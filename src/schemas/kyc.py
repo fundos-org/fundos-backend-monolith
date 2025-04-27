@@ -44,6 +44,36 @@ class ResendOTPResponse(BaseModel):
     code_verifier: str
     message: str
 
+class PanDetailsRequest(BaseModel):
+    unique_id: str
+    pan_number: str
+
+class PanDetailsResponse(BaseModel):
+    pan: str
+    status: str
+    status_code: str
+    name: Optional[str] = None
+    dob: Optional[str] = None
+    seeding_status: Optional[str] = None
+
+class PhoneNumRequest(BaseModel):
+    phone_number: str
+    alias: Optional[str] = "UserVerification"
+    channel: Optional[str] = "sms"
+
+class PhoneNumResponse(BaseModel):
+    message: str
+    verification_uuid: str
+
+
+class OTPVerificationRequest(BaseModel):
+    session_uuid: str
+    otp_code: str
+
+class OTPVerificationResponse(BaseModel):
+    message: str
+    session_uuid: str
+    api_id: str
 
 class OnBoardingRequest(BaseModel):
     pass 
@@ -70,11 +100,7 @@ class InvestorTypeRequest(BaseModel):
 class InvestorTypeResponse(BaseModel):
     pass 
 
-class PanDetailsRequest(BaseModel):
-    pass 
 
-class PanDetailsResponse(BaseModel):
-    pass 
 
 
 

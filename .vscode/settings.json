@@ -2,9 +2,12 @@
     "python.analysis.extraPaths": ["./src"],
     "python.defaultInterpreterPath": ".venv/bin/python",
     "cSpell.words": [
+      "autoflush",
       "DIGITAP",
       "fwdp",
-      "intiate"
+      "intiate",
+      "PLIVO",
+      "sessionmaker"
     ]
   }
   

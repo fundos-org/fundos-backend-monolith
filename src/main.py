@@ -2,9 +2,15 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from configs.app_configs import AppConfigs
 from routes.index import router as indexRouter
+from middlewares.request_logger import request_logging_middleware
+from utils.lifespan import lifespan
 
-app = FastAPI() 
+app = FastAPI(lifespan=lifespan) 
+# Register the middleware using FastAPI's .middleware() method
+app.middleware("http")(request_logging_middleware) 
+
 app.include_router(router=indexRouter, prefix="/api/v1")
+
 app_configs = AppConfigs()
 
 @app.get("/")
