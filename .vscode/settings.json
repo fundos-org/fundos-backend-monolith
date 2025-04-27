@@ -1,0 +1,10 @@
+{
+    "python.analysis.extraPaths": ["./src"],
+    "python.defaultInterpreterPath": ".venv/bin/python",
+    "cSpell.words": [
+      "DIGITAP",
+      "fwdp",
+      "intiate"
+    ]
+  }
+  

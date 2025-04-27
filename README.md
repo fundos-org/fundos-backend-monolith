@@ -1,0 +1,1 @@
+uv sync --no-dev [only install prod dependencies to make the app lightweight]
