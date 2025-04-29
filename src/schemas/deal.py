@@ -1,19 +1,36 @@
-from pydantic import BaseModel
-from typing import Optional
-import datetime
-# from .models import Role
+from typing import Optional, Annotated
+from uuid import UUID
+from fastapi import UploadFile, File, Form
+from pydantic import BaseModel, HttpUrl
+from datetime import datetime
+from ..models.deal import DealStatus, BusinessModel, CustomerSegment, InstrumentType
 
-class DealCreate(BaseModel):
+class DealCreateRequest(BaseModel):
+    fund_manager_id: Annotated[int, Form()]
+    title: Annotated[str, Form()]
+    description: Annotated[str, Form()]
+    company_name: Annotated[Optional[str], Form()] = None
+    about_company: Annotated[Optional[str], Form()] = None
+    company_website: Annotated[Optional[HttpUrl], Form()] = None
+    industry: Annotated[Optional[str], Form()] = None
+    problem_statement: Annotated[Optional[str], Form()] = None
+    business_model: Annotated[Optional[BusinessModel], Form()] = None
+    business_size: Annotated[Optional[str], Form()] = None
+    target_customer_segment: Annotated[Optional[CustomerSegment], Form()] = None
+    current_valuation: Annotated[Optional[float], Form()] = None
+    round_size: Annotated[Optional[float], Form()] = None
+    syndicate_commitment: Annotated[Optional[float], Form()] = None
+    conversion_terms: Annotated[Optional[str], Form()] = None
+    instrument_type: Annotated[Optional[InstrumentType], Form()] = None
+    agreed_to_terms: Annotated[bool, Form()]
+
+    logo: Annotated[Optional[UploadFile], File()] = None
+    pitch_deck: Annotated[Optional[UploadFile], File()] = None
+    pitch_video: Annotated[Optional[UploadFile], File()] = None
+
+class DealCreateResponse(BaseModel):
+    id: UUID
     title: str
     description: str
-    amount: float
-    legal_document_id: Optional[str]
-
-class DealOut(BaseModel):
-    id: int
-    fund_manager_id: int
-    title: str
-    description: str
-    amount: float
-    status: str
+    status: DealStatus
     created_at: datetime

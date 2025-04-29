@@ -1,30 +1,32 @@
-from sqlmodel import SQLModel, create_engine, Session
+# app/core/database.py
+from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import sessionmaker
-from typing import Generator
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
 import os
-from logging.logging_setup import get_logger
+import logging
 
-class DatabaseServices:
-    def __init__(self, db_url: str = "sqlite:///./test.db"):
-        self.db_url = db_url
-        self.engine = create_engine(self.db_url, echo=True, connect_args={"check_same_thread": False})
-        self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine, class_=Session)
-        self.logger = get_logger("DatabaseServices", env="dev")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:password@localhost/dbname")
 
-    def init_db(self) -> None:
-        """
-        Initialize the database by creating tables if they don't exist.
-        """
-        if not os.path.exists(self.db_url[10:]):  # Check if SQLite file exists
-            self.logger.info("Database file does not exist. Creating new database.")
-            SQLModel.metadata.create_all(self.engine)
-            self.logger.info("Database and tables created successfully.")
-        else:
-            self.logger.info("Database file exists. Skipping creation.")
+# Optional: Configure logging
+logger = logging.getLogger("sqlalchemy.engine")
+logger.setLevel(logging.INFO)
 
-    def get_session(self) -> Generator[Session, None, None]:
-        """
-        Dependency that provides a database session.
-        """
-        with self.SessionLocal() as session:
+# Async Engine + Session
+engine = create_async_engine(DATABASE_URL, echo=False, future=True)
+
+async_session = sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False
+)
+
+@asynccontextmanager
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    async with async_session() as session:
+        try:
             yield session
+        except Exception as e:
+            logger.error(f"DB session error: {e}")
+            raise
