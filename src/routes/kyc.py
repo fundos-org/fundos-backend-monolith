@@ -1,5 +1,5 @@
 from fastapi import APIRouter 
-from schemas.kyc import ( AadhaarRequest, AadhaarResponse,
+from src.schemas.kyc import ( AadhaarRequest, AadhaarResponse,
                          SubmitOTPRequest, SubmitOTPResponse,
                          ResendOTPRequest, ResendOTPResponse,
                          PhoneNumRequest, PhoneNumResponse, 
@@ -9,18 +9,24 @@ from schemas.kyc import ( AadhaarRequest, AadhaarResponse,
                          InvestorTypeRequest, InvestorTypeResponse,
                          PanDetailsRequest, PanDetailsResponse
                         )
-from services.aadhaar_service import AadhaarService
-from services.pan_service import PANService
-from services.phone_service import PhoneService
+from src.schemas.kyc_validation import (ValidateAadhaarRequest, ValidateAadhaarResponse,
+                                        ValidatePanRequest,ValidatePanResponse,
+                                        PanAadhaarLinkRequest, PanAadhaarLinkResponse
+                                        )
+from src.services.aadhaar_service import AadhaarService
+from src.services.pan_service import PANService
+from src.services.phone_service import PhoneService
+from src.services.kyc_validation_service import ValidationService
 
 
 aadhaar_service = AadhaarService() #initiate the service to use later in code. 
 pan_service = PANService()  # initiate PAN service
 phone_service = PhoneService() # initiate Phone service
+validation_service = ValidationService() # intiate validation service
 
 router = APIRouter() 
 
-@router.post('/verify-aadhaar')
+@router.post('/aadhaar/verify')
 async def verify_aadhaar(aadhaar_details: AadhaarRequest) -> AadhaarResponse:
     response_data = await aadhaar_service.initiate_kyc(
         unique_id=aadhaar_details.unique_id,
@@ -34,7 +40,7 @@ async def verify_aadhaar(aadhaar_details: AadhaarRequest) -> AadhaarResponse:
         message="OTP sent to Aadhaar registered mobile number"
     )
 
-@router.post('/submit-aadhaar-otp')
+@router.post('/aadhaar/submit-otp', tags = ["aadhaar"])
 async def submit_aadhaar_otp(otp_details: SubmitOTPRequest) -> SubmitOTPResponse:
     user_data = await aadhaar_service.submit_aadhaar_otp(
         otp=otp_details.otp,
@@ -45,7 +51,7 @@ async def submit_aadhaar_otp(otp_details: SubmitOTPRequest) -> SubmitOTPResponse
 
     return SubmitOTPResponse(**user_data) 
 
-@router.post('/resend-aadhaar-otp')
+@router.post('/aadhaar/resend-otp', tags = ["aadhaar"])
 async def resend_aadhaar_otp(otp_details: ResendOTPRequest) -> ResendOTPResponse:
     response_data = await aadhaar_service.resend_aadhaar_otp(
         unique_id=otp_details.unique_id,
@@ -56,7 +62,16 @@ async def resend_aadhaar_otp(otp_details: ResendOTPRequest) -> ResendOTPResponse
 
     return ResendOTPResponse(**response_data)
 
-@router.post('/verify-pan')
+@router.post("/aadhaar/validate", tags = ["aadhaar"])
+async def validate_aadhaar(validation_details: ValidateAadhaarRequest) -> ValidateAadhaarResponse:
+    response_data = await validation_service.validate_aadhaar(
+        client_ref_num=validation_details.client_ref_num,
+        aadhaar_number=validation_details.aadhaar_number
+    )
+
+    return ValidateAadhaarResponse(**response_data)
+
+@router.post('/pan/verify', tags= ["pan"])
 async def verify_pan(pan_details: PanDetailsRequest) -> PanDetailsResponse:
     pan_data = await pan_service.verify_pan(
         unique_id=pan_details.unique_id,
@@ -65,8 +80,29 @@ async def verify_pan(pan_details: PanDetailsRequest) -> PanDetailsResponse:
 
     return PanDetailsResponse(**pan_data)
 
-@router.post('/verify-phone-number', response_model=PhoneNumResponse)
-async def verify_phone_number(onboarding_details: PhoneNumRequest):
+@router.post("/pan/validate", tags= ["pan"])
+async def validate_pan(validation_details: ValidatePanRequest) -> ValidatePanResponse:
+    response_data = await validation_service.validate_pan(
+        client_ref_num=validation_details.client_ref_num,
+        aadhaar_number=validation_details.pan_number,
+        full_name=validation_details.full_name
+    )
+
+    return ValidateAadhaarResponse(**response_data)
+
+@router.post("/pan/aadhaar/link", tags= ["pan", "aadhaar"])
+async def validate_pan_aadhaar_linked(validation_details: PanAadhaarLinkRequest) -> PanAadhaarLinkResponse:
+    response_data = await validation_service.validate_pan_aadhaar_link(
+        client_ref_num = validation_details.client_ref_num,
+        pan_number = validation_details.pan_number,
+        aadhaar_number=validation_details.aadhaar_number
+    )
+
+    return PanAadhaarLinkResponse(**response_data)
+    pass 
+
+@router.post('/phone-num/verify', tags = ["phone-num"])
+async def verify_phone_number(onboarding_details: PhoneNumRequest) -> PhoneNumResponse :
     
     result = await phone_service.verify_phone_number(
         phone_number=onboarding_details.phone_number,
@@ -75,7 +111,7 @@ async def verify_phone_number(onboarding_details: PhoneNumRequest):
     )
     return PhoneNumResponse(**result)
 
-@router.post('/verify-otp', response_model=OTPVerificationResponse)
+@router.post('/phone-num/submit-otp', response_model=OTPVerificationResponse)
 async def verify_otp(request: OTPVerificationRequest):
     phone_service = PhoneService()
     
@@ -91,12 +127,12 @@ async def verify_otp(request: OTPVerificationRequest):
     )
 
 
-@router.post('/submit-user-details')
+@router.post('/user/submit-details')
 async def submit_user_details(user_details: UserDetailsRequest) -> UserDetailsResponse: 
     pass 
 
 
-@router.post('/verify-email-id')
+@router.post('/email/verify')
 async def verify_email(email_details: EmailDetailsRequest) -> EmailDetailsResponse: 
     pass 
 

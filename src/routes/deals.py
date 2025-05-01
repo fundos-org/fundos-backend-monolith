@@ -3,18 +3,19 @@ from uuid import UUID
 from sqlmodel.ext.asyncio.session import AsyncSession
 from starlette import status
 
-from schemas.deal import DealCreateRequest, DealCreateResponse
-from utils.dependencies import get_db, get_s3_service
-from services.s3_services import S3Service
-from services.deal_service import DealService
-from utils.json_response import success_response, error_response
+from src.schemas.deal import DealCreateRequest, DealCreateResponse
+from src.utils.dependencies import get_s3_service
+from src.db.session import get_session
+from src.services.s3_services import S3Service
+from src.services.deal_service import DealService
+from src.utils.json_response import success_response, error_response
 
 router = APIRouter()
 
-@router.post("/create-deal-draft")
+@router.post("/create/draft")
 async def create_deal_draft(
     fund_manager_id: int = Form(...),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_session)
 ):
     try:
         deal = await DealService.create_draft(fund_manager_id, db)
@@ -24,11 +25,11 @@ async def create_deal_draft(
         return error_response(f"Failed to create deal draft: {str(e)}", status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@router.patch("/update-deal/{deal_id}")
+@router.patch("/update/{deal_id}")
 async def update_deal(
     deal_id: UUID,
     form_data: DealCreateRequest = Depends(),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_session),
     s3: S3Service = Depends(get_s3_service)
 ):
     try:

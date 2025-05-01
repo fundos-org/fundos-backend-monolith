@@ -2,7 +2,7 @@ import httpx
 import base64
 from fastapi import HTTPException
 
-DIGITAP_BASE_URL = "https://svcdemo.digitap.work"
+DIGITAP_BASE_URL = "https://svc.digitap.ai"
 CLIENT_ID = "your_client_id"
 CLIENT_SECRET = "your_client_secret"
 
@@ -21,7 +21,7 @@ class PANService:
         }
 
     async def verify_pan(self, unique_id: str, pan_number: str) -> dict:
-        url = f"{self.base_url}/validation/kyc/v1/pan_basic"
+        url = f"{self.base_url}/validation/kyc/v1/pan_details"
         payload = {
             "client_ref_num": unique_id,
             "pan": pan_number

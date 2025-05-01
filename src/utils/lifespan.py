@@ -1,8 +1,8 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from src.services.db_services import init_db
+from src.db import init_db
 from src.logging.logging_setup import get_logger
-from src.services.db_services import engine
+from src.db.engine import engine
 
 logger = get_logger(__name__)
 

@@ -11,7 +11,7 @@ class PaymentStatus(str, Enum):
     ON_HOLD = "on_hold"
 
 class Investment(SQLModel, table=True):
-    id: uuid.UUID = Field(default=None, primary_key=True, default_factory=uuid.uuid4())
+    id: uuid.UUID = Field(primary_key=True, default_factory=uuid.uuid4())
     investor_id: int = Field(foreign_key="user.id")
     deal_id: int = Field(foreign_key="deal.id")
     amount: float

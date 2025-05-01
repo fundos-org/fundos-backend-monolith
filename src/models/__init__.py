@@ -1,10 +1,14 @@
-from models.deal import Deal 
-from models.investment import Investment
-from models.kyc import KYC 
-from models.user import User 
-from sqlmodel import SQLModel
+from src.models.user import User  # noqa: F401
+from src.models.deal import Deal  # noqa: F401
+from src.models.investment import Investment  # noqa: F401
+from src.models.kyc import KYC  # noqa: F401
 
-class Base(SQLModel):
-    pass
+# Optional: if using a custom metadata object, but not strictly required for basic setup
+# from sqlalchemy import MetaData
+# metadata_obj = MetaData()
+# SQLModel.metadata = metadata_obj
 
-Base.metadata.tables = [Deal.__table__, Investment.__table__,User.__table__, KYC.__table__]
+# No need to manually assign tables, SQLModel handles this
+models = [Deal, Investment, KYC, User]
+
+

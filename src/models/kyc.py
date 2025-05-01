@@ -6,8 +6,8 @@ import uuid
 from .user import KycStatus
 
 class KYC(SQLModel, table=True):
-    id: uuid.UUID = Field(default=None, primary_key=True, default_factory=uuid.uuid4())
-    user_id: int = Field(foreign_key="user.id")
+    id: uuid.UUID = Field(primary_key=True, default_factory=uuid.uuid4())
+    user_id: uuid.UUID = Field(foreign_key="user.id")
     aadhaar_number: Optional[str]  # Encrypted
     pan_number: Optional[str]  # Encrypted
     bank_account_number: Optional[str]  # Encrypted

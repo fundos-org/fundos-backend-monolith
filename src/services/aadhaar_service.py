@@ -2,9 +2,9 @@ import httpx
 import base64
 from fastapi import HTTPException
 
-DIGITAP_BASE_URL = "https://svcdemo.digitap.work"
-CLIENT_ID = "your_client_id"
-CLIENT_SECRET = "your_client_secret"
+DIGITAP_BASE_URL = "https://svc.digitap.ai"
+CLIENT_ID = "17137231"
+CLIENT_SECRET = "RhoLU35zsKc2OMao9SNec3kpcHJjIWAk"
 
 class AadhaarService:
     def __init__(self):
@@ -13,6 +13,14 @@ class AadhaarService:
         self.client_secret = CLIENT_SECRET
 
     def get_auth_header(self) -> dict:
+        token = f"{self.client_id}:{self.client_secret}"
+        base64_token = base64.b64encode(token.encode()).decode()
+        return {
+            "Authorization": f"{base64_token}",
+            "Content-Type": "application/json"
+        }
+    
+    def get_auth_header_basic(self) -> dict:
         token = f"{self.client_id}:{self.client_secret}"
         base64_token = base64.b64encode(token.encode()).decode()
         return {
@@ -98,3 +106,5 @@ class AadhaarService:
             "code_verifier": model.get("codeVerifier"),
             "message": data.get("msg", "OTP resent successfully")
         }
+
+    
