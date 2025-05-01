@@ -2,7 +2,7 @@ from fastapi import Request
 import time
 import json
 
-from logging.logging_setup import get_logger  # import your own get_logger
+from src.logging.logging_setup import get_logger  # import your own get_logger
 
 logger = get_logger("request-logger")
 

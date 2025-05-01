@@ -5,13 +5,12 @@ from sqlalchemy.orm import sessionmaker
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 import os
-import logging
+from src.logging.logging_setup import get_logger 
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:password@localhost/dbname")
 
-# Optional: Configure logging
-logger = logging.getLogger("sqlalchemy.engine")
-logger.setLevel(logging.INFO)
+
+logger = get_logger(__name__) 
 
 # Async Engine + Session
 engine = create_async_engine(DATABASE_URL, echo=False, future=True)
@@ -30,3 +29,10 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
         except Exception as e:
             logger.error(f"DB session error: {e}")
             raise
+
+# Define function to initialize the database tables
+async def init_db():
+    """Create the database tables"""
+    async with engine.begin() as conn:
+        from src.models import Base  # Import your SQLModel base class
+        await conn.run_sync(Base.metadata.create_all)

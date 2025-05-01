@@ -3,12 +3,12 @@ from uuid import UUID
 from fastapi import UploadFile, File, Form
 from pydantic import BaseModel, HttpUrl
 from datetime import datetime
-from ..models.deal import DealStatus, BusinessModel, CustomerSegment, InstrumentType
+from src.models.deal import DealStatus, BusinessModel, CustomerSegment, InstrumentType
 
 class DealCreateRequest(BaseModel):
-    fund_manager_id: Annotated[int, Form()]
-    title: Annotated[str, Form()]
-    description: Annotated[str, Form()]
+    fund_manager_id: Annotated[UUID, Form()]
+    title: Annotated[Optional[str], Form()]
+    description: Annotated[Optional[str], Form()]
     company_name: Annotated[Optional[str], Form()] = None
     about_company: Annotated[Optional[str], Form()] = None
     company_website: Annotated[Optional[HttpUrl], Form()] = None
