@@ -11,4 +11,7 @@ logs/
 .venv
 
 # vscode settings 
-.vscode
+.vscode/
+
+# db 
+db.sqlite
