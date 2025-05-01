@@ -98,8 +98,7 @@ async def validate_pan_aadhaar_linked(validation_details: PanAadhaarLinkRequest)
         aadhaar_number=validation_details.aadhaar_number
     )
 
-    return PanAadhaarLinkResponse(**response_data)
-    pass 
+    return PanAadhaarLinkResponse(**response_data) 
 
 @router.post('/phone-num/verify', tags = ["phone-num"])
 async def verify_phone_number(onboarding_details: PhoneNumRequest) -> PhoneNumResponse :
