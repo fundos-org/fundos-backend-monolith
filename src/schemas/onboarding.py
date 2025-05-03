@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from uuid import UUID
+from fastapi import UploadFile
 
 
 class PhoneNumRequest(BaseModel):
@@ -32,6 +33,27 @@ class UserDetailsRequest(BaseModel):
     first_name: str
     last_name: str 
     pass 
+
+class ProfessionalBackgroundRequest(BaseModel): 
+    occupation: str
+    income_source: str
+    annual_income: str
+    capital_commitment: float
+ 
+
+class ProfessionalBackgroundResponse(BaseModel): 
+    user_id: UUID
+    message: str
+    pass 
+
+class PhotoUploadRequest(BaseModel):
+    image: UploadFile
+    expiration: int | None = 3600 
+
+
+class PhotoUploadResponse(BaseModel):
+    message: str
+    user_id: UUID 
 
 class UserDetailsResponse(BaseModel): 
     user_id: UUID

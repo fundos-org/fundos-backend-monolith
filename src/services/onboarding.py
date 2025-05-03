@@ -1,20 +1,15 @@
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from models.user import User
-from utils.dependencies import get_user, get_session 
-from models.user import investorType
+from src.models.user import User
+from src.utils.dependencies import get_user, get_session 
+from src.models.user import investorType
 
 class OnboardingService:
 
     def __init__(self):
         self.session: AsyncSession = get_session
 
-    async def set_user_details(
-        self,
-        user_id: str,
-        first_name: str,
-        last_name: str,
-    ) -> dict:
+    async def set_user_details(self, user_id: str,first_name: str,last_name: str) -> dict:
         try:
             user: User = get_user(user_id=user_id)
             user.first_name = first_name

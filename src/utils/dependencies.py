@@ -1,10 +1,10 @@
-from services.s3 import S3Service
+from src.services.s3 import S3Service
 from fastapi import Depends 
 from fastapi.exceptions import HTTPException
 from sqlmodel import select
-from db.session import get_session
+from src.db.session import get_session
 from uuid import UUID
-from models.user import User
+from src.models.user import User
 from sqlalchemy.ext.asyncio import AsyncSession
 
 BUCKET_NAME = "your-s3-bucket-name"

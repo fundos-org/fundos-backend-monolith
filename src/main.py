@@ -4,8 +4,9 @@ from fastapi.responses import JSONResponse
 from src.configs.app_configs import AppConfigs
 from src.routes.index import router as indexRouter
 from src.routes.kyc import router as kycRouter
-from src.routes.deals import router as dealsRouter 
+from src.routes.deal import router as dealsRouter 
 from src.routes.dummy import router as dummyRouter
+from src.routes.onboarding import router as onBoardingRouter
 from src.middlewares.request_logger import request_logging_middleware
 from src.utils.lifespan import lifespan
 from src.middlewares.exception_handlers import (
@@ -15,10 +16,10 @@ from src.middlewares.exception_handlers import (
 )
 
 version = "v1"
-api_prefix = "/api/v1" 
+api_prefix = "/api/v1/live" 
 
 version_v0 = "v0" 
-api_prefix_v0 = "/api/v0" 
+api_prefix_v0 = "/api/v0/test" 
 
 app = FastAPI(lifespan=lifespan) 
 
@@ -34,9 +35,10 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.include_router(router=indexRouter, prefix=f"{api_prefix}", tags=["index"])
 app.include_router(router=kycRouter, prefix=f"{api_prefix}/kyc", tags=["kyc"])
 app.include_router(router=dealsRouter, prefix=f"{api_prefix}/deals", tags=["deals"]) 
+app.include_router(router=onBoardingRouter, prefix=f"{api_prefix}/onboarding", tags=["live"])
 
 # dummy api Routers
-app.include_router(router=dummyRouter, prefix=f"{api_prefix}/dummy", tags=["dummy"])
+app.include_router(router=dummyRouter, prefix=f"{api_prefix_v0}", tags=["test"])
 
 app_configs = AppConfigs()
 port = 8000

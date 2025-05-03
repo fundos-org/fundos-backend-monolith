@@ -6,8 +6,8 @@ from starlette import status
 from src.schemas.deal import DealCreateRequest, DealCreateResponse
 from src.utils.dependencies import get_s3_service
 from src.db.session import get_session
-from services.s3 import S3Service
-from services.deal import DealService
+from src.services.s3 import S3Service
+from src.services.deal import DealService
 from src.utils.json_response import success_response, error_response
 
 router = APIRouter()

@@ -1,15 +1,15 @@
 from fastapi import HTTPException
 from fastapi import UploadFile
-from logging.logging_setup import get_logger # assuming you have a logger setup
+from src.logging.logging_setup import get_logger # assuming you have a logger setup
 from pydantic import EmailStr
-from models.user import User, investorType
-from utils.dependencies import get_user
+from src.models.user import User, investorType
+from src.utils.dependencies import get_user
 from uuid import UUID
-from services.s3 import S3Service
+from src.services.s3 import S3Service
 
 logger = get_logger(__name__) 
 
-s3_service = S3Service()
+s3_service = S3Service(bucket_name="")
 
 class DummyService:
     def __init__(self):

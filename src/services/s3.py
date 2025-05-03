@@ -6,7 +6,7 @@ from typing import Optional
 import logging
 from urllib.parse import urlparse
 from uuid import uuid4 
-from logging.logging_setup import get_logger
+from src.logging.logging_setup import get_logger
 
 logger = get_logger(__name__)
 

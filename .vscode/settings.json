@@ -8,7 +8,10 @@
       "fundos",
       "fwdp",
       "intiate",
+      "jsonlogger",
+      "levelname",
       "PLIVO",
+      "pythonjsonlogger",
       "sessionmaker"
     ]
   }
