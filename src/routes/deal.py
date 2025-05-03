@@ -13,12 +13,9 @@ from src.utils.json_response import success_response, error_response
 router = APIRouter()
 
 @router.post("/create/draft")
-async def create_deal_draft(
-    fund_manager_id: int = Form(...),
-    db: AsyncSession = Depends(get_session)
-):
+async def create_deal_draft( fund_manager_id: int = Form(...)):
     try:
-        deal = await DealService.create_draft(fund_manager_id, db)
+        deal = await DealService.create_draft(fund_manager_id)
         response_data = DealCreateResponse.model_validate(deal)
         return success_response("Deal draft created", response_data.model_dump(), status.HTTP_201_CREATED)
     except Exception as e:

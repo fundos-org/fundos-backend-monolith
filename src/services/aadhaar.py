@@ -1,6 +1,12 @@
 import httpx
 import base64
 from fastapi import HTTPException
+from uuid import UUID 
+from sqlalchemy.ext.asyncio import AsyncSession
+# from typing import Annotated 
+
+from src.models.kyc import KYC
+from src.utils.dependencies import get_kyc_row, get_session
 
 DIGITAP_BASE_URL = "https://svc.digitap.ai"
 CLIENT_ID = "17137231"
@@ -11,6 +17,7 @@ class AadhaarService:
         self.base_url = DIGITAP_BASE_URL
         self.client_id = CLIENT_ID
         self.client_secret = CLIENT_SECRET
+        self.session: AsyncSession = get_session()
 
     def get_auth_header(self) -> dict:
         token = f"{self.client_id}:{self.client_secret}"
@@ -50,7 +57,7 @@ class AadhaarService:
             "code_verifier": data["model"]["codeVerifier"]
         }
 
-    async def submit_aadhaar_otp(self, otp: str, transaction_id: str, code_verifier: str, fwdp: str, share_code: str = "5678") -> dict:
+    async def submit_aadhaar_otp(self, user_id: UUID, otp: str, transaction_id: str, code_verifier: str, fwdp: str, share_code: str = "5678") -> dict:
         url = f"{self.base_url}/ent/v3/kyc/submit-otp"
         payload = {
             "shareCode": share_code,
@@ -73,9 +80,21 @@ class AadhaarService:
         if data.get("code") != "200":
             raise HTTPException(status_code=400, detail=data.get("msg", "OTP submission failed"))
 
-        user_data = data.get("model", {})
+        model: dict = data.get("model") 
 
-        return user_data
+        kyc_row: KYC = get_kyc_row(user_id = user_id) 
+
+        kyc_row.aadhaar_number = model.adharNumber 
+        kyc_row.gender = model.gender
+        kyc_row.dob = model.dob
+        kyc_row.care_of = model.careOf 
+        kyc_row.address = model.address 
+
+        await self.session.add(kyc_row)
+        await self.session.commit()
+        await self.session.refresh(kyc_row)
+
+        return model
     
     async def resend_aadhaar_otp(self, unique_id: str, aadhaar_number: str, transaction_id: str, fwdp: str) -> dict:
         url = f"{self.base_url}/ent/v3/kyc/resend-otp"
@@ -98,8 +117,8 @@ class AadhaarService:
         if data.get("code") != "200":
             raise HTTPException(status_code=400, detail=data.get("msg", "Resend OTP failed"))
 
-        model = data.get("model", {})
-
+        model: dict = data.get("model", {}) 
+        
         return {
             "transaction_id": model.get("transactionId"),
             "fwdp": model.get("fwdp"),

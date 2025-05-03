@@ -3,7 +3,7 @@ from fastapi import UploadFile
 from src.logging.logging_setup import get_logger # assuming you have a logger setup
 from pydantic import EmailStr
 from src.models.user import User, investorType
-from src.utils.dependencies import get_user
+from src.utils.dependencies import get_user, get_session
 from uuid import UUID
 from src.services.s3 import S3Service
 
@@ -15,6 +15,7 @@ class DummyService:
     def __init__(self):
         self.bucket_name = ""
         self.folder_prefix = ""
+        self.session = get_session
   
     async def verify_invitation_code(invitation_code: str): 
 
@@ -65,7 +66,7 @@ class DummyService:
             user.first_name = first_name
             user.last_name = last_name
 
-            self.session.add(user)
+            await self.session.add(user)
             await self.session.commit()
             await self.session.refresh(user)
 
@@ -110,7 +111,7 @@ class DummyService:
             user: User = get_user(user_id= user_id)
             user.investor_type = investor_type
 
-            self.session.add(user)
+            await self.session.add(user)
             await self.session.commit()
             await self.session.refresh(user)
 
@@ -129,7 +130,7 @@ class DummyService:
             user: User = get_user(user_id=user_id) 
 
             user.declaration_accepted = declaration_accepted
-            self.session.add(user)
+            await self.session.add(user)
             await self.session.commit()
             await self.session.refresh(user) 
 
@@ -153,7 +154,7 @@ class DummyService:
             user.capital_commitment = capital_commitment
             user.occupation  = occupation 
 
-            self.session.add(user)
+            await self.session.add(user)
             await self.session.commit()
             await self.session.refresh(user) 
 
@@ -173,7 +174,7 @@ class DummyService:
 
             user.agreement_signed = agreement_signed
 
-            self.session.add(user)
+            await self.session.add(user)
             await self.session.commit()
             await self.session.refresh(user) 
 
@@ -198,7 +199,7 @@ class DummyService:
 
             user.profile_image_url = image_url
 
-            self.session.add(user)
+            await self.session.add(user)
             await self.session.commit()
             await self.session.refresh(user) 
 

@@ -5,15 +5,20 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.models.deal import Deal
 from src.schemas.deal import DealCreateRequest
 from src.services.s3 import S3Service
+from src.utils.dependencies import get_session
 
 class DealService:
+    def __init__(self):
+        self.session = get_session()
+
+
     @staticmethod
-    async def create_draft(fund_manager_id: int, db: AsyncSession) -> Deal:
-        deal = Deal(fund_manager_id=fund_manager_id)
-        db.add(deal)
-        await db.commit()
-        await db.refresh(deal)
-        return deal
+    async def create_draft(self, fund_manager_id: int) -> Deal:
+        deal_row = Deal(fund_manager_id=fund_manager_id)
+        await self.session.add(deal_row)
+        await self.session.commit()
+        await self.session.refresh(deal_row)
+        return deal_row
 
     @staticmethod
     async def update_deal_partial(
