@@ -5,6 +5,7 @@
       "autoflush",
       "DIGITAP",
       "dotenv",
+      "fundos",
       "fwdp",
       "intiate",
       "PLIVO",

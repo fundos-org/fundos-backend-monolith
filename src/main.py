@@ -4,7 +4,8 @@ from fastapi.responses import JSONResponse
 from src.configs.app_configs import AppConfigs
 from src.routes.index import router as indexRouter
 from src.routes.kyc import router as kycRouter
-from src.routes.deals import router as dealsRouter
+from src.routes.deals import router as dealsRouter 
+from src.routes.dummy import router as dummyRouter
 from src.middlewares.request_logger import request_logging_middleware
 from src.utils.lifespan import lifespan
 from src.middlewares.exception_handlers import (
@@ -14,7 +15,11 @@ from src.middlewares.exception_handlers import (
 )
 
 version = "v1"
-api_prefix = "/api/v1"
+api_prefix = "/api/v1" 
+
+version_v0 = "v0" 
+api_prefix_v0 = "/api/v0" 
+
 app = FastAPI(lifespan=lifespan) 
 
 # Register the middleware using FastAPI's .middleware() method
@@ -28,7 +33,10 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 # adding api Routers 
 app.include_router(router=indexRouter, prefix=f"{api_prefix}", tags=["index"])
 app.include_router(router=kycRouter, prefix=f"{api_prefix}/kyc", tags=["kyc"])
-app.include_router(router=dealsRouter, prefix=f"{api_prefix}/deals", tags=["deals"])
+app.include_router(router=dealsRouter, prefix=f"{api_prefix}/deals", tags=["deals"]) 
+
+# dummy api Routers
+app.include_router(router=dummyRouter, prefix=f"{api_prefix}/dummy", tags=["dummy"])
 
 app_configs = AppConfigs()
 port = 8000

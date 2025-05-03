@@ -13,10 +13,10 @@ from src.schemas.kyc_validation import (ValidateAadhaarRequest, ValidateAadhaarR
                                         ValidatePanRequest,ValidatePanResponse,
                                         PanAadhaarLinkRequest, PanAadhaarLinkResponse
                                         )
-from src.services.aadhaar_service import AadhaarService
-from src.services.pan_service import PANService
-from src.services.phone_service import PhoneService
-from src.services.kyc_validation_service import ValidationService
+from services.aadhaar import AadhaarService
+from services.pan import PANService
+from services.phone import PhoneService
+from services.kyc_validation import ValidationService
 
 
 aadhaar_service = AadhaarService() #initiate the service to use later in code. 

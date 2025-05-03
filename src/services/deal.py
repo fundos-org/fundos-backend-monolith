@@ -4,7 +4,7 @@ from sqlmodel import UUID
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.models.deal import Deal
 from src.schemas.deal import DealCreateRequest
-from src.services.s3_services import S3Service
+from services.s3 import S3Service
 
 class DealService:
     @staticmethod

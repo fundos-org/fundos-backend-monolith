@@ -1,3 +1,152 @@
-# this is a dummy file for demo 
+from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse
+from starlette import status
+from pydantic import BaseModel 
+from uuid import UUID 
+from db.session import get_session 
+from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Annotated
+from models.user import User, investorType 
+from schemas.kyc import PhoneNumRequest, PhoneNumResponse, UserDetailsRequest, UserDetailsResponse, ProfessionalBackgroundRequest, ProfessionalBackgroundResponse, PhotoUploadRequest, PhotoUploadResponse
+from services.dummy import DummyService
 
+router = APIRouter() 
+
+# service initialization 
+dummy_service = DummyService()
+
+# schemas : will move to schemas folder 
+class UserOnboardingStartRequest(BaseModel):
+    invitation_code = str
+    
+
+class UserOnboardingStartResponse(BaseModel):
+    user_id: UUID
+    message: str
+
+@router.post("/invitation/validate")
+async def validate_invitation(data: UserOnboardingStartRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> UserOnboardingStartResponse:
+    
+    result = dummy_service.verify_invitation_code(
+        invitation_code = data.invitation_code,
+    ) 
+
+    if result.success :  
+        user = User(invitation_code=data.invitation_code, onboarding_status= "Invitation_verified")
+        session.add(user)
+        session.commit()
+        session.refresh(user) 
+
+    content = UserOnboardingStartResponse(user_id=user.id, message="new user added")
+    return JSONResponse(status_code=status.HTTP_201_CREATED, content= content) 
+
+@router.patch('/phone-num/otp/send', tags = ["phone-num"])
+async def send_phone_otp(onboarding_details: PhoneNumRequest) -> PhoneNumResponse :
+    
+    result = await dummy_service.send_phone_otp(
+        phone_number=onboarding_details.phone_number,
+        otp=onboarding_details.phone_number
+    )
+    content = PhoneNumResponse(**result) 
+    return JSONResponse(status_code=status.HTTP_200_OK, content= content) 
+
+@router.patch('/phone-num/otp/verify')
+async def verify_phone_otp(data: dict) -> dict :
+
+    result = await dummy_service.verify_phone_otp(
+        otp_code= data.otp
+    )
+
+    content = dict(**result) 
+    return JSONResponse(status_code= status.HTTP_200_OK, content=content) 
+
+@router.patch("/user/details", tags = ["user-details"])
+async def store_user_details(user_details: UserDetailsRequest) -> UserDetailsResponse:
+
+    result = await dummy_service.set_user_details(
+        user_id = user_details.user_id,
+        first_name= user_details.first_name,
+        last_name=user_details.last_name,
+    )
+
+    content = UserDetailsResponse(**result)
+    return JSONResponse(status_code=status.HTTP_200_OK, content = content)
+
+@router.patch('/email/otp/send', tags = ["email"])
+async def send_email_otp(onboarding_details: PhoneNumRequest) -> PhoneNumResponse :
+    
+    result = await dummy_service.send_email_otp(
+        phone_number=onboarding_details.phone_number,
+        otp=onboarding_details.phone_number
+    )
+    content = PhoneNumResponse(**result) 
+    return JSONResponse(status_code=status.HTTP_200_OK, content= content) 
+
+@router.patch('/email/otp/verify', tags = ["email"])
+async def verify_email_otp(data: dict) -> dict :
+
+    result = await dummy_service.verify_email_otp(
+        otp_code= data.otp
+    )
+
+    content = dict(**result) 
+    return JSONResponse(status_code= status.HTTP_200_OK, content=content) 
+
+@router.patch("/user/choose-investor-type",tags = ["user-details"])
+async def choose_investor_type(user_id: str, data: investorType) -> dict :
+
+    result = await dummy_service.choose_investor_type(
+        user_id=user_id,
+        investor_type=data
+    ) 
+    
+    content = dict(**result) 
+    return JSONResponse(status_code= status.HTTP_200_OK, content=content) 
+
+@router.patch("/user/declaration", tags = ["user-details"])
+async def declaration(user_id: str, declaration_accepted: bool) -> any: 
+
+    result = dummy_service.declaration_accepted(
+        user_id=user_id, 
+        declaration_accepted=declaration_accepted
+    )
+
+    content = result 
+    return JSONResponse(status_code=status.HTTP_200_OK, content=content)
+
+@router.patch("/user/professional-background",tags = ["user-details"]) 
+async def professional_back(user_id: str, data: ProfessionalBackgroundRequest) -> ProfessionalBackgroundResponse: 
+    
+    result = dummy_service.set_professional_background(
+        user_id = user_id,
+        occupation = data.income_source,
+        income_source = data.income_source,
+        annual_income = data.annual_income,
+        capital_commitment = data.capital_commitment
+    )
+
+    content = ProfessionalBackgroundResponse(**result)
+    return JSONResponse(status_code=status.HTTP_200_OK, content=content)
+
+@router.patch("/user/sign-agreement", tags = ["user-details"])
+async def sign_agreement(user_id : UUID, agreement_signed: bool) -> dict: 
+
+    result = dummy_service.contribution_agreement(
+        user_id=user_id,
+        agreement_signed=agreement_signed
+    )
+
+    content = result 
+    return JSONResponse(status_code=status.HTTP_200_OK, content= content) 
+
+@router.patch("/user/upload-photo", tags = ["user-details"]) 
+async def upload_photo(user_id : UUID, data: PhotoUploadRequest) -> PhotoUploadResponse: 
+    
+    result = dummy_service.upload_photograph(
+        user_id = user_id,
+        file = data.image_file
+    ) 
+
+    content = PhotoUploadResponse(**result) 
+    return JSONResponse(status_code=status.HTTP_200_OK, content=content) 
 

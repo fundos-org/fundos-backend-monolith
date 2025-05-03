@@ -1,5 +1,7 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional, Dict
+from uuid import UUID
+from fastapi import UploadFile
 
 class AadhaarRequest(BaseModel):
     unique_id: str
@@ -82,10 +84,15 @@ class OnBoardingResponse(BaseModel):
     pass 
 
 class UserDetailsRequest(BaseModel):
-    pass 
+    user_id: UUID
+    first_name: str
+    last_name: str 
 
 class UserDetailsResponse(BaseModel): 
-    pass 
+    message: str
+    user_id: UUID
+    first_name: str
+    last_name: str  
 
 class EmailDetailsRequest(BaseModel):
     email: EmailStr
@@ -100,13 +107,27 @@ class InvestorTypeRequest(BaseModel):
 class InvestorTypeResponse(BaseModel):
     pass 
 
+class ProfessionalBackgroundRequest(BaseModel): 
+    occupation: str
+    income_source: str
+    annual_income: str
+    capital_commitment: float
+ 
+
+class ProfessionalBackgroundResponse(BaseModel): 
+    user_id: UUID
+    message: str
+    pass 
+
+class PhotoUploadRequest(BaseModel):
+    image: UploadFile
+    expiration: int | None = 3600 
 
 
-
-
-
-
-
+class PhotoUploadResponse(BaseModel):
+    message: str
+    user_id: UUID
+ 
 
 
 class KYCCreate(BaseModel):
