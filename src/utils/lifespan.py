@@ -16,6 +16,6 @@ async def lifespan(app: FastAPI):
     db_instance = await init_db()  # Initialize the database
     logger.info(db_instance)
     yield
-    engine.dispose() # Close the session 
+    await engine.dispose() # Close the session 
 
 

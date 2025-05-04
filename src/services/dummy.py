@@ -1,11 +1,13 @@
 from fastapi import HTTPException
 from fastapi import UploadFile
+from sqlalchemy.ext.asyncio import AsyncSession
 from src.logging.logging_setup import get_logger # assuming you have a logger setup
 from pydantic import EmailStr
 from src.models.user import User, investorType
-from src.utils.dependencies import get_user, get_session
+from src.utils.dependencies import get_user
 from uuid import UUID
 from src.services.s3 import S3Service
+from typing import Dict, Any
 
 logger = get_logger(__name__) 
 
@@ -15,15 +17,20 @@ class DummyService:
     def __init__(self):
         self.bucket_name = ""
         self.folder_prefix = ""
-        self.session = get_session
   
-    async def verify_invitation_code(invitation_code: str): 
+    async def verify_invitation_code(self, invitation_code: str, session: AsyncSession) -> Dict[str, Any]:
 
         try: 
             if invitation_code == "fundos": 
+                user = User(invitation_code=invitation_code, onboarding_status= "Invitation_verified")
+                session.add(user)
+                await session.commit()
+                await session.refresh(user) 
+
                 return {
-                    "success": True, 
-                } 
+                    "success": True,
+                    "user_id": user.id
+                }
             
             else: 
                 return {
@@ -32,7 +39,6 @@ class DummyService:
         except Exception as e: 
             logger.error(f"Request failed: {e}")
             raise HTTPException(status_code=500, detail="Internal request error")
-
 
     async def send_phone_otp(self, phone_num: str) -> dict:
 

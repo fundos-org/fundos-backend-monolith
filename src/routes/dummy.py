@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from starlette import status
 from pydantic import BaseModel 
@@ -6,7 +6,7 @@ from uuid import UUID
 from src.db.session import get_session 
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
-from src.models.user import User, investorType 
+from src.models.user import investorType 
 from src.schemas.kyc import PhoneNumRequest, PhoneNumResponse, UserDetailsRequest, UserDetailsResponse, ProfessionalBackgroundRequest, ProfessionalBackgroundResponse, PhotoUploadRequest, PhotoUploadResponse
 from src.services.dummy import DummyService
 
@@ -27,18 +27,14 @@ class UserOnboardingStartResponse(BaseModel):
 @router.post("/invitation/validate")
 async def validate_invitation(data: UserOnboardingStartRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> UserOnboardingStartResponse:
     
-    result = dummy_service.verify_invitation_code(
+    result: dict = await dummy_service.verify_invitation_code(
         invitation_code = data.invitation_code,
+        session=session
     ) 
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Invalid invitation code")
 
-    if result.success :  
-        user = User(invitation_code=data.invitation_code, onboarding_status= "Invitation_verified")
-        session.add(user)
-        session.commit()
-        session.refresh(user) 
-
-    content = UserOnboardingStartResponse(user_id=user.id, message="new user added")
-    return JSONResponse(status_code=status.HTTP_201_CREATED, content= content) 
+    return UserOnboardingStartResponse(user_id=result["user_id"], message="new user added")
 
 @router.patch('/phone/otp/send')
 async def send_phone_otp(onboarding_details: PhoneNumRequest) -> PhoneNumResponse :
