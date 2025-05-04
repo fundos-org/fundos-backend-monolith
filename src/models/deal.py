@@ -27,7 +27,7 @@ class InstrumentType(str, Enum):
 
 class Deal(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    fund_manager_id: int = Field(foreign_key="user.id")
+    fund_manager_id: UUID = Field(foreign_key="user.id")
     title: str
     description: str
     company_name: Optional[str]

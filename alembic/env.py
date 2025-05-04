@@ -1,4 +1,5 @@
 from logging.config import fileConfig
+import os
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
@@ -41,6 +42,13 @@ def run_migrations_offline() -> None:
     script output.
 
     """
+
+    db_url = os.getenv("DB_URL")
+    if not db_url:
+        raise ValueError("DATABASE_URL environment variable is not set") 
+
+    config.set_main_option("sqlalchemy.url", db_url)
+
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
@@ -60,6 +68,12 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    db_url = os.getenv("DB_URL")
+    if not db_url:
+        raise ValueError("DB_URL environment variable is not set")
+
+    config.set_main_option("sqlalchemy.url", db_url)
+    url = config.get_main_option("sqlalchemy.url")
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
@@ -68,7 +82,9 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            url = url,
+            connection=connection, 
+            target_metadata=target_metadata
         )
 
         with context.begin_transaction():

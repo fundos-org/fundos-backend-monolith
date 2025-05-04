@@ -7,7 +7,6 @@ from src.routes.kyc import router as kycRouter
 from src.routes.deal import router as dealsRouter 
 from src.routes.dummy import router as dummyRouter
 from src.routes.onboarding import router as onBoardingRouter
-from src.middlewares.request_logger import request_logging_middleware
 from src.utils.lifespan import lifespan
 from src.middlewares.exception_handlers import (
     general_exception_handler,
@@ -23,8 +22,9 @@ api_prefix_v0 = "/api/v0/test"
 
 app = FastAPI(lifespan=lifespan) 
 
+# from src.middlewares.request_logger import request_logging_middleware
 # Register the middleware using FastAPI's .middleware() method
-app.middleware("http")(request_logging_middleware) 
+# app.middleware("http")(request_logging_middleware) 
 
 # adding exception handling 
 app.add_exception_handler(Exception, general_exception_handler)

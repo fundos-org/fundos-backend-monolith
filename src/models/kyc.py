@@ -1,13 +1,13 @@
 from sqlmodel import SQLModel, Field
 from typing import Optional
 from datetime import datetime, timezone
-import uuid
+from uuid import UUID, uuid4
 # from enum import Enum 
 from .user import KycStatus
 
 class KYC(SQLModel, table=True):
-    id: uuid.UUID = Field(primary_key=True, default_factory=uuid.uuid4())
-    user_id: uuid.UUID = Field(foreign_key="user.id")
+    id: UUID = Field(primary_key=True, default_factory=uuid4)
+    user_id: UUID = Field(foreign_key="user.id")
     aadhaar_number: Optional[str]  # Encrypted
     pan_number: Optional[str]  # Encrypted
     bank_account_number: Optional[str]  # Encrypted

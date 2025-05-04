@@ -4,6 +4,22 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///db.sqlite")
+def get_env(name: str) -> str:
+    value = os.getenv(name)
+    if not value:
+        raise ValueError(f"Missing required environment variable: {name}")
+    return value
 
-engine = create_async_engine(DATABASE_URL, echo=False, future=True)
+USER = get_env("user")
+PASSWORD = get_env("password")
+HOST = get_env("host")
+PORT = get_env("port")
+DBNAME = get_env("dbname")
+
+DATABASE_URL = f"postgresql+asyncpg://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}"
+
+async_engine = create_async_engine(
+    url = DATABASE_URL, 
+    echo=False, 
+    future=True
+)

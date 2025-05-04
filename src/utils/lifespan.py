@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from src.db import init_db
 from src.logging.logging_setup import get_logger
-from src.db.engine import engine
+from src.db.engine import async_engine
 
 logger = get_logger(__name__)
 
@@ -16,6 +16,6 @@ async def lifespan(app: FastAPI):
     db_instance = await init_db()  # Initialize the database
     logger.info(db_instance)
     yield
-    await engine.dispose() # Close the session 
+    await async_engine.dispose() # Close the session 
 
 

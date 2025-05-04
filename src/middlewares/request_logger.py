@@ -1,6 +1,7 @@
 from fastapi import Request
 import time
 import json
+import pprint
 
 from src.logging.logging_setup import get_logger  # import your own get_logger
 
@@ -38,14 +39,13 @@ async def request_logging_middleware(request: Request, call_next):
         response = await call_next(request)
         process_time = (time.time() - start_time) * 1000
 
-        logger.info(
-            {
-                "event": "request",
-                "request": request_info,
-                "response_status": response.status_code,
-                "process_time_ms": f"{process_time:.2f}",
-            }
-        )
+        logger.info(pprint.pformat({
+            "event": "request",
+            "request": request_info,
+            "response_status": response.status_code,
+            "process_time_ms": f"{process_time:.2f}",
+        }, indent=2, width=120
+        ))
         return response
 
     except Exception as exc:

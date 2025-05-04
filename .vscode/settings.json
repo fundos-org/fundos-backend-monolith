@@ -3,6 +3,7 @@
     "python.defaultInterpreterPath": ".venv/bin/python",
     "cSpell.words": [
       "autoflush",
+      "dbname",
       "DIGITAP",
       "dotenv",
       "fundos",

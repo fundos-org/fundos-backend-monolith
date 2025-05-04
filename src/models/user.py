@@ -1,6 +1,6 @@
 from sqlmodel import SQLModel, Field
 from typing import Optional
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import Enum
 from uuid import uuid4, UUID
 
@@ -42,13 +42,14 @@ class User(SQLModel, table=True):
     address: Optional[str] = Field(default=None) 
 
     # professional info
-    occupation: str = Field() 
-    income_source: float = Field()
-    annual_income: float = Field()
-    capital_commitment: float = Field() 
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: Optional[datetime]
-    fund_manager_id: Optional[int] = Field(foreign_key="user.id")  # For investors/founders under a fund manager
+    # professional info
+    occupation: Optional[str] = Field(default=None, nullable=True)
+    income_source: Optional[float] = Field(default=None, nullable=True)
+    annual_income: Optional[float] = Field(default=None, nullable=True)
+    capital_commitment: Optional[float] = Field(default=None, nullable=True)
+    created_at: datetime = Field(default_factory=lambda: datetime.now().replace(tzinfo=None))
+    updated_at: Optional[datetime] = Field(default=None, nullable=True)
+    fund_manager_id: Optional[UUID] = Field(foreign_key="user.id")  # For investors/founders under a fund manager
     kyc_status: KycStatus = Field(default=KycStatus.PENDING)  # pending, verified, rejected
     profile_image_url: Optional[str] = Field()
     # deals: List[uuid.UUID] = Field(foreign_key="deal.id")

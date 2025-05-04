@@ -4,12 +4,17 @@ import sys
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
 from pythonjsonlogger import jsonlogger
+from colorlog import ColoredFormatter
+import pprint
 
 LOGS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
 os.makedirs(LOGS_DIR, exist_ok=True)
 
 class CustomFormatter(logging.Formatter):
     def format(self, record):
+        # Pretty-print any dict message
+        if isinstance(record.msg, dict):
+            record.msg = pprint.pformat(record.msg, indent=2, width=120)
         log_fmt = "%(asctime)s | %(levelname)s | %(name)s | %(filename)s:%(lineno)d | %(message)s"
         formatter = logging.Formatter(log_fmt, datefmt='%Y-%m-%d %H:%M:%S')
         return formatter.format(record)
@@ -44,9 +49,22 @@ def get_logger(module_name: str, env: str = "dev") -> logging.Logger:
     else:
         console_handler.setLevel(logging.DEBUG)
         file_handler.setLevel(logging.INFO)
-        formatter = CustomFormatter()
 
-    console_handler.setFormatter(formatter)
+        color_formatter = ColoredFormatter(
+            "%(log_color)s%(asctime)s | %(levelname)s | %(name)s | %(filename)s:%(lineno)d | %(message)s",
+            datefmt='%Y-%m-%d %H:%M:%S',
+            log_colors={
+                "DEBUG":    "cyan",
+                "INFO":     "green",
+                "WARNING":  "yellow",
+                "ERROR":    "red",
+                "CRITICAL": "bold_red",
+            }
+        )
+        formatter = CustomFormatter()  # for file_handler only
+
+        console_handler.setFormatter(color_formatter)
+
     file_handler.setFormatter(formatter)
 
     logger.addHandler(console_handler)
