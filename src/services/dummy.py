@@ -131,7 +131,7 @@ class DummyService:
     async def declaration_accepted( self, user_id: str, declaration_accepted: bool, session: AsyncSession) -> any : 
 
         try: 
-            user: User = get_user(user_id=user_id, session=session) 
+            user = await get_user(user_id=user_id, session=session) 
 
             user.declaration_accepted = declaration_accepted
 
@@ -150,7 +150,7 @@ class DummyService:
     async def set_professional_background( self, user_id: str, occupation: str, income_source: float, annual_income: float, capital_commitment: float, session: AsyncSession) -> any : 
 
         try: 
-            user: User = get_user(user_id=user_id) 
+            user = await get_user(user_id=user_id, session=session) 
 
             user.income_source = income_source
             user.annual_income = annual_income
@@ -166,16 +166,15 @@ class DummyService:
             }
 
         except Exception as e:
-            await self.session.rollback()
+            await session.rollback()
             raise HTTPException(status_code=500, detail=f"Failed to update user details: {str(e)}")
         
     async def contribution_agreement(self, user_id: UUID, agreement_signed: bool, session: AsyncSession ) -> dict :
 
         try: 
-            user: User = get_user(user_id=user_id) 
+            user = await get_user(user_id=user_id, session=session) 
 
             user.agreement_signed = agreement_signed
-
 
             await session.commit()
             await session.refresh(user) 
@@ -186,7 +185,7 @@ class DummyService:
             }
 
         except Exception as e:
-            await self.session.rollback()
+            await session.rollback()
             raise HTTPException(status_code=500, detail=f"Failed to update user details: {str(e)}")
         
     async def upload_photograph(self, user_id: UUID, file: UploadFile, session: AsyncSession ) -> dict :

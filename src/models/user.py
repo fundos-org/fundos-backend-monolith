@@ -42,11 +42,11 @@ class User(SQLModel, table=True):
     address: Optional[str] = Field(default=None) 
 
     # professional info
-    # professional info
     occupation: Optional[str] = Field(default=None, nullable=True)
-    income_source: Optional[float] = Field(default=None, nullable=True)
+    income_source: Optional[str] = Field(default=None, nullable=True)
     annual_income: Optional[float] = Field(default=None, nullable=True)
     capital_commitment: Optional[float] = Field(default=None, nullable=True)
+    agreement_signed: bool = Field(default=True, nullable=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now().replace(tzinfo=None))
     updated_at: Optional[datetime] = Field(default=None, nullable=True)
     fund_manager_id: Optional[UUID] = Field(foreign_key="user.id")  # For investors/founders under a fund manager

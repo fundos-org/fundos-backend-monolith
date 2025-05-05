@@ -6,7 +6,7 @@ from uuid import UUID
 from src.db.session import get_session 
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
-from src.schemas.kyc import AgreementRequest, AgreementResponse, DeclarationRequest, DeclarationResponse, ChooseInvestorRequest, ChooseInvestorResponse, PhoneNumSendOtpRequest, EmailSendOtpRequest, EmailSendOtpResponse, PhoneNumSendOtpResponse, PhoneNumVerifyOtpRequest, PhoneNumVerifyOtpResponse, UserDetailsRequest, UserDetailsResponse, ProfessionalBackgroundRequest, ProfessionalBackgroundResponse, PhotoUploadRequest, PhotoUploadResponse
+from src.schemas.kyc import EmailVerifyOtpRequest, EmailVerifyOtpResponse, AgreementRequest, AgreementResponse, DeclarationRequest, DeclarationResponse, ChooseInvestorRequest, ChooseInvestorResponse, PhoneNumSendOtpRequest, EmailSendOtpRequest, EmailSendOtpResponse, PhoneNumSendOtpResponse, PhoneNumVerifyOtpRequest, PhoneNumVerifyOtpResponse, UserDetailsRequest, UserDetailsResponse, ProfessionalBackgroundRequest, ProfessionalBackgroundResponse, PhotoUploadRequest, PhotoUploadResponse
 from src.services.dummy import DummyService
 
 router = APIRouter() 
@@ -70,25 +70,22 @@ async def send_email_otp(onboarding_details: EmailSendOtpRequest) -> EmailSendOt
     result = await dummy_service.send_email_otp(
         email=onboarding_details.email
     )
-    content = EmailSendOtpResponse(**result) 
-    return JSONResponse(status_code=status.HTTP_200_OK, content= content) 
+    return EmailSendOtpResponse(**result)  
 
 @router.patch('/email/otp/verify')
-async def verify_email_otp(data: dict) -> dict :
+async def verify_email_otp(data: EmailVerifyOtpRequest) -> EmailVerifyOtpResponse :
 
     result = await dummy_service.verify_email_otp(
         otp= data.otp
     )
-
-    content = dict(**result) 
-    return JSONResponse(status_code= status.HTTP_200_OK, content=content) 
+    return EmailVerifyOtpResponse(**result)
 
 @router.patch("/user/choose-investor-type")
 async def choose_investor_type(data: ChooseInvestorRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> ChooseInvestorResponse :
 
     result = await dummy_service.choose_investor_type(
-        user_id=data.investor_type,
-        investor_type=data,
+        user_id=data.user_id,
+        investor_type=data.investor_type,
         session=session
     ) 
     
@@ -97,7 +94,7 @@ async def choose_investor_type(data: ChooseInvestorRequest, session: Annotated[A
 @router.patch("/user/declaration")
 async def declaration(data: DeclarationRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> DeclarationResponse: 
 
-    result = dummy_service.declaration_accepted(
+    result = await dummy_service.declaration_accepted(
         user_id=data.user_id, 
         declaration_accepted=data.declaration_accepted, 
         session=session
@@ -108,7 +105,7 @@ async def declaration(data: DeclarationRequest, session: Annotated[AsyncSession,
 @router.patch("/user/professional-background") 
 async def professional_back(data: ProfessionalBackgroundRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> ProfessionalBackgroundResponse: 
     
-    result = dummy_service.set_professional_background(
+    result = await dummy_service.set_professional_background(
         user_id = data.user_id,
         occupation = data.income_source,
         income_source = data.income_source,
@@ -122,7 +119,7 @@ async def professional_back(data: ProfessionalBackgroundRequest, session: Annota
 @router.patch("/user/sign-agreement")
 async def sign_agreement(data: AgreementRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> AgreementResponse: 
 
-    result = dummy_service.contribution_agreement(
+    result = await dummy_service.contribution_agreement(
         user_id=data.user_id,
         agreement_signed=data.agreement_signed,
         session=session

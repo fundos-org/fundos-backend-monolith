@@ -2,6 +2,7 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional, Dict
 from uuid import UUID
 from fastapi import UploadFile
+from src.models.user import investorType
 
 class AadhaarRequest(BaseModel):
     unique_id: str
@@ -89,6 +90,13 @@ class EmailSendOtpResponse(BaseModel):
     message: str
     otp: str
 
+class EmailVerifyOtpRequest(BaseModel):
+    otp: str 
+
+class EmailVerifyOtpResponse(BaseModel):
+    message: str 
+    success: bool
+
 class OnBoardingRequest(BaseModel):
     pass 
 
@@ -107,7 +115,7 @@ class UserDetailsResponse(BaseModel):
     last_name: str  
 
 class ChooseInvestorRequest(BaseModel):
-    investor_type: str
+    investor_type: investorType
     user_id: UUID
 
 class ChooseInvestorResponse(BaseModel):
@@ -125,7 +133,7 @@ class DeclarationResponse(BaseModel):
 class ProfessionalBackgroundRequest(BaseModel): 
     occupation: str
     income_source: str
-    annual_income: str
+    annual_income: float
     capital_commitment: float
     user_id: UUID
  
@@ -147,15 +155,11 @@ class PhotoUploadResponse(BaseModel):
 
 class AgreementRequest(BaseModel):
     agreement_signed: bool
-    user_id: UUID
-    pass 
+    user_id: UUID 
 
 class AgreementResponse(BaseModel):
     message: str
-    user_id: str 
-
- 
-
+    user_id: UUID 
 
 class KYCCreate(BaseModel):
     aadhaar_number: str
