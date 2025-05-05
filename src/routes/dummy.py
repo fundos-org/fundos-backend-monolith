@@ -6,8 +6,7 @@ from uuid import UUID
 from src.db.session import get_session 
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
-from src.models.user import investorType 
-from src.schemas.kyc import PhoneNumRequest, PhoneNumResponse, UserDetailsRequest, UserDetailsResponse, ProfessionalBackgroundRequest, ProfessionalBackgroundResponse, PhotoUploadRequest, PhotoUploadResponse
+from src.schemas.kyc import AgreementRequest, AgreementResponse, DeclarationRequest, DeclarationResponse, ChooseInvestorRequest, ChooseInvestorResponse, PhoneNumSendOtpRequest, EmailSendOtpRequest, EmailSendOtpResponse, PhoneNumSendOtpResponse, PhoneNumVerifyOtpRequest, PhoneNumVerifyOtpResponse, UserDetailsRequest, UserDetailsResponse, ProfessionalBackgroundRequest, ProfessionalBackgroundResponse, PhotoUploadRequest, PhotoUploadResponse
 from src.services.dummy import DummyService
 
 router = APIRouter() 
@@ -19,7 +18,6 @@ dummy_service = DummyService()
 class UserOnboardingStartRequest(BaseModel):
     invitation_code: str
     
-
 class UserOnboardingStartResponse(BaseModel):
     user_id: UUID
     message: str
@@ -37,17 +35,15 @@ async def validate_invitation(data: UserOnboardingStartRequest, session: Annotat
     return UserOnboardingStartResponse(user_id=result["user_id"], message="new user added")
 
 @router.patch('/phone/otp/send')
-async def send_phone_otp(onboarding_details: PhoneNumRequest) -> PhoneNumResponse :
+async def send_phone_otp(onboarding_details: PhoneNumSendOtpRequest) -> PhoneNumSendOtpResponse :
     
     result = await dummy_service.send_phone_otp(
-        phone_number=onboarding_details.phone_number,
-        otp=onboarding_details.phone_number
+        phone_number=onboarding_details.phone_number
     )
-    content = PhoneNumResponse(**result) 
-    return JSONResponse(status_code=status.HTTP_200_OK, content= content) 
-
+    return PhoneNumSendOtpResponse(**result) 
+    
 @router.patch('/phone/otp/verify')
-async def verify_phone_otp(data: dict) -> dict :
+async def verify_phone_otp(data: PhoneNumVerifyOtpRequest) -> PhoneNumVerifyOtpResponse :
 
     result = await dummy_service.verify_phone_otp(
         otp_code= data.otp
@@ -57,90 +53,90 @@ async def verify_phone_otp(data: dict) -> dict :
     return JSONResponse(status_code= status.HTTP_200_OK, content=content) 
 
 @router.patch("/user/details")
-async def store_user_details(user_details: UserDetailsRequest) -> UserDetailsResponse:
+async def store_user_details(user_details: UserDetailsRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> UserDetailsResponse:
 
     result = await dummy_service.set_user_details(
         user_id = user_details.user_id,
         first_name= user_details.first_name,
         last_name=user_details.last_name,
+        session=session
     )
 
-    content = UserDetailsResponse(**result)
-    return JSONResponse(status_code=status.HTTP_200_OK, content = content)
+    return UserDetailsResponse(**result) 
 
 @router.patch('/email/otp/send')
-async def send_email_otp(onboarding_details: PhoneNumRequest) -> PhoneNumResponse :
+async def send_email_otp(onboarding_details: EmailSendOtpRequest) -> EmailSendOtpResponse :
     
     result = await dummy_service.send_email_otp(
-        phone_number=onboarding_details.phone_number,
-        otp=onboarding_details.phone_number
+        email=onboarding_details.email
     )
-    content = PhoneNumResponse(**result) 
+    content = EmailSendOtpResponse(**result) 
     return JSONResponse(status_code=status.HTTP_200_OK, content= content) 
 
 @router.patch('/email/otp/verify')
 async def verify_email_otp(data: dict) -> dict :
 
     result = await dummy_service.verify_email_otp(
-        otp_code= data.otp
+        otp= data.otp
     )
 
     content = dict(**result) 
     return JSONResponse(status_code= status.HTTP_200_OK, content=content) 
 
 @router.patch("/user/choose-investor-type")
-async def choose_investor_type(user_id: str, data: investorType) -> dict :
+async def choose_investor_type(data: ChooseInvestorRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> ChooseInvestorResponse :
 
     result = await dummy_service.choose_investor_type(
-        user_id=user_id,
-        investor_type=data
+        user_id=data.investor_type,
+        investor_type=data,
+        session=session
     ) 
     
-    content = dict(**result) 
-    return JSONResponse(status_code= status.HTTP_200_OK, content=content) 
+    return ChooseInvestorResponse(**result)
 
 @router.patch("/user/declaration")
-async def declaration(user_id: str, declaration_accepted: bool) -> dict: 
+async def declaration(data: DeclarationRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> DeclarationResponse: 
 
     result = dummy_service.declaration_accepted(
-        user_id=user_id, 
-        declaration_accepted=declaration_accepted
+        user_id=data.user_id, 
+        declaration_accepted=data.declaration_accepted, 
+        session=session
     )
 
-    content = result 
-    return JSONResponse(status_code=status.HTTP_200_OK, content=content)
+    return DeclarationResponse(**result) 
 
 @router.patch("/user/professional-background") 
-async def professional_back(user_id: str, data: ProfessionalBackgroundRequest) -> ProfessionalBackgroundResponse: 
+async def professional_back(data: ProfessionalBackgroundRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> ProfessionalBackgroundResponse: 
     
     result = dummy_service.set_professional_background(
-        user_id = user_id,
+        user_id = data.user_id,
         occupation = data.income_source,
         income_source = data.income_source,
         annual_income = data.annual_income,
-        capital_commitment = data.capital_commitment
+        capital_commitment = data.capital_commitment,
+        session=session
     )
 
-    content = ProfessionalBackgroundResponse(**result)
-    return JSONResponse(status_code=status.HTTP_200_OK, content=content)
+    return ProfessionalBackgroundResponse(**result)
 
 @router.patch("/user/sign-agreement")
-async def sign_agreement(user_id : UUID, agreement_signed: bool) -> dict: 
+async def sign_agreement(data: AgreementRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> AgreementResponse: 
 
     result = dummy_service.contribution_agreement(
-        user_id=user_id,
-        agreement_signed=agreement_signed
+        user_id=data.user_id,
+        agreement_signed=data.agreement_signed,
+        session=session
     )
 
-    content = result 
-    return JSONResponse(status_code=status.HTTP_200_OK, content= content) 
+    return AgreementResponse(**result)
 
 @router.patch("/user/upload-photo") 
-async def upload_photo(user_id : UUID, data: PhotoUploadRequest) -> PhotoUploadResponse: 
+async def upload_photo(data: PhotoUploadRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> PhotoUploadResponse: 
     
     result = dummy_service.upload_photograph(
-        user_id = user_id,
-        file = data.image_file
+        user_id = data.user_id,
+        file = data.image, 
+        session=session
     ) 
 
     content = PhotoUploadResponse(**result) 

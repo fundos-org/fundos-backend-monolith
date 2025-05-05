@@ -58,15 +58,20 @@ class PanDetailsResponse(BaseModel):
     dob: Optional[str] = None
     seeding_status: Optional[str] = None
 
-class PhoneNumRequest(BaseModel):
+class PhoneNumSendOtpRequest(BaseModel):
     phone_number: str
     alias: Optional[str] = "UserVerification"
     channel: Optional[str] = "sms"
 
-class PhoneNumResponse(BaseModel):
+class PhoneNumSendOtpResponse(BaseModel):
     message: str
-    verification_uuid: str
+    otp: str
 
+class PhoneNumVerifyOtpRequest(BaseModel):
+    otp: str
+
+class PhoneNumVerifyOtpResponse(BaseModel):
+    message: str
 
 class OTPVerificationRequest(BaseModel):
     session_uuid: str
@@ -76,6 +81,13 @@ class OTPVerificationResponse(BaseModel):
     message: str
     session_uuid: str
     api_id: str
+
+class EmailSendOtpRequest(BaseModel):
+    email: EmailStr
+
+class EmailSendOtpResponse(BaseModel):
+    message: str
+    otp: str
 
 class OnBoardingRequest(BaseModel):
     pass 
@@ -94,39 +106,54 @@ class UserDetailsResponse(BaseModel):
     first_name: str
     last_name: str  
 
-class EmailDetailsRequest(BaseModel):
-    email: EmailStr
-    pass 
+class ChooseInvestorRequest(BaseModel):
+    investor_type: str
+    user_id: UUID
 
-class EmailDetailsResponse(BaseModel):
-    pass 
+class ChooseInvestorResponse(BaseModel):
+    message: str
+    user_id: UUID 
 
-class InvestorTypeRequest(BaseModel):
-    pass 
+class DeclarationRequest(BaseModel):
+    declaration_accepted: bool
+    user_id: UUID
 
-class InvestorTypeResponse(BaseModel):
-    pass 
+class DeclarationResponse(BaseModel): 
+    message: str
+    user_id: UUID
 
 class ProfessionalBackgroundRequest(BaseModel): 
     occupation: str
     income_source: str
     annual_income: str
     capital_commitment: float
+    user_id: UUID
  
 
 class ProfessionalBackgroundResponse(BaseModel): 
+    message: str 
     user_id: UUID
-    message: str
-    pass 
+    
 
 class PhotoUploadRequest(BaseModel):
     image: UploadFile
     expiration: int | None = 3600 
+    user_id: UUID
 
 
 class PhotoUploadResponse(BaseModel):
     message: str
     user_id: UUID
+
+class AgreementRequest(BaseModel):
+    agreement_signed: bool
+    user_id: UUID
+    pass 
+
+class AgreementResponse(BaseModel):
+    message: str
+    user_id: str 
+
  
 
 

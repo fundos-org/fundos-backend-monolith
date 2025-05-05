@@ -40,11 +40,11 @@ class DummyService:
             logger.error(f"Request failed: {e}")
             raise HTTPException(status_code=500, detail="Internal request error")
 
-    async def send_phone_otp(self, phone_num: str) -> dict:
+    async def send_phone_otp(self, phone_number: str) -> dict:
 
         try:
             return {
-                "message" : "otp sent", 
+                "message" : f"otp sent to: {phone_number}", 
                 "otp" : "123456" 
             }  
 
@@ -65,16 +65,15 @@ class DummyService:
             logger.error(f"Request failed: {e}")
             raise HTTPException(status_code=500, detail="Internal request error") 
         
-    async def set_user_details(self, user_id: str, first_name: str, last_name: str) -> dict:
+    async def set_user_details(self, user_id: UUID, first_name: str, last_name: str, session: AsyncSession) -> dict:
         
         try:
-            user: User = get_user(user_id=user_id)
+            user = await get_user(user_id=user_id, session=session)
             user.first_name = first_name
             user.last_name = last_name
 
-            await self.session.add(user)
-            await self.session.commit()
-            await self.session.refresh(user)
+            await session.commit()
+            await session.refresh(user)
 
             return {
                 "message": "User details updated successfully",
@@ -83,14 +82,14 @@ class DummyService:
                 "last_name": user.last_name
             }
         except Exception as e:
-            await self.session.rollback()
+            await session.rollback()
             raise HTTPException(status_code=500, detail=f"Failed to update user details: {str(e)}")
         
     async def send_email_otp(self, email: EmailStr) -> dict:
 
         try:
             return {
-                "message" : "otp sent", 
+                "message" : f"otp sent to: {email}", 
                 "otp" : "123456" 
             }  
 
@@ -98,10 +97,10 @@ class DummyService:
             logger.error(f"Request failed: {e}")
             raise HTTPException(status_code=500, detail="Internal request error")
         
-    async def verify_email_otp(self, otp_code: str) -> dict: 
+    async def verify_email_otp(self, otp: str) -> dict: 
 
         try: 
-            if otp_code == "123456" :
+            if otp == "123456" :
                 return {
                     "message" : "otp code matched",
                     "success" : True
@@ -111,15 +110,14 @@ class DummyService:
             logger.error(f"Request failed: {e}")
             raise HTTPException(status_code=500, detail="Internal request error") 
         
-    async def choose_investor_type(self, user_id, investor_type:investorType) -> any :
+    async def choose_investor_type(self, user_id: UUID, investor_type:investorType, session: AsyncSession) -> any :
         
         try:
-            user: User = get_user(user_id= user_id)
+            user = await get_user(user_id= user_id, session=session)
             user.investor_type = investor_type
 
-            await self.session.add(user)
-            await self.session.commit()
-            await self.session.refresh(user)
+            await session.commit()
+            await session.refresh(user)
 
             return {
                 "message": "Investor Type updated successfully",
@@ -127,30 +125,29 @@ class DummyService:
             }
 
         except Exception as e:
-            await self.session.rollback()
+            await session.rollback()
             raise HTTPException(status_code=500, detail=f"Failed to update user details: {str(e)}")
         
-    async def declaration_accepted( self, user_id: str, declaration_accepted: bool) -> any : 
+    async def declaration_accepted( self, user_id: str, declaration_accepted: bool, session: AsyncSession) -> any : 
 
         try: 
-            user: User = get_user(user_id=user_id) 
+            user: User = get_user(user_id=user_id, session=session) 
 
             user.declaration_accepted = declaration_accepted
-            await self.session.add(user)
-            await self.session.commit()
-            await self.session.refresh(user) 
+
+            await session.commit()
+            await session.refresh(user) 
 
             return {
                 "message": "User details updated successfully",
                 "user_id": user.id,
-                "declaration_accepted": f"{declaration_accepted}",
             }
 
         except Exception as e:
-            await self.session.rollback()
+            await session.rollback()
             raise HTTPException(status_code=500, detail=f"Failed to update user details: {str(e)}")
         
-    async def set_professional_background( self, user_id: str, occupation: str, income_source: float, annual_income: float, capital_commitment: float) -> any : 
+    async def set_professional_background( self, user_id: str, occupation: str, income_source: float, annual_income: float, capital_commitment: float, session: AsyncSession) -> any : 
 
         try: 
             user: User = get_user(user_id=user_id) 
@@ -160,9 +157,8 @@ class DummyService:
             user.capital_commitment = capital_commitment
             user.occupation  = occupation 
 
-            await self.session.add(user)
-            await self.session.commit()
-            await self.session.refresh(user) 
+            await session.commit()
+            await session.refresh(user) 
 
             return {
                 "message": "User professional details updated successfully",
@@ -173,16 +169,16 @@ class DummyService:
             await self.session.rollback()
             raise HTTPException(status_code=500, detail=f"Failed to update user details: {str(e)}")
         
-    async def contribution_agreement(self, user_id: UUID, agreement_signed: bool ) -> dict :
+    async def contribution_agreement(self, user_id: UUID, agreement_signed: bool, session: AsyncSession ) -> dict :
 
         try: 
             user: User = get_user(user_id=user_id) 
 
             user.agreement_signed = agreement_signed
 
-            await self.session.add(user)
-            await self.session.commit()
-            await self.session.refresh(user) 
+
+            await session.commit()
+            await session.refresh(user) 
 
             return {
                 "message": "User signed agreement ",
@@ -193,7 +189,7 @@ class DummyService:
             await self.session.rollback()
             raise HTTPException(status_code=500, detail=f"Failed to update user details: {str(e)}")
         
-    async def upload_photograph(self, user_id: UUID, file: UploadFile ) -> dict :
+    async def upload_photograph(self, user_id: UUID, file: UploadFile, session: AsyncSession ) -> dict :
 
         try: 
             user: User = get_user(user_id=user_id) 
@@ -205,9 +201,8 @@ class DummyService:
 
             user.profile_image_url = image_url
 
-            await self.session.add(user)
-            await self.session.commit()
-            await self.session.refresh(user) 
+            await session.commit()
+            await session.refresh(user) 
 
             return {
                 "message": "User image uploaded successfully ",
