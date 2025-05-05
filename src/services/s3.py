@@ -1,12 +1,12 @@
 import boto3
 from botocore.exceptions import ClientError
-from fastapi import UploadFile
-from fastapi.exceptions import HTTPException
+from fastapi import UploadFile, HTTPException
 from typing import Optional
-import logging
 from urllib.parse import urlparse
-from uuid import uuid4 
+from uuid import UUID
 from src.logging.logging_setup import get_logger
+import mimetypes
+from datetime import datetime
 
 logger = get_logger(__name__)
 
@@ -15,7 +15,7 @@ class S3Service:
         self.bucket_name = bucket_name
         self.s3_client = boto3.client("s3", region_name=region_name)
 
-    def upload_file(self, file: UploadFile, object_name: Optional[str] = None) -> str:
+    async def upload_file(self, file: UploadFile, object_name: Optional[str] = None) -> str:
         """
         Uploads a file to S3.
         :param file: UploadFile object from FastAPI
@@ -26,13 +26,19 @@ class S3Service:
             object_name = file.filename
 
         try:
-            self.s3_client.upload_fileobj(file.file, self.bucket_name, object_name)
+            await file.seek(0)  # Reset file pointer
+            self.s3_client.upload_fileobj(
+                file.file,
+                self.bucket_name,
+                object_name,
+                ExtraArgs={'ContentType': file.content_type}
+            )
         except ClientError as e:
-            logging.error(e)
-            raise e
+            logger.error(f"S3 upload failed: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to upload to S3")
         return object_name
 
-    def generate_presigned_url(self, object_name: str, expiration: int = 3600) -> str:
+    async def generate_presigned_url(self, object_name: str, expiration: int = 3600) -> str:
         """
         Generates a presigned URL to access the uploaded file.
         :param object_name: S3 object name
@@ -46,32 +52,50 @@ class S3Service:
                 ExpiresIn=expiration,
             )
         except ClientError as e:
-            logging.error(e)
-            raise e
+            logger.error(f"Failed to generate presigned URL: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to generate presigned URL")
         return response
-    
-    def upload_and_get_url(self, file: UploadFile, bucket_name: str, folder_prefix = str, expiration:int = 3600 ) -> str:
+
+    async def upload_and_get_url(self, object_id: UUID, file: UploadFile, bucket_name: str, folder_prefix: str, expiration: int = 3600) -> str:
+        """
+        Uploads a file to S3 and returns a presigned URL.
+        :param file: UploadFile object from FastAPI
+        :param bucket_name: S3 bucket name
+        :param folder_prefix: Folder prefix for the S3 object
+        :param expiration: Time in seconds for the presigned URL to remain valid
+        :return: Presigned URL as string
+        """
         try:
-            # Generate a unique object name
-            object_name = f"profiles/{uuid4()}_{file.filename}"
-            
+            # Generate unique object name
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            file_extension = mimetypes.guess_extension(file.content_type) or '.jpg'
+            object_name = f"{folder_prefix}{object_id}_{timestamp}{file_extension}"
+
             # Upload file to S3
-            self.s3_client.upload_fileobj(file.file, bucket_name, object_name)
-            
-            # Generate presigned URL for accessing the file
+            await file.seek(0)  # Reset file pointer
+            self.s3_client.upload_fileobj(
+                file.file,
+                bucket_name,
+                object_name,
+                ExtraArgs={'ContentType': file.content_type}
+            )
+
+            # Generate presigned URL
             url = self.s3_client.generate_presigned_url(
                 'get_object',
                 Params={'Bucket': bucket_name, 'Key': object_name},
-                ExpiresIn=3600
-            ) 
+                ExpiresIn=expiration
+            )
 
-            return url 
+            return url
         except ClientError as e:
-            logger.error(f"{e} while upload file {file.filename}")
-            raise HTTPException(status_code=500, detail=str(e))
-         
-    
-    def delete_file(self, file_uri: str) -> None:
+            logger.error(f"Failed to upload file {file.filename}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to upload to S3")
+        except Exception as e:
+            logger.error(f"Unexpected error uploading file {file.filename}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Internal server error")
+
+    async def delete_file(self, file_uri: str) -> None:
         """
         Deletes a file from S3 given its URI.
         :param file_uri: The full URI of the file in S3.
@@ -82,5 +106,5 @@ class S3Service:
         try:
             self.s3_client.delete_object(Bucket=self.bucket_name, Key=object_key)
         except ClientError as e:
-            logging.error(e)
-            raise e
+            logger.error(f"Failed to delete S3 object {object_key}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to delete from S3")

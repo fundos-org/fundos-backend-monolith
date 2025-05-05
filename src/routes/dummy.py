@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse
 from starlette import status
 from pydantic import BaseModel 
@@ -6,7 +6,12 @@ from uuid import UUID
 from src.db.session import get_session 
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
-from src.schemas.kyc import EmailVerifyOtpRequest, EmailVerifyOtpResponse, AgreementRequest, AgreementResponse, DeclarationRequest, DeclarationResponse, ChooseInvestorRequest, ChooseInvestorResponse, PhoneNumSendOtpRequest, EmailSendOtpRequest, EmailSendOtpResponse, PhoneNumSendOtpResponse, PhoneNumVerifyOtpRequest, PhoneNumVerifyOtpResponse, UserDetailsRequest, UserDetailsResponse, ProfessionalBackgroundRequest, ProfessionalBackgroundResponse, PhotoUploadRequest, PhotoUploadResponse
+from src.schemas.kyc import (EmailVerifyOtpRequest, EmailVerifyOtpResponse, AgreementRequest, AgreementResponse, 
+                            DeclarationRequest, DeclarationResponse, ChooseInvestorRequest, ChooseInvestorResponse, 
+                            PhoneNumSendOtpRequest, EmailSendOtpRequest, EmailSendOtpResponse, PhoneNumSendOtpResponse, 
+                            PhoneNumVerifyOtpRequest, PhoneNumVerifyOtpResponse, UserDetailsRequest, UserDetailsResponse, 
+                            ProfessionalBackgroundRequest, ProfessionalBackgroundResponse, PhotoUploadRequest, PhotoUploadResponse
+                            , OnBoardingResponse)
 from src.services.dummy import DummyService
 
 router = APIRouter() 
@@ -23,7 +28,7 @@ class UserOnboardingStartResponse(BaseModel):
     message: str
 
 @router.post("/invitation/validate")
-async def validate_invitation(data: UserOnboardingStartRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> UserOnboardingStartResponse:
+async def validate_invitation(data: UserOnboardingStartRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> OnBoardingResponse:
     
     result: dict = await dummy_service.verify_invitation_code(
         invitation_code = data.invitation_code,
@@ -32,7 +37,7 @@ async def validate_invitation(data: UserOnboardingStartRequest, session: Annotat
     if not result["success"]:
         raise HTTPException(status_code=400, detail="Invalid invitation code")
 
-    return UserOnboardingStartResponse(user_id=result["user_id"], message="new user added")
+    return OnBoardingResponse(user_id=result["user_id"], message="new user added")
 
 @router.patch('/phone/otp/send')
 async def send_phone_otp(onboarding_details: PhoneNumSendOtpRequest) -> PhoneNumSendOtpResponse :
@@ -46,7 +51,8 @@ async def send_phone_otp(onboarding_details: PhoneNumSendOtpRequest) -> PhoneNum
 async def verify_phone_otp(data: PhoneNumVerifyOtpRequest) -> PhoneNumVerifyOtpResponse :
 
     result = await dummy_service.verify_phone_otp(
-        otp_code= data.otp
+        otp_code= data.otp, 
+        phone_number=data.phone_number
     )
 
     content = dict(**result) 
@@ -127,15 +133,16 @@ async def sign_agreement(data: AgreementRequest, session: Annotated[AsyncSession
 
     return AgreementResponse(**result)
 
-@router.patch("/user/upload-photo") 
-async def upload_photo(data: PhotoUploadRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> PhotoUploadResponse: 
-    
-    result = dummy_service.upload_photograph(
-        user_id = data.user_id,
-        file = data.image, 
-        session=session
-    ) 
-
-    content = PhotoUploadResponse(**result) 
-    return JSONResponse(status_code=status.HTTP_200_OK, content=content) 
-
+@router.post("/user/upload-photo")
+async def upload_photo( session: Annotated[AsyncSession, Depends(get_session)], data: PhotoUploadRequest = Depends(), image: UploadFile = File(...)) -> PhotoUploadResponse:
+    try:
+        result = await dummy_service.upload_photograph(
+            user_id=data.user_id,
+            file=image,
+            session=session
+        )
+        return PhotoUploadResponse(**result)
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to upload photo: {str(e)}")

@@ -1,51 +1,267 @@
-import datetime
-from fastapi import HTTPException
+from datetime import datetime
+from fastapi import HTTPException, UploadFile
+from sqlalchemy.ext.asyncio import AsyncSession
+from src.logging.logging_setup import get_logger
 from sqlmodel import UUID
-from sqlmodel.ext.asyncio.session import AsyncSession
-from src.models.deal import Deal
-from src.schemas.deal import DealCreateRequest
+from src.models.deal import Deal, DealStatus
 from src.services.s3 import S3Service
-from src.utils.dependencies import get_session
+
+logger = get_logger(__name__)
 
 class DealService:
     def __init__(self):
-        self.session = get_session()
+        self.bucket_name = "fundos-dev-bucket"
+        self.folder_prefix = "deals"
+        self.s3_service = S3Service(bucket_name=self.bucket_name, region_name="ap-south-1")
 
+    async def create_draft(self, fund_manager_id: int, session: AsyncSession) -> Deal:
+        """
+        Creates a new deal draft for a fund manager.
 
-    @staticmethod
-    async def create_draft(self, fund_manager_id: int) -> Deal:
-        deal_row = Deal(fund_manager_id=fund_manager_id)
-        await self.session.add(deal_row)
-        await self.session.commit()
-        await self.session.refresh(deal_row)
-        return deal_row
+        Args:
+            fund_manager_id: ID of the fund manager creating the deal
+            db: SQLAlchemy AsyncSession for database operations
 
-    @staticmethod
-    async def update_deal_partial(
-        deal_id: UUID, 
-        data: DealCreateRequest, 
-        db: AsyncSession, 
-        s3: S3Service
+        Returns:
+            Deal: The created deal object
+
+        Raises:
+            HTTPException: If there's an error during creation
+        """
+        try:
+            deal_row = Deal(
+                fund_manager_id=fund_manager_id,
+                title="New Deal Draft",
+                description="Draft deal created", 
+                status= DealStatus.OPEN
+            )
+            session.add(deal_row)
+            await session.commit()
+            await session.refresh(deal_row)
+            return deal_row
+
+        except Exception as e:
+            logger.error(f"Failed to create deal draft: {str(e)}")
+            await session.rollback()
+            raise HTTPException(status_code=500, detail="Internal server error")
+
+    async def update_company_details(self, deal_id: UUID, logo: UploadFile, company_name: str, about_company: str, company_website: str,session: AsyncSession) -> Deal:
+        """
+        Updates the company details for a deal.
+
+        Args:
+            deal_id: UUID of the deal to update
+            company_name: Name of the company
+            about_company: Description of the company
+            company_website: Website URL of the company
+            session: SQLAlchemy AsyncSession for database operations
+
+        Returns:
+            Deal: Updated deal object
+
+        Raises:
+            HTTPException: If deal not found or update fails
+        """
+        try:
+            deal = await session.get(Deal, deal_id)
+            if not deal:
+                raise HTTPException(status_code=404, detail="Deal not found")
+
+            deal.company_name = company_name
+            deal.about_company = about_company
+            deal.company_website = company_website
+            deal.logo_url = self.s3_service.upload_and_get_url(
+                object_id=deal_id,
+                file=logo,
+                bucket_name=f"{self.bucket_name}/logos/",
+                folder_prefix=self.folder_prefix,
+            )
+            deal.updated_at = datetime.now()
+
+            await session.commit()
+            await session.refresh(deal)
+            return deal
+
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            logger.error(f"Failed to update company details: {str(e)}")
+            await session.rollback()
+            raise HTTPException(status_code=500, detail="Internal server error")
+
+    async def update_industry_problem(self, deal_id: UUID, industry: str, problem_statement: str, business_model: str, session: AsyncSession) -> Deal:
+        """
+        Updates industry, problem statement, and business model for a deal.
+
+        Args:
+            deal_id: UUID of the deal to update
+            industry: Industry of the company
+            problem_statement: Problem statement the company addresses
+            business_model: Business model of the company
+            session: SQLAlchemy AsyncSession for database operations
+
+        Returns:
+            Deal: Updated deal object
+
+        Raises:
+            HTTPException: If deal not found or update fails
+        """
+        try:
+            deal = await session.get(Deal, deal_id)
+            if not deal:
+                raise HTTPException(status_code=404, detail="Deal not found")
+
+            deal.industry = industry
+            deal.problem_statement = problem_statement
+            deal.business_model = business_model
+            deal.updated_at = datetime.now()
+
+            await session.commit()
+            await session.refresh(deal)
+            return deal
+
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            logger.error(f"Failed to update industry and problem details: {str(e)}")
+            await session.rollback()
+            raise HTTPException(status_code=500, detail="Internal server error")
+
+    async def update_customer_segment(self, deal_id: UUID, target_customer_segment: str, customer_segment_type: str, session: AsyncSession) -> Deal:
+        """
+        Updates customer segment details for a deal.
+
+        Args:
+            deal_id: UUID of the deal to update
+            target_customer_segment: Target customer segment
+            customer_segment_type: Type of customer segment
+            session: SQLAlchemy AsyncSession for database operations
+
+        Returns:
+            Deal: Updated deal object
+
+        Raises:
+            HTTPException: If deal not found or update fails
+        """
+        try:
+            deal = await session.get(Deal, deal_id)
+            if not deal:
+                raise HTTPException(status_code=404, detail="Deal not found")
+
+            deal.target_customer_segment = target_customer_segment
+            deal.business_size = customer_segment_type
+            deal.updated_at = datetime.now()
+
+            await session.commit()
+            await session.refresh(deal)
+            return deal
+
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            logger.error(f"Failed to update customer segment: {str(e)}")
+            await session.rollback()
+            raise HTTPException(status_code=500, detail="Internal server error")
+
+    async def update_valuation(
+        self,
+        deal_id: UUID,
+        current_valuation: float,
+        round_size: float,
+        syndicate_commitment: float,
+        pitch_deck: UploadFile,
+        pitch_video: UploadFile, 
+        session: AsyncSession
     ) -> Deal:
-        deal = await db.get(Deal, deal_id)
-        if not deal:
-            raise HTTPException(status_code=404, detail="Deal not found")
+        """
+        Updates valuation details for a deal.
 
-        update_data = data.model_dump(exclude_unset=True, exclude={"logo", "pitch_deck", "pitch_video"})
+        Args:
+            deal_id: UUID of the deal to update
+            current_valuation: Current valuation of the company
+            round_size: Size of the funding round
+            syndicate_commitment: Syndicate's commitment amount
+            session: SQLAlchemy AsyncSession for database operations
 
-        # Upload files if provided
-        if data.logo:
-            deal.logo_url = s3.upload_file(data.logo)
-        if data.pitch_deck:
-            deal.pitch_deck_url = s3.upload_file(data.pitch_deck)
-        if data.pitch_video:
-            deal.pitch_video_url = s3.upload_file(data.pitch_video)
+        Returns:
+            Deal: Updated deal object
 
-        for key, value in update_data.items():
-            setattr(deal, key, value)
+        Raises:
+            HTTPException: If deal not found or update fails
+        """
+        try:
+            deal = await session.get(Deal, deal_id)
+            if not deal:
+                raise HTTPException(status_code=404, detail="Deal not found")
 
-        deal.updated_at = datetime.now(datetime.timezone.utc)
+            deal.current_valuation = current_valuation
+            deal.round_size = round_size
+            deal.syndicate_commitment = syndicate_commitment
+            deal.pitch_deck_url = self.s3_service.upload_and_get_url(
+                object_id=deal_id,
+                file=pitch_deck,
+                bucket_name=self.bucket_name,
+                folder_prefix=f"{self.folder_prefix}/pitch_decks/"
+            )
+            deal.pitch_video_url =self.s3_service.upload_and_get_url(
+                object_id=deal_id,
+                file=pitch_video, 
+                folder_prefix=f"{self.folder_prefix}/pitch_videos/"
+            )
+            deal.updated_at = datetime.now()
 
-        await db.commit()
-        await db.refresh(deal)
-        return deal
+            await session.commit()
+            await session.refresh(deal)
+            return deal
+
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            logger.error(f"Failed to update valuation details: {str(e)}")
+            await session.rollback()
+            raise HTTPException(status_code=500, detail="Internal server error")
+
+    async def update_securities(
+        self,
+        deal_id: UUID,
+        instrument_type: str,
+        conversion_terms: str,
+        is_startup: bool,
+        session: AsyncSession
+    ) -> Deal:
+        """
+        Updates securities details for a deal.
+
+        Args:
+            deal_id: UUID of the deal to update
+            instrument_type: Type of financial instrument
+            conversion_terms: Terms for conversion
+            is_startup: Whether the company is a startup
+            session: SQLAlchemy AsyncSession for database operations
+
+        Returns:
+            Deal: Updated deal object
+
+        Raises:
+            HTTPException: If deal not found or update fails
+        """
+        try:
+            deal = await session.get(Deal, deal_id)
+            if not deal:
+                raise HTTPException(status_code=404, detail="Deal not found")
+
+            deal.instrument_type = instrument_type
+            deal.conversion_terms = conversion_terms
+            deal.agreed_to_terms = is_startup
+            deal.updated_at = datetime.datetime.now(datetime.timezone.utc)
+
+            await session.commit()
+            await session.refresh(deal)
+            return deal
+
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            logger.error(f"Failed to update securities details: {str(e)}")
+            await session.rollback()
+            raise HTTPException(status_code=500, detail="Internal server error")

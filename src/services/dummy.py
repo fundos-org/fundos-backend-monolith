@@ -8,15 +8,15 @@ from src.utils.dependencies import get_user
 from uuid import UUID
 from src.services.s3 import S3Service
 from typing import Dict, Any
+from datetime import datetime
 
 logger = get_logger(__name__) 
 
-s3_service = S3Service(bucket_name="")
-
 class DummyService:
     def __init__(self):
-        self.bucket_name = ""
-        self.folder_prefix = ""
+        self.bucket_name = "fundos-dev-bucket"
+        self.folder_prefix = "users/profile_pictures/"
+        self.s3_service = S3Service(bucket_name=self.bucket_name, region_name="ap-south-1")
   
     async def verify_invitation_code(self, invitation_code: str, session: AsyncSession) -> Dict[str, Any]:
 
@@ -52,18 +52,27 @@ class DummyService:
             logger.error(f"Request failed: {e}")
             raise HTTPException(status_code=500, detail="Internal request error")
         
-    async def verify_phone_otp(self, otp_code: str) -> dict: 
+    async def verify_phone_otp(self, user_id: UUID, otp_code: str, phone_number: str, session: AsyncSession) -> dict: 
 
-        try: 
-            if otp_code == "123456" :
-                return {
-                    "message" : "otp code matched",
-                    "success" : True
-                }
-            
-        except Exception as e : 
-            logger.error(f"Request failed: {e}")
-            raise HTTPException(status_code=500, detail="Internal request error") 
+        try:
+            user = await session.get(User, user_id)
+            if not user:
+                raise HTTPException(status_code=404, detail="Deal not found")
+
+            if otp_code == "123456": 
+                user.phone_number = phone_number
+                user.updated_at = datetime.now()
+
+                await session.commit()
+                await session.refresh(user)
+
+            return user
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            logger.error(f"Failed to update company details: {str(e)}")
+            await session.rollback()
+            raise HTTPException(status_code=500, detail="Internal server error")
         
     async def set_user_details(self, user_id: UUID, first_name: str, last_name: str, session: AsyncSession) -> dict:
         
@@ -188,33 +197,70 @@ class DummyService:
             await session.rollback()
             raise HTTPException(status_code=500, detail=f"Failed to update user details: {str(e)}")
         
-    async def upload_photograph(self, user_id: UUID, file: UploadFile, session: AsyncSession ) -> dict :
+    async def upload_photograph(self, user_id: UUID, file: UploadFile, session: AsyncSession) -> dict:
+        """
+        Uploads a user profile photograph to S3 and updates the user's profile_image_url in the database.
+        
+        Args:
+            user_id: UUID of the user
+            file: FastAPI UploadFile containing the image
+            session: SQLAlchemy AsyncSession for database operations
+            
+        Returns:
+            dict: Response containing success message, user_id, and image_url
+            
+        Raises:
+            HTTPException: For various error conditions
+        """
+        try:
+            # Validate file type
+            if not file.content_type.startswith('image/'):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid file type. Only images are allowed."
+                )
 
-        try: 
-            user: User = get_user(user_id=user_id) 
-            image_url: str = s3_service.upload_and_get_url(
-                file = file,
-                bucket_name = self.bucket_name,
-                folder_prefix = self.folder_prefix
+            # Validate file size (max 5MB)
+            max_size_bytes = 5 * 1024 * 1024
+            if file.size > max_size_bytes:
+                raise HTTPException(
+                    status_code=400,
+                    detail="File size exceeds 5MB limit."
+                )
+
+            # Get user from database
+            user = await get_user(user_id=user_id, session=session)
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+
+            # Upload to S3 and get presigned URL
+            image_url = await self.s3_service.upload_and_get_url(
+                object_id=user_id,
+                file=file,
+                bucket_name=self.bucket_name,
+                folder_prefix=self.folder_prefix,
+                expiration=3600
             )
 
+            # Update user in database
             user.profile_image_url = image_url
-
             await session.commit()
-            await session.refresh(user) 
+            await session.refresh(user)
 
             return {
-                "message": "User image uploaded successfully ",
-                "user_id": user.id,
+                "message": "User image uploaded successfully",
+                "user_id": str(user.id),
+                "image_url": image_url
             }
 
+        except HTTPException as he:
+            raise he
         except Exception as e:
-            await self.session.rollback()
-            raise HTTPException(status_code=500, detail=f"Failed to update user details: {str(e)}")
-        
-
-
-
-        
-
-
+            logger.error(f"Failed to upload photograph: {str(e)}")
+            await session.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail="Internal server error"
+            )
+        finally:
+            await file.close()

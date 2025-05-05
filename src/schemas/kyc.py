@@ -1,7 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional, Dict
 from uuid import UUID
-from fastapi import UploadFile
 from src.models.user import investorType
 
 class AadhaarRequest(BaseModel):
@@ -69,7 +68,9 @@ class PhoneNumSendOtpResponse(BaseModel):
     otp: str
 
 class PhoneNumVerifyOtpRequest(BaseModel):
+    phone_number: str
     otp: str
+    user_id: UUID
 
 class PhoneNumVerifyOtpResponse(BaseModel):
     message: str
@@ -101,7 +102,8 @@ class OnBoardingRequest(BaseModel):
     pass 
 
 class OnBoardingResponse(BaseModel):
-    pass 
+    message: str
+    user_id: UUID 
 
 class UserDetailsRequest(BaseModel):
     user_id: UUID
@@ -144,7 +146,6 @@ class ProfessionalBackgroundResponse(BaseModel):
     
 
 class PhotoUploadRequest(BaseModel):
-    image: UploadFile
     expiration: int | None = 3600 
     user_id: UUID
 
@@ -152,6 +153,7 @@ class PhotoUploadRequest(BaseModel):
 class PhotoUploadResponse(BaseModel):
     message: str
     user_id: UUID
+    image_url: str
 
 class AgreementRequest(BaseModel):
     agreement_signed: bool
