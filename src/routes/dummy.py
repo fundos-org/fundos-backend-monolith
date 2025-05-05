@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
-from fastapi.responses import JSONResponse
 from starlette import status
 from pydantic import BaseModel 
 from uuid import UUID 
@@ -48,15 +47,16 @@ async def send_phone_otp(onboarding_details: PhoneNumSendOtpRequest) -> PhoneNum
     return PhoneNumSendOtpResponse(**result) 
     
 @router.patch('/phone/otp/verify')
-async def verify_phone_otp(data: PhoneNumVerifyOtpRequest) -> PhoneNumVerifyOtpResponse :
+async def verify_phone_otp(data: PhoneNumVerifyOtpRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> PhoneNumVerifyOtpResponse :
 
     result = await dummy_service.verify_phone_otp(
         otp_code= data.otp, 
-        phone_number=data.phone_number
+        phone_number=data.phone_number, 
+        user_id=data.user_id,
+        session=session
     )
 
-    content = dict(**result) 
-    return JSONResponse(status_code= status.HTTP_200_OK, content=content) 
+    return PhoneNumVerifyOtpResponse(**result)
 
 @router.patch("/user/details")
 async def store_user_details(user_details: UserDetailsRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> UserDetailsResponse:

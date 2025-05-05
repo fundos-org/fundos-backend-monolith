@@ -66,7 +66,10 @@ class DummyService:
                 await session.commit()
                 await session.refresh(user)
 
-            return user
+            return {
+                "message": "Phone num verified", 
+                "user_id": f"{user_id}"
+            }
         except HTTPException as he:
             raise he
         except Exception as e:

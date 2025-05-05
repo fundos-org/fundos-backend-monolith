@@ -74,6 +74,7 @@ class PhoneNumVerifyOtpRequest(BaseModel):
 
 class PhoneNumVerifyOtpResponse(BaseModel):
     message: str
+    user_id: str
 
 class OTPVerificationRequest(BaseModel):
     session_uuid: str
