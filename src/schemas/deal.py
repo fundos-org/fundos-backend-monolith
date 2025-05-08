@@ -1,3 +1,4 @@
+from src.models.deal import BusinessModel, InstrumentType,TargetCustomerSegment, CompanyStage
 from uuid import UUID
 from pydantic import BaseModel
 
@@ -20,18 +21,18 @@ class IndustryProblemRequest(BaseModel):
     deal_id: str
     industry: str
     problem_statement: str
-    business_model: str
+    business_model: BusinessModel
 
 class SecuritiesRequest(BaseModel):
     deal_id: str
-    instrument_type: str
+    instrument_type: InstrumentType
     conversion_terms: str
     is_startup: bool
 
 class CustomerSegmentRequest(BaseModel):
     deal_id: str
-    target_customer_segment: str
-    customer_segment_type: str
+    company_stage: CompanyStage
+    target_customer_segment: TargetCustomerSegment
 
 class ValuationRequest(BaseModel):
     deal_id: str

@@ -16,7 +16,7 @@ class DealService:
 
     async def create_draft(
         self, 
-        fund_manager_id: int, 
+        fund_manager_id: UUID, 
         session: AsyncSession
     ) -> Deal:
         """
