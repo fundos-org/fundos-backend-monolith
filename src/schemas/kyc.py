@@ -4,7 +4,7 @@ from uuid import UUID
 from src.models.user import investorType
 
 class AadhaarRequest(BaseModel):
-    unique_id: str
+    user_id: str
     aadhaar_number: str
 
 class AadhaarResponse(BaseModel):
@@ -13,11 +13,16 @@ class AadhaarResponse(BaseModel):
     code_verifier: str
     message: str
 
+# class SubmitOTPRequest(BaseModel):
+#     user_id: str
+#     otp: str
+#     transaction_id: str
+#     code_verifier: str
+#     fwdp: str
+
 class SubmitOTPRequest(BaseModel):
+    user_id: str
     otp: str
-    transaction_id: str
-    code_verifier: str
-    fwdp: str
 
 class SubmitOTPResponse(BaseModel):
     aadhaarNumber: str
@@ -34,11 +39,11 @@ class SubmitOTPResponse(BaseModel):
     image: str
     isXmlValid: str
 
-class ResendOTPRequest(BaseModel):
-    unique_id: str
-    aadhaar_number: str
-    transaction_id: str
-    fwdp: str
+# class ResendOTPRequest(BaseModel):
+#     user_id: str
+#     aadhaar_number: str
+#     transaction_id: str
+#     fwdp: str
 
 class ResendOTPResponse(BaseModel):
     transaction_id: str
@@ -47,7 +52,7 @@ class ResendOTPResponse(BaseModel):
     message: str
 
 class PanDetailsRequest(BaseModel):
-    unique_id: str
+    user_id: str
     pan_number: str
 
 class PanDetailsResponse(BaseModel):
@@ -174,4 +179,9 @@ class KYCOut(BaseModel):
     id: int
     user_id: int
     status: str
-    verification_details: Optional[str]
+    verification_details: Optional[str] 
+
+class ResendOTPRequest(BaseModel):
+    user_id: str
+    aadhaar_number: str
+

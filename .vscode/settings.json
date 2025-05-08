@@ -13,7 +13,8 @@
       "levelname",
       "PLIVO",
       "pythonjsonlogger",
-      "sessionmaker"
+      "sessionmaker",
+      "setex"
     ]
   }
   

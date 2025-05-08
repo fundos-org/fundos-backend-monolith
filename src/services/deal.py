@@ -14,7 +14,11 @@ class DealService:
         self.folder_prefix = "deals"
         self.s3_service = S3Service(bucket_name=self.bucket_name, region_name="ap-south-1")
 
-    async def create_draft(self, fund_manager_id: int, session: AsyncSession) -> Deal:
+    async def create_draft(
+        self, 
+        fund_manager_id: int, 
+        session: AsyncSession
+    ) -> Deal:
         """
         Creates a new deal draft for a fund manager.
 
@@ -33,7 +37,8 @@ class DealService:
                 fund_manager_id=fund_manager_id,
                 title="New Deal Draft",
                 description="Draft deal created", 
-                status= DealStatus.OPEN
+                status= DealStatus.OPEN, 
+                created_at=datetime.now()
             )
             session.add(deal_row)
             await session.commit()
@@ -45,7 +50,15 @@ class DealService:
             await session.rollback()
             raise HTTPException(status_code=500, detail="Internal server error")
 
-    async def update_company_details(self, deal_id: UUID, logo: UploadFile, company_name: str, about_company: str, company_website: str,session: AsyncSession) -> Deal:
+    async def update_company_details(
+        self, 
+        deal_id: str, 
+        logo: UploadFile, 
+        company_name: str, 
+        about_company: str, 
+        company_website: str,
+        session: AsyncSession
+    ) -> Deal:
         """
         Updates the company details for a deal.
 
@@ -63,7 +76,8 @@ class DealService:
             HTTPException: If deal not found or update fails
         """
         try:
-            deal = await session.get(Deal, deal_id)
+            deal_uuid = UUID(deal_id)
+            deal = await session.get(Deal, deal_uuid)
             if not deal:
                 raise HTTPException(status_code=404, detail="Deal not found")
 
@@ -73,8 +87,8 @@ class DealService:
             deal.logo_url = self.s3_service.upload_and_get_url(
                 object_id=deal_id,
                 file=logo,
-                bucket_name=f"{self.bucket_name}/logos/",
-                folder_prefix=self.folder_prefix,
+                bucket_name=f"{self.bucket_name}",
+                folder_prefix=f"{self.folder_prefix}/logos/",
             )
             deal.updated_at = datetime.now()
 
@@ -89,7 +103,14 @@ class DealService:
             await session.rollback()
             raise HTTPException(status_code=500, detail="Internal server error")
 
-    async def update_industry_problem(self, deal_id: UUID, industry: str, problem_statement: str, business_model: str, session: AsyncSession) -> Deal:
+    async def update_industry_problem(
+        self, 
+        deal_id: str, 
+        industry: str, 
+        problem_statement: str, 
+        business_model: str, 
+        session: AsyncSession
+    ) -> Deal:
         """
         Updates industry, problem statement, and business model for a deal.
 
@@ -107,7 +128,8 @@ class DealService:
             HTTPException: If deal not found or update fails
         """
         try:
-            deal = await session.get(Deal, deal_id)
+            deal_uuid = UUID(deal_id)
+            deal = await session.get(Deal, deal_uuid)
             if not deal:
                 raise HTTPException(status_code=404, detail="Deal not found")
 
@@ -127,7 +149,13 @@ class DealService:
             await session.rollback()
             raise HTTPException(status_code=500, detail="Internal server error")
 
-    async def update_customer_segment(self, deal_id: UUID, target_customer_segment: str, customer_segment_type: str, session: AsyncSession) -> Deal:
+    async def update_customer_segment(
+        self, 
+        deal_id: str, 
+        target_customer_segment: str, 
+        customer_segment_type: str, 
+        session: AsyncSession
+    ) -> Deal:
         """
         Updates customer segment details for a deal.
 
@@ -144,7 +172,8 @@ class DealService:
             HTTPException: If deal not found or update fails
         """
         try:
-            deal = await session.get(Deal, deal_id)
+            deal_uuid = UUID(deal_id)
+            deal = await session.get(Deal, deal_uuid)
             if not deal:
                 raise HTTPException(status_code=404, detail="Deal not found")
 
@@ -165,7 +194,7 @@ class DealService:
 
     async def update_valuation(
         self,
-        deal_id: UUID,
+        deal_id: str,
         current_valuation: float,
         round_size: float,
         syndicate_commitment: float,
@@ -190,7 +219,8 @@ class DealService:
             HTTPException: If deal not found or update fails
         """
         try:
-            deal = await session.get(Deal, deal_id)
+            deal_uuid = UUID(deal_id)
+            deal = await session.get(Deal, deal_uuid)
             if not deal:
                 raise HTTPException(status_code=404, detail="Deal not found")
 
@@ -223,7 +253,7 @@ class DealService:
 
     async def update_securities(
         self,
-        deal_id: UUID,
+        deal_id: str,
         instrument_type: str,
         conversion_terms: str,
         is_startup: bool,
@@ -246,14 +276,15 @@ class DealService:
             HTTPException: If deal not found or update fails
         """
         try:
-            deal = await session.get(Deal, deal_id)
+            deal_uuid = UUID(deal_id)
+            deal = await session.get(Deal, deal_uuid)
             if not deal:
                 raise HTTPException(status_code=404, detail="Deal not found")
 
             deal.instrument_type = instrument_type
             deal.conversion_terms = conversion_terms
             deal.agreed_to_terms = is_startup
-            deal.updated_at = datetime.datetime.now(datetime.timezone.utc)
+            deal.updated_at = datetime.now()
 
             await session.commit()
             await session.refresh(deal)

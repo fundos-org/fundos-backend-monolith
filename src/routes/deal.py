@@ -15,7 +15,10 @@ router = APIRouter()
 deal_service = DealService()
 
 @router.post("/create/draft")
-async def create_deal_draft(data: DealCreateRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> DealCreateResponse:
+async def create_deal_draft(
+    data: DealCreateRequest, 
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> DealCreateResponse:
     try:
         deal = await deal_service.create_draft(
             fund_manager_id=data.fund_manager_id, 
@@ -26,11 +29,15 @@ async def create_deal_draft(data: DealCreateRequest, session: Annotated[AsyncSes
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to create deal draft: {str(e)}")
 
 @router.patch("/deal/company-details")
-async def update_company_details(data: CompanyDetailsRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> DealCreateResponse:
+async def update_company_details(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    data: CompanyDetailsRequest = Depends(), 
+    logo: UploadFile = File(...)
+) -> DealCreateResponse:
     try:
         deal = await deal_service.update_company_details(
             deal_id=data.deal_id,
-            logo= data.logo,
+            logo= logo,
             company_name=data.company_name,
             about_company=data.about_company,
             company_website=data.company_website,
@@ -41,7 +48,10 @@ async def update_company_details(data: CompanyDetailsRequest, session: Annotated
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update company details: {str(e)}")
 
 @router.patch("/deal/industry-problem")
-async def update_industry_problem(data: IndustryProblemRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> DealCreateResponse:
+async def update_industry_problem(
+    data: IndustryProblemRequest, 
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> DealCreateResponse:
     try:
         deal = await deal_service.update_industry_problem(
             deal_id=data.deal_id,
@@ -55,7 +65,10 @@ async def update_industry_problem(data: IndustryProblemRequest, session: Annotat
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update industry and problem details: {str(e)}")
 
 @router.patch("/deal/customer-segment")
-async def update_customer_segment( data: CustomerSegmentRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> DealCreateResponse:
+async def update_customer_segment( 
+    data: CustomerSegmentRequest, 
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> DealCreateResponse:
     try:
         deal = await deal_service.update_customer_segment(
             deal_id=data.deal_id,
@@ -68,7 +81,12 @@ async def update_customer_segment( data: CustomerSegmentRequest, session: Annota
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update customer segment: {str(e)}")
 
 @router.patch("/deal/valuation")
-async def update_valuation(session: Annotated[AsyncSession, Depends(get_session)], data: ValuationRequest = Depends(), pitch_deck: UploadFile = File(...), pitch_video: UploadFile = File(...)) -> DealCreateResponse:
+async def update_valuation(
+    session: Annotated[AsyncSession, Depends(get_session)], 
+    data: ValuationRequest = Depends(), 
+    pitch_deck: UploadFile = File(...), 
+    pitch_video: UploadFile = File(...)
+) -> DealCreateResponse:
     try:
         deal = await deal_service.update_valuation(
             deal_id=data.deal_id,
@@ -84,7 +102,10 @@ async def update_valuation(session: Annotated[AsyncSession, Depends(get_session)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update valuation details: {str(e)}")
 
 @router.patch("/deal/securities")
-async def update_securities( data: SecuritiesRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> DealCreateResponse:
+async def update_securities( 
+    data: SecuritiesRequest, 
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> DealCreateResponse:
     try:
         deal = await deal_service.update_securities(
             deal_id=data.deal_id,
