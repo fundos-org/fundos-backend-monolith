@@ -28,7 +28,7 @@ async def create_deal_draft(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to create deal draft: {str(e)}")
 
-@router.patch("/deal/company-details")
+@router.post("/deal/company-details")
 async def update_company_details(
     session: Annotated[AsyncSession, Depends(get_session)],
     data: CompanyDetailsRequest = Depends(), 
@@ -47,7 +47,7 @@ async def update_company_details(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update company details: {str(e)}")
 
-@router.patch("/deal/industry-problem")
+@router.post("/deal/industry-problem")
 async def update_industry_problem(
     data: IndustryProblemRequest, 
     session: Annotated[AsyncSession, Depends(get_session)]
@@ -64,7 +64,7 @@ async def update_industry_problem(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update industry and problem details: {str(e)}")
 
-@router.patch("/deal/customer-segment")
+@router.post("/deal/customer-segment")
 async def update_customer_segment( 
     data: CustomerSegmentRequest, 
     session: Annotated[AsyncSession, Depends(get_session)]
@@ -72,15 +72,15 @@ async def update_customer_segment(
     try:
         deal = await deal_service.update_customer_segment(
             deal_id=data.deal_id,
+            company_stage=data.company_stage, 
             target_customer_segment=data.target_customer_segment,
-            customer_segment_type=data.customer_segment_type,
             session=session
         )
         return DealCreateResponse(deal_id=deal.id, message="Customer segment updated")
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update customer segment: {str(e)}")
 
-@router.patch("/deal/valuation")
+@router.post("/deal/valuation")
 async def update_valuation(
     session: Annotated[AsyncSession, Depends(get_session)], 
     data: ValuationRequest = Depends(), 
@@ -101,7 +101,7 @@ async def update_valuation(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update valuation details: {str(e)}")
 
-@router.patch("/deal/securities")
+@router.post("/deal/securities")
 async def update_securities( 
     data: SecuritiesRequest, 
     session: Annotated[AsyncSession, Depends(get_session)]

@@ -49,7 +49,7 @@ async def validate_invitation(invitation_code: str, session: session_dependency 
     content= {"user_id": user.id, "message": "Invitation validated, onboarding started"}
     return JSONResponse(status_code=status.HTTP_201_CREATED, content= content) 
 
-@router.patch('/phone/otp/send', tags = ["phone"])
+@router.post('/phone/otp/send', tags = ["phone"])
 async def verify_phone_number(onboarding_details: PhoneNumRequest) -> PhoneNumResponse :
     
     result = await phone_service.verify_phone_number(
@@ -60,7 +60,7 @@ async def verify_phone_number(onboarding_details: PhoneNumRequest) -> PhoneNumRe
     content = PhoneNumResponse(**result) 
     return JSONResponse(status_code=status.HTTP_200_OK, content= content) 
 
-@router.patch("/phone/otp/verify", tags= ["phone"])
+@router.post("/phone/otp/verify", tags= ["phone"])
 async def verify_phone_otp(verify_otp_details: VerifyPhoneOtpRequest) -> VerifyPhoneOtpResponse:
 
     result = await phone_service.verify_otp(
@@ -72,7 +72,7 @@ async def verify_phone_otp(verify_otp_details: VerifyPhoneOtpRequest) -> VerifyP
     JSONResponse(status_code=status.HTTP_200_OK, content=content)
     pass 
 
-@router.patch("/user/details", tags = ["user"])
+@router.post("/user/details", tags = ["user"])
 async def store_user_details(user_details: UserDetailsRequest) -> UserDetailsResponse:
 
     result = await OnboardingService.set_user_details(
@@ -85,7 +85,7 @@ async def store_user_details(user_details: UserDetailsRequest) -> UserDetailsRes
     return JSONResponse(status_code=status.HTTP_200_OK, content = content)
     pass 
 
-@router.patch('/email/otp/send')
+@router.post('/email/otp/send')
 async def verify_email(email_details: EmailDetailsRequest) -> EmailDetailsResponse: 
     
     result = EmailService.send_email_otp(
@@ -95,7 +95,7 @@ async def verify_email(email_details: EmailDetailsRequest) -> EmailDetailsRespon
     content = EmailDetailsResponse(**result)
     return JSONResponse(status_code=status.HTTP_200_OK, content = content)
     
-@router.patch('/email/otp/verify', tags = ["email"])
+@router.post('/email/otp/verify', tags = ["email"])
 async def verify_email_otp(data: dict) -> dict :
 
     result = await email_service.verify_email_otp(
@@ -105,7 +105,7 @@ async def verify_email_otp(data: dict) -> dict :
     content = dict(**result) 
     return JSONResponse(status_code= status.HTTP_200_OK, content=content) 
 
-@router.patch("/user/choose-investor-type",tags = ["user"])
+@router.post("/user/choose-investor-type",tags = ["user"])
 async def choose_investor_type(user_id: str, data: investorType) -> dict :
 
     result = await user_service.choose_investor_type(
@@ -116,7 +116,7 @@ async def choose_investor_type(user_id: str, data: investorType) -> dict :
     content = dict(**result) 
     return JSONResponse(status_code= status.HTTP_200_OK, content=content) 
 
-@router.patch("/user/declaration", tags = ["user"])
+@router.post("/user/declaration", tags = ["user"])
 async def declaration(user_id: str, declaration_accepted: bool) -> dict: 
 
     result = user_service.declaration_accepted(
@@ -127,7 +127,7 @@ async def declaration(user_id: str, declaration_accepted: bool) -> dict:
     content = result 
     return JSONResponse(status_code=status.HTTP_200_OK, content=content)
 
-@router.patch("/user/professional-background",tags = ["user"]) 
+@router.post("/user/professional-background",tags = ["user"]) 
 async def professional_back(user_id: str, data: ProfessionalBackgroundRequest) -> ProfessionalBackgroundResponse: 
     
     result = user_service.set_professional_background(
@@ -141,7 +141,7 @@ async def professional_back(user_id: str, data: ProfessionalBackgroundRequest) -
     content = ProfessionalBackgroundResponse(**result)
     return JSONResponse(status_code=status.HTTP_200_OK, content=content)
 
-@router.patch("/user/sign-agreement", tags = ["user"])
+@router.post("/user/sign-agreement", tags = ["user"])
 async def sign_agreement(user_id : UUID, agreement_signed: bool) -> dict: 
 
     result = user_service.contribution_agreement(
@@ -152,7 +152,7 @@ async def sign_agreement(user_id : UUID, agreement_signed: bool) -> dict:
     content = result 
     return JSONResponse(status_code=status.HTTP_200_OK, content= content) 
 
-@router.patch("/user/photo-upload", tags = ["user"]) 
+@router.post("/user/photo-upload", tags = ["user"]) 
 async def upload_photo(user_id : UUID, data: PhotoUploadRequest) -> PhotoUploadResponse: 
     
     result = user_service.upload_photograph(

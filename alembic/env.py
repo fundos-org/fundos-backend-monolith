@@ -5,7 +5,24 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context 
-from src.models import metadata
+from src.models import metadata 
+from dotenv import load_dotenv
+
+load_dotenv()
+
+def get_env(name: str) -> str:
+    value = os.getenv(name)
+    if not value:
+        raise ValueError(f"Missing required environment variable: {name}")
+    return value
+
+USER = get_env("user")
+PASSWORD = get_env("password")
+HOST = get_env("host")
+PORT = get_env("port")
+DBNAME = get_env("dbname")
+
+DB_URL = f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}"
 
 
 # this is the Alembic Config object, which provides
@@ -43,7 +60,7 @@ def run_migrations_offline() -> None:
 
     """
 
-    db_url = os.getenv("DB_URL")
+    db_url = DB_URL
     if not db_url:
         raise ValueError("DATABASE_URL environment variable is not set") 
 
@@ -68,7 +85,7 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    db_url = os.getenv("DB_URL")
+    db_url = DB_URL
     if not db_url:
         raise ValueError("DB_URL environment variable is not set")
 

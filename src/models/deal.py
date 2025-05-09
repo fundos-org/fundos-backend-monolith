@@ -52,7 +52,6 @@ class Deal(SQLModel, table=True):
     industry: Optional[str]
     problem_statement: Optional[str]
     business_model: Optional[BusinessModel]
-    business_size: Optional[str]
     company_stage: Optional[CompanyStage]
     target_customer_segment: Optional[TargetCustomerSegment]
     current_valuation: Optional[float]

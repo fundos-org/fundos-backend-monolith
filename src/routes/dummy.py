@@ -38,7 +38,7 @@ async def validate_invitation(data: UserOnboardingStartRequest, session: Annotat
 
     return OnBoardingResponse(user_id=result["user_id"], message="new user added")
 
-@router.patch('/phone/otp/send')
+@router.post('/phone/otp/send')
 async def send_phone_otp(onboarding_details: PhoneNumSendOtpRequest) -> PhoneNumSendOtpResponse :
     
     result = await dummy_service.send_phone_otp(
@@ -46,7 +46,7 @@ async def send_phone_otp(onboarding_details: PhoneNumSendOtpRequest) -> PhoneNum
     )
     return PhoneNumSendOtpResponse(**result) 
     
-@router.patch('/phone/otp/verify')
+@router.post('/phone/otp/verify')
 async def verify_phone_otp(data: PhoneNumVerifyOtpRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> PhoneNumVerifyOtpResponse :
 
     result = await dummy_service.verify_phone_otp(
@@ -58,7 +58,7 @@ async def verify_phone_otp(data: PhoneNumVerifyOtpRequest, session: Annotated[As
 
     return PhoneNumVerifyOtpResponse(**result)
 
-@router.patch("/user/details")
+@router.post("/user/details")
 async def store_user_details(user_details: UserDetailsRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> UserDetailsResponse:
 
     result = await dummy_service.set_user_details(
@@ -70,7 +70,7 @@ async def store_user_details(user_details: UserDetailsRequest, session: Annotate
 
     return UserDetailsResponse(**result) 
 
-@router.patch('/email/otp/send')
+@router.post('/email/otp/send')
 async def send_email_otp(onboarding_details: EmailSendOtpRequest) -> EmailSendOtpResponse :
     
     result = await dummy_service.send_email_otp(
@@ -78,7 +78,7 @@ async def send_email_otp(onboarding_details: EmailSendOtpRequest) -> EmailSendOt
     )
     return EmailSendOtpResponse(**result)  
 
-@router.patch('/email/otp/verify')
+@router.post('/email/otp/verify')
 async def verify_email_otp(data: EmailVerifyOtpRequest) -> EmailVerifyOtpResponse :
 
     result = await dummy_service.verify_email_otp(
@@ -86,7 +86,7 @@ async def verify_email_otp(data: EmailVerifyOtpRequest) -> EmailVerifyOtpRespons
     )
     return EmailVerifyOtpResponse(**result)
 
-@router.patch("/user/choose-investor-type")
+@router.post("/user/choose-investor-type")
 async def choose_investor_type(data: ChooseInvestorRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> ChooseInvestorResponse :
 
     result = await dummy_service.choose_investor_type(
@@ -97,7 +97,7 @@ async def choose_investor_type(data: ChooseInvestorRequest, session: Annotated[A
     
     return ChooseInvestorResponse(**result)
 
-@router.patch("/user/declaration")
+@router.post("/user/declaration")
 async def declaration(data: DeclarationRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> DeclarationResponse: 
 
     result = await dummy_service.declaration_accepted(
@@ -108,7 +108,7 @@ async def declaration(data: DeclarationRequest, session: Annotated[AsyncSession,
 
     return DeclarationResponse(**result) 
 
-@router.patch("/user/professional-background") 
+@router.post("/user/professional-background") 
 async def professional_back(data: ProfessionalBackgroundRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> ProfessionalBackgroundResponse: 
     
     result = await dummy_service.set_professional_background(
@@ -122,7 +122,7 @@ async def professional_back(data: ProfessionalBackgroundRequest, session: Annota
 
     return ProfessionalBackgroundResponse(**result)
 
-@router.patch("/user/sign-agreement")
+@router.post("/user/sign-agreement")
 async def sign_agreement(data: AgreementRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> AgreementResponse: 
 
     result = await dummy_service.contribution_agreement(

@@ -8,7 +8,7 @@ class DealCreateRequest(BaseModel):
 
 
 class DealCreateResponse(BaseModel):
-    deal_id: str
+    deal_id: UUID
     message: str
 
 class CompanyDetailsRequest(BaseModel):

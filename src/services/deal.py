@@ -5,6 +5,7 @@ from src.logging.logging_setup import get_logger
 from sqlmodel import UUID
 from src.models.deal import Deal, DealStatus
 from src.services.s3 import S3Service
+from src.utils.dependencies import get_deal
 
 logger = get_logger(__name__)
 
@@ -52,7 +53,7 @@ class DealService:
 
     async def update_company_details(
         self, 
-        deal_id: str, 
+        deal_id: UUID, 
         logo: UploadFile, 
         company_name: str, 
         about_company: str, 
@@ -76,15 +77,14 @@ class DealService:
             HTTPException: If deal not found or update fails
         """
         try:
-            deal_uuid = UUID(deal_id)
-            deal = await session.get(Deal, deal_uuid)
+            deal = await get_deal(deal_id = deal_id, session = session)
             if not deal:
                 raise HTTPException(status_code=404, detail="Deal not found")
 
             deal.company_name = company_name
             deal.about_company = about_company
             deal.company_website = company_website
-            deal.logo_url = self.s3_service.upload_and_get_url(
+            deal.logo_url = await self.s3_service.upload_and_get_url(
                 object_id=deal_id,
                 file=logo,
                 bucket_name=f"{self.bucket_name}",
@@ -105,7 +105,7 @@ class DealService:
 
     async def update_industry_problem(
         self, 
-        deal_id: str, 
+        deal_id: UUID, 
         industry: str, 
         problem_statement: str, 
         business_model: str, 
@@ -128,8 +128,7 @@ class DealService:
             HTTPException: If deal not found or update fails
         """
         try:
-            deal_uuid = UUID(deal_id)
-            deal = await session.get(Deal, deal_uuid)
+            deal = await get_deal(deal_id = deal_id, session = session)
             if not deal:
                 raise HTTPException(status_code=404, detail="Deal not found")
 
@@ -151,9 +150,9 @@ class DealService:
 
     async def update_customer_segment(
         self, 
-        deal_id: str, 
+        deal_id: UUID, 
         target_customer_segment: str, 
-        customer_segment_type: str, 
+        company_stage: str, 
         session: AsyncSession
     ) -> Deal:
         """
@@ -172,13 +171,12 @@ class DealService:
             HTTPException: If deal not found or update fails
         """
         try:
-            deal_uuid = UUID(deal_id)
-            deal = await session.get(Deal, deal_uuid)
+            deal = await get_deal(deal_id = deal_id, session = session)
             if not deal:
                 raise HTTPException(status_code=404, detail="Deal not found")
 
             deal.target_customer_segment = target_customer_segment
-            deal.business_size = customer_segment_type
+            deal.company_stage = company_stage
             deal.updated_at = datetime.now()
 
             await session.commit()
@@ -194,7 +192,7 @@ class DealService:
 
     async def update_valuation(
         self,
-        deal_id: str,
+        deal_id: UUID,
         current_valuation: float,
         round_size: float,
         syndicate_commitment: float,
@@ -219,23 +217,23 @@ class DealService:
             HTTPException: If deal not found or update fails
         """
         try:
-            deal_uuid = UUID(deal_id)
-            deal = await session.get(Deal, deal_uuid)
+            deal = await get_deal(deal_id = deal_id, session = session)
             if not deal:
                 raise HTTPException(status_code=404, detail="Deal not found")
 
             deal.current_valuation = current_valuation
             deal.round_size = round_size
             deal.syndicate_commitment = syndicate_commitment
-            deal.pitch_deck_url = self.s3_service.upload_and_get_url(
+            deal.pitch_deck_url = await self.s3_service.upload_and_get_url(
                 object_id=deal_id,
                 file=pitch_deck,
                 bucket_name=self.bucket_name,
                 folder_prefix=f"{self.folder_prefix}/pitch_decks/"
             )
-            deal.pitch_video_url =self.s3_service.upload_and_get_url(
+            deal.pitch_video_url = await self.s3_service.upload_and_get_url(
                 object_id=deal_id,
                 file=pitch_video, 
+                bucket_name=self.bucket_name,
                 folder_prefix=f"{self.folder_prefix}/pitch_videos/"
             )
             deal.updated_at = datetime.now()
@@ -253,7 +251,7 @@ class DealService:
 
     async def update_securities(
         self,
-        deal_id: str,
+        deal_id: UUID,
         instrument_type: str,
         conversion_terms: str,
         is_startup: bool,
@@ -276,8 +274,7 @@ class DealService:
             HTTPException: If deal not found or update fails
         """
         try:
-            deal_uuid = UUID(deal_id)
-            deal = await session.get(Deal, deal_uuid)
+            deal = await get_deal(deal_id=deal_id, session=session)
             if not deal:
                 raise HTTPException(status_code=404, detail="Deal not found")
 
@@ -290,8 +287,13 @@ class DealService:
             await session.refresh(deal)
             return deal
 
+        except ValueError as ve:
+            logger.error(f"Invalid UUID: {str(ve)}")
+            raise HTTPException(status_code=400, detail="Invalid UUID format for deal_id")
+        
         except HTTPException as he:
             raise he
+        
         except Exception as e:
             logger.error(f"Failed to update securities details: {str(e)}")
             await session.rollback()
