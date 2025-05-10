@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from starlette import status
 from src.db.session import get_session
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Annotated, List
+from typing import Annotated, List, Any
 from src.services.deal import DealService
 from src.schemas.deal import (
     DealCreateRequest, DealCreateResponse, CompanyDetailsRequest, IndustryProblemRequest, CustomerSegmentRequest, 
@@ -121,9 +121,12 @@ async def update_securities(
 @router.get("/mobile/all-deals")
 async def get_all_deals(
     session: Annotated[AsyncSession, Depends(get_session)]
-) -> List[DealDataResponse]: 
+) -> Any: 
     try: 
-        pass 
+        result = await deal_service.get_all_deals(
+            session=session
+        ) 
+        return result
     except Exception as e : 
         raise HTTPException(detail=str(e)) 
     
@@ -131,14 +134,13 @@ async def get_all_deals(
 async def get_deal_by_id(
     deal_id: str,
     session: Annotated[AsyncSession, Depends(get_session)]
-) -> DealDataResponse :
+) -> Any :
     try: 
-        deal_service.get_deal_by_id(
+        result = await deal_service.get_deal_by_id(
             session = session,
             deal_id = deal_id
-        )
-        pass 
-
+        )    
+        return result  
     except Exception as e: 
         raise HTTPException(detail=str(e))
     

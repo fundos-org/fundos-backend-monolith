@@ -1,6 +1,6 @@
 from datetime import datetime
 from fastapi import HTTPException, UploadFile
-from typing import List
+from typing import List, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from src.logging.logging_setup import get_logger
@@ -304,7 +304,7 @@ class DealService:
     async def get_all_deals(
         self, 
         session: AsyncSession
-    ) -> List[Deal]:
+    ) -> Any :
         """
         Retrieves all deals from the database.
 
