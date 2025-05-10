@@ -1,6 +1,8 @@
 from datetime import datetime
 from fastapi import HTTPException, UploadFile
+from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from src.logging.logging_setup import get_logger
 from sqlmodel import UUID
 from src.models.deal import Deal, DealStatus
@@ -298,3 +300,60 @@ class DealService:
             logger.error(f"Failed to update securities details: {str(e)}")
             await session.rollback()
             raise HTTPException(status_code=500, detail="Internal server error")
+        
+    async def get_all_deals(
+        self, 
+        session: AsyncSession
+    ) -> List[Deal]:
+        """
+        Retrieves all deals from the database.
+
+        Args:
+            session: SQLAlchemy AsyncSession for database operations
+
+        Returns:
+            List[Deal]: List of all deals
+
+        Raises:
+            HTTPException: If fetching deals fails
+        """
+        try:
+            result = await session.execute(select(Deal))
+            deals = result.scalars().all()
+            return deals
+        except Exception as e:
+            logger.error(f"Failed to retrieve all deals: {str(e)}")
+            await session.rollback()
+            raise HTTPException(status_code=500, detail="Internal server error")
+        
+    async def get_deal_by_id(
+        self, 
+        deal_id: UUID, 
+        session: AsyncSession
+    ) -> Deal:
+        """
+        Retrieves a deal by its ID.
+
+        Args:
+            deal_id: UUID of the deal to retrieve
+            session: SQLAlchemy AsyncSession for database operations
+
+        Returns:
+            Deal: The requested deal object
+
+        Raises:
+            HTTPException: If deal is not found or retrieval fails
+        """
+        try:
+            deal = await get_deal(deal_id=deal_id, session=session)
+            if not deal:
+                raise HTTPException(status_code=404, detail="Deal not found")
+            return deal
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            logger.error(f"Failed to retrieve deal by ID: {str(e)}")
+            await session.rollback()
+            raise HTTPException(status_code=500, detail="Internal server error")
+
+        

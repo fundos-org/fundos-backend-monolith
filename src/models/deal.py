@@ -41,6 +41,14 @@ class InstrumentType(str, Enum):
     HYBRID = "hybrid"
     DERIVATIVE = "derivative"
 
+class RoundType(str, Enum): 
+    IDEAL = "ideal"
+    PRE_SEED = "pre-seed"
+    SEED = "seed"
+    SERIES_A = "series-a" 
+    SERIES_B = "series-b"
+    SERIES_C = "series-c" 
+
 class Deal(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     fund_manager_id: UUID = Field(foreign_key="user.id")

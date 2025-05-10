@@ -2,11 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from starlette import status
 from src.db.session import get_session
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Annotated
+from typing import Annotated, List
 from src.services.deal import DealService
 from src.schemas.deal import (
     DealCreateRequest, DealCreateResponse, CompanyDetailsRequest, IndustryProblemRequest, CustomerSegmentRequest, 
-    ValuationRequest, SecuritiesRequest
+    ValuationRequest, SecuritiesRequest, DealDataResponse
 )
 
 router = APIRouter()
@@ -14,7 +14,7 @@ router = APIRouter()
 # service initialization
 deal_service = DealService()
 
-@router.post("/create/draft")
+@router.post("/web/create/draft")
 async def create_deal_draft(
     data: DealCreateRequest, 
     session: Annotated[AsyncSession, Depends(get_session)]
@@ -28,7 +28,7 @@ async def create_deal_draft(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to create deal draft: {str(e)}")
 
-@router.post("/deal/company-details")
+@router.post("/web/company-details")
 async def update_company_details(
     session: Annotated[AsyncSession, Depends(get_session)],
     data: CompanyDetailsRequest = Depends(), 
@@ -47,7 +47,7 @@ async def update_company_details(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update company details: {str(e)}")
 
-@router.post("/deal/industry-problem")
+@router.post("/web/industry-problem")
 async def update_industry_problem(
     data: IndustryProblemRequest, 
     session: Annotated[AsyncSession, Depends(get_session)]
@@ -64,7 +64,7 @@ async def update_industry_problem(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update industry and problem details: {str(e)}")
 
-@router.post("/deal/customer-segment")
+@router.post("/web/customer-segment")
 async def update_customer_segment( 
     data: CustomerSegmentRequest, 
     session: Annotated[AsyncSession, Depends(get_session)]
@@ -80,7 +80,7 @@ async def update_customer_segment(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update customer segment: {str(e)}")
 
-@router.post("/deal/valuation")
+@router.post("/web/valuation")
 async def update_valuation(
     session: Annotated[AsyncSession, Depends(get_session)], 
     data: ValuationRequest = Depends(), 
@@ -101,7 +101,7 @@ async def update_valuation(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update valuation details: {str(e)}")
 
-@router.post("/deal/securities")
+@router.post("/web/securities")
 async def update_securities( 
     data: SecuritiesRequest, 
     session: Annotated[AsyncSession, Depends(get_session)]
@@ -117,3 +117,28 @@ async def update_securities(
         return DealCreateResponse(deal_id=deal.id, message="Securities details updated")
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update securities details: {str(e)}")
+
+@router.get("/mobile/all-deals")
+async def get_all_deals(
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> List[DealDataResponse]: 
+    try: 
+        pass 
+    except Exception as e : 
+        raise HTTPException(detail=str(e)) 
+    
+@router.get("/mobile/{deal_id}")
+async def get_deal_by_id(
+    deal_id: str,
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> DealDataResponse :
+    try: 
+        deal_service.get_deal_by_id(
+            session = session,
+            deal_id = deal_id
+        )
+        pass 
+
+    except Exception as e: 
+        raise HTTPException(detail=str(e))
+    

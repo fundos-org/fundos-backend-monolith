@@ -1,4 +1,4 @@
-from src.models.deal import BusinessModel, InstrumentType,TargetCustomerSegment, CompanyStage
+from src.models.deal import BusinessModel, InstrumentType,TargetCustomerSegment, CompanyStage, RoundType
 from uuid import UUID
 from pydantic import BaseModel
 
@@ -43,4 +43,14 @@ class ValuationRequest(BaseModel):
 class PitchUploadRequest(BaseModel):
     deal_id: str
     pitch_deck_url: str | None = None
-    pitch_video_url: str | None = None
+    pitch_video_url: str | None = None 
+
+class DealDataResponse(BaseModel): 
+    current_valuation: float 
+    round_type: RoundType
+    round_size: float 
+    minimum_investment: float 
+    valuation_type: str  # change to enum later
+    instruments: str # change to enum late 
+    pass 
+
