@@ -5,7 +5,7 @@ import json
 from fastapi import HTTPException
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.models.kyc import KYC
+from src.models.kyc import KYC, KycStatus
 from src.models.user import User
 from src.logging.logging_setup import get_logger
 from datetime import datetime
@@ -289,9 +289,15 @@ class KycService:
 
     # PAN Methods
     async def verify_pan(self, user_id: str, pan_number: str, session: AsyncSession) -> dict:
+        try:
+            UUID(user_id)
+        except ValueError:
+            logger.error(f"Invalid user_id format: {user_id}")
+            raise HTTPException(status_code=400, detail="Invalid user_id format")
+
         url = f"{self.validation_base_url}/kyc/v1/pan_details"
         payload = {
-            "client_ref_num": user_id,
+            "client_ref_num": "pan-" + user_id,
             "pan": pan_number
         }
         headers = self.get_auth_header_basic()
@@ -300,16 +306,69 @@ class KycService:
             response = await client.post(url, json=payload, headers=headers)
 
         if response.status_code != 200:
-            logger.error(f"Failed to verify PAN: {response.status_code} {response.text}")
-            raise HTTPException(status_code=response.status_code, detail="Failed to verify PAN")
+            logger.error(f"PAN verification failed: {response.status_code} {response.text}")
+            raise HTTPException(status_code=response.status_code, detail="PAN verification failed")
 
         data = response.json()
+        logger.info(f"PAN verification response: {data}")
 
         if data.get("result_code") != 101:
-            logger.error(f"PAN verification failed: {data.get('message', 'No message provided')}")
-            raise HTTPException(status_code=400, detail=data.get("message", "PAN verification failed"))
+            raise HTTPException(status_code=400, detail="PAN verification unsuccessful")
 
-        return data.get("result", {})
+        result = data.get("result", {})
+
+        pan_status = result.get("pan_status")
+        aadhaar_linked = result.get("aadhaar_linked")
+        aadhaar_num = result.get("aadhaar_number") 
+
+        if pan_status:
+            logger.info(f"pan status: {pan_status}")
+
+        else: 
+            logger.error(f"pan status: {pan_status}") 
+            
+        if aadhaar_linked and aadhaar_num: 
+            masked_aadhaar = aadhaar_num[-4:]
+        else: 
+            logger.error("aadhaar number unavailable unable to check pan aadhaar link")
+
+        # Fetch and update user
+        uuid_obj = UUID(user_id)
+        user = await session.get(User, uuid_obj)
+        if not user:
+            logger.error(f"User not found: {user_id}")
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Update or create KYC record
+        kyc = await session.get(KYC, user_id)
+        if kyc:
+            # pull aadhaar num: 
+            kyc_aadhaar_num = kyc.aadhaar_number
+            kyc_masked_aadhaar = kyc_aadhaar_num[-4:] 
+
+            if masked_aadhaar == kyc_masked_aadhaar: 
+                kyc.pan_aadhaar_linked = True
+
+            kyc.pan_number = result.get("pan")
+            kyc.status = KycStatus.VERIFIED
+            kyc.updated_at = datetime.now()
+            await session.merge(kyc)
+        else:
+            kyc = KYC(
+                user_id=user_id,
+                pan_number=result.get("pan"),
+                status="pending",
+                created_at=datetime.now(),
+                updated_at=datetime.now()
+            )
+            session.add(kyc)
+
+        await session.merge(user)
+        await session.commit()
+        await session.refresh(user)
+        await session.refresh(kyc)
+
+        return result
 
     # Validation Methods
     async def validate_pan_aadhaar_link(self, client_ref_num: str, pan_number: str, aadhaar_number: str, session: AsyncSession) -> dict:

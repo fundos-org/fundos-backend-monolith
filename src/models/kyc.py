@@ -10,6 +10,7 @@ class KYC(SQLModel, table=True):
     user_id: UUID = Field(foreign_key="user.id")
     aadhaar_number: Optional[str]  # Encrypted
     pan_number: Optional[str]  # Encrypted
+    pan_aadhaar_linked: Optional[bool]
     bank_account_number: Optional[str]  # Encrypted
     bank_ifsc: Optional[str]
     status: KycStatus = Field(default=KycStatus.PENDING)  # pending, verified, rejected

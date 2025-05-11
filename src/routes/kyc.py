@@ -117,7 +117,7 @@ async def verify_pan(
 ) -> dict:
     try:
         pan_data = await kyc_service.verify_pan(
-            unique_id=pan_details.unique_id,
+            user_id=pan_details.user_id,
             pan_number=pan_details.pan_number,
             session=session
         )
