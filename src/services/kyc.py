@@ -2,6 +2,7 @@ import httpx
 import base64
 import redis
 import json
+import os
 from fastapi import HTTPException
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,7 +19,7 @@ DIGITAP_BASE_URL = "https://svc.digitap.ai"
 VALIDATION_BASE_URL = "https://svc.digitap.ai/validation"
 CLIENT_ID = "17137231"
 CLIENT_SECRET = "RhoLU35zsKc2OMao9SNec3kpcHJjIWAk"
-REDIS_HOST = "localhost"
+REDIS_HOST = os.getenv("REDIS_HOST", "redis")
 REDIS_PORT = 6379
 REDIS_DB = 0
 CACHE_TTL = 300  # 5 minutes in seconds, aligned with likely Digitap session timeout
