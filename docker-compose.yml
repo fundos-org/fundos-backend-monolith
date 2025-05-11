@@ -1,15 +1,5 @@
 version: '3.8'
 services:
-  redis:
-    image: redis:latest
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   fundos-backend:
     build:
       context: .

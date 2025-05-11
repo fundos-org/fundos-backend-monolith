@@ -53,7 +53,7 @@ app.include_router(router=dummyRouter, prefix=f"{api_prefix_v0}", tags=["test"])
 app_configs = AppConfigs()
 port = 8000
 
-@app.get("/")
+@app.get("/heath")
 async def root(): 
     return JSONResponse(status_code=200, content= {"message" : f"app running on localhost:{port}", "isSuccess": True})
 
