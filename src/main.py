@@ -1,7 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
 from src.configs.app_configs import AppConfigs
 from src.routes.index import router as indexRouter
 from src.routes.kyc import router as kycRouter
@@ -27,14 +26,14 @@ app = FastAPI(lifespan=lifespan)
 # Register the middleware using FastAPI's .middleware() method
 # app.middleware("http")(request_logging_middleware) 
 
-# Handle cors middle
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Handle cors middle (added via nginx)
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],  # Allow all origins
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
 
 # adding exception handling 
 app.add_exception_handler(Exception, general_exception_handler)
