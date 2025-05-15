@@ -30,8 +30,8 @@ app = FastAPI(lifespan=lifespan)
 # Handle cors middle
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # or specific domains
-    allow_credentials=False,
+    allow_origin_regex=r"^(https:\/\/fundos-obq6srbb6-goutamkotas-projects\.vercel\.app|http:\/\/localhost(:\d+)?)$",
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
