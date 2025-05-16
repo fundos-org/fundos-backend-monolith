@@ -1,61 +1,61 @@
-import httpx
-import base64
+import boto3
+import redis
+import random
+import string
 from fastapi import HTTPException
+from src.logging.logging_setup import get_logger
 
-PLIVO_AUTH_ID = "your_auth_id"
-PLIVO_AUTH_TOKEN = "your_auth_token"
-PLIVO_BASE_URL = f"https://api.plivo.com/v1/Account/{PLIVO_AUTH_ID}"
+logger = get_logger(__name__)
+
+AWS_REGION = "ap-south-1"
+REDIS_HOST = "redis"
+REDIS_PORT = 6379
+REDIS_DB = 0
+CACHE_TTL = 300
 
 class PhoneService:
     def __init__(self):
-        self.auth_id = PLIVO_AUTH_ID
-        self.auth_token = PLIVO_AUTH_TOKEN
-        self.base_url = PLIVO_BASE_URL
+        self.sns_client = boto3.client("sns", region_name=AWS_REGION)
+        self.redis = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, decode_responses=True)
 
-    def get_auth_header(self) -> dict:
-        token = f"{self.auth_id}:{self.auth_token}"
-        base64_token = base64.b64encode(token.encode()).decode()
-        return {
-            "Authorization": f"Basic {base64_token}",
-            "Content-Type": "application/json"
-        }
+    def _generate_otp(self, length: int = 6) -> str:
+        return ''.join(random.choices(string.digits, k=length))
 
-    async def verify_phone_number(self, phone_number: str, alias: str = "UserVerification", channel: str = "sms") -> dict:
-        url = f"{self.base_url}/VerifiedCallerId/"
-        payload = {
-            "phone_number": phone_number,
-            "alias": alias,
-            "channel": channel
-        }
-        headers = self.get_auth_header()
+    def _get_otp_cache_key(self, phone_number: str) -> str:
+        return f"otp:phone:{phone_number}"
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(url, json=payload, headers=headers)
+    async def send_phone_otp(self, phone_number: str) -> dict:
+        try:
+            if not phone_number.startswith("+") or len(phone_number) < 10:
+                raise HTTPException(status_code=400, detail="Invalid phone number format")
+            otp = self._generate_otp()
+            message = f"Your verification OTP is {otp}. Valid for 5 minutes."
+            response = self.sns_client.publish(
+                PhoneNumber=phone_number,
+                Message=message,
+                MessageAttributes={
+                    "AWS.SNS.SMS.SenderID": {"DataType": "String", "StringValue": "Fundos"},
+                    "AWS.SNS.SMS.SMSType": {"DataType": "String", "StringValue": "Transactional"}
+                }
+            )
+            logger.info(f"SNS response: {response}")
+            cache_key = self._get_otp_cache_key(phone_number)
+            self.redis.setex(cache_key, CACHE_TTL, otp)
+            return {"message": f"OTP sent to {phone_number}", "phone_number": phone_number}
+        except Exception as e:
+            logger.error(f"Failed to send OTP: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to send OTP")
 
-        if response.status_code != 201:
-            raise HTTPException(status_code=response.status_code, detail="Failed to initiate phone number verification")
-
-        data = response.json()
-        return {
-            "message": data.get("message"),
-            "verification_uuid": data.get("verification_uuid")
-        }
-    async def verify_otp(self, session_uuid: str, otp_code: str) -> dict:
-        url = f"{self.base_url}/Verify/Session/{session_uuid}/"
-        payload = {
-            "otp": otp_code
-        }
-        headers = self.get_auth_header()
-
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(url, json=payload, headers=headers)
-
-        if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail="Failed to verify OTP")
-
-        data = response.json()
-
-        if not data.get("verified"):
-            raise HTTPException(status_code=400, detail="Invalid OTP")
-
-        return data
+    async def verify_phone_otp(self, phone_number: str, otp: str) -> dict:
+        try:
+            cache_key = self._get_otp_cache_key(phone_number)
+            cached_otp = self.redis.get(cache_key)
+            if not cached_otp:
+                raise HTTPException(status_code=400, detail="OTP expired or not found")
+            if cached_otp != otp:
+                raise HTTPException(status_code=400, detail="Invalid OTP")
+            self.redis.delete(cache_key)
+            return {"message": "Phone number verified", "phone_number": phone_number}
+        except Exception as e:
+            logger.error(f"Failed to verify OTP: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to verify OTP")
