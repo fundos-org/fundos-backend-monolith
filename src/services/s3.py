@@ -94,6 +94,38 @@ class S3Service:
         except Exception as e:
             logger.error(f"Unexpected error uploading file {file.filename}: {str(e)}")
             raise HTTPException(status_code=500, detail="Internal server error")
+        
+    async def upload_and_get_key(self, object_id: UUID, file: UploadFile, bucket_name: str, folder_prefix: str) -> str:
+        """
+        Uploads a file to S3 and returns the object key.
+        :param object_id: Unique identifier for the object
+        :param file: UploadFile object from FastAPI
+        :param bucket_name: S3 bucket name
+        :param folder_prefix: Folder prefix for the S3 object
+        :return: Object key as string
+        """
+        try:
+            # Generate unique object name
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            file_extension = mimetypes.guess_extension(file.content_type) or '.jpg'
+            object_name = f"{folder_prefix}{object_id}_{timestamp}{file_extension}"
+
+            # Upload file to S3
+            await file.seek(0)  # Reset file pointer
+            self.s3_client.upload_fileobj(
+                file.file,
+                bucket_name,
+                object_name,
+                ExtraArgs={'ContentType': file.content_type}
+            )
+
+            return object_name
+        except ClientError as e:
+            logger.error(f"Failed to upload file {file.filename}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to upload to S3")
+        except Exception as e:
+            logger.error(f"Unexpected error uploading file {file.filename}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Internal server error")
 
     async def delete_file(self, file_uri: str) -> None:
         """

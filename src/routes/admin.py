@@ -1,13 +1,14 @@
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException
 from typing import Any, Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
+from uuid import UUID
 from src.utils.dependencies import get_session
 from src.schemas.admin import (CreateProfileReq, CreateCredentialsReq, CreateProfileRes)
-from src.services.admin import SubAdminService
+from src.services.admin import AdminService
 
 router = APIRouter() 
 
-subadmin_services = SubAdminService()
+admin_services = AdminService()
 
 @router.post("/create/profile")
 async def create_subadmin(
@@ -16,11 +17,12 @@ async def create_subadmin(
     logo: UploadFile = File(...)
     ) -> Any:
 
-    result = await subadmin_services.create_subadmin_profile(
+    result = await admin_services.create_subadmin_profile(
         session=session,
         name=data.name, 
         email=data.email, 
         contact=data.contact,
+        about=data.about,
         logo=logo
     )
     if not result["success"]:
@@ -31,10 +33,11 @@ async def create_subadmin(
 @router.post("/create/credentials")
 async def create_credentials(
     session:Annotated[AsyncSession, Depends(get_session)], 
-    data: CreateCredentialsReq = Depends(),
+    data: CreateCredentialsReq,
     ) -> Any: 
-    result = await subadmin_services.set_subadmin_credentials(
+    result = await admin_services.set_subadmin_credentials(
         session=session,
+        subadmin_id=data.subadmin_id,
         username=data.username, 
         password=data.password,
         re_entered_password=data.re_entered_password,
@@ -46,12 +49,16 @@ async def create_credentials(
 
     return result
 
-@router.get("/create/")
+@router.get("/get/{subadmin_id}")
 async def get_subadmin(
-    session: Annotated[AsyncSession, Depends(get_session)]
+    session: Annotated[AsyncSession, Depends(get_session)],
+    subadmin_id: UUID
 ) -> CreateProfileRes: 
 
-    result = await subadmin_services.get_subadmin_details(session=session) 
+    result = await admin_services.get_subadmin_details(
+        session=session,
+        subadmin_id=subadmin_id
+        ) 
     if not result["success"]:
         raise HTTPException(status_code=400, detail="failed to get subadmin details")
 
