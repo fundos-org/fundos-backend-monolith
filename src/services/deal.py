@@ -1,6 +1,6 @@
 from datetime import datetime
 from fastapi import HTTPException, UploadFile
-from typing import List, Any
+from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from src.logging.logging_setup import get_logger
@@ -356,4 +356,19 @@ class DealService:
             await session.rollback()
             raise HTTPException(status_code=500, detail="Internal server error")
 
-        
+    async def get_deals_by_subadmin_id(
+        self, 
+        subadmin_id: UUID, 
+        session: AsyncSession
+    ) -> Any: 
+        try:
+            statement = select(Deal).where(Deal.fund_manager_id == subadmin_id)
+            results = await session.execute(statement)
+            deals = results.scalars().all()
+            return deals
+        except Exception as e:
+            logger.error(f"Failed to retrieve deals by subadmin ID: {str(e)}")
+            await session.rollback()
+            raise HTTPException(status_code=500, detail="Internal server error")
+        except HTTPException as he:
+            raise he

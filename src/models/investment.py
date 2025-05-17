@@ -1,4 +1,4 @@
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional
 from datetime import datetime, timezone
 from enum import Enum 
@@ -16,9 +16,9 @@ class Investment(SQLModel, table=True):
     deal_id: UUID = Field(foreign_key="deal.id")
     amount: float
     payment_status: PaymentStatus = Field(default=PaymentStatus.PENDING)  # pending, completed, failed
-    payment_id: Optional[str]  # Razorpay/PayU payment ID
-    signed_document_url: Optional[str]  # Zoho Sign signed document ID
+    payment_id: Optional[str] = Field(default=None) # Razorpay/PayU payment ID
+    signed_document_url: Optional[str] = Field(default=None) # Zoho Sign signed document ID
     created_at: datetime = Field(default_factory=datetime.now(timezone.utc))
     updated_at: Optional[datetime]
-    # investor: Optional[User] = Relationship(back_populates="investments")
-    # deal: Optional[Deal] = Relationship(back_populates="investments")
+    investor: Optional["User"] = Relationship(back_populates="investments") # type: ignore  # noqa: F821
+    deal: Optional["Deal"] = Relationship(back_populates="investments") # type: ignore  # noqa: F821

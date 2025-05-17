@@ -2,12 +2,15 @@ from fastapi import HTTPException
 from fastapi import UploadFile
 from fastapi import status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
 from src.logging.logging_setup import get_logger # assuming you have a logger setup
 from src.models.subadmin import Subadmin
+from src.schemas.admin import SubadminDetails
 from uuid import UUID
 from src.services.s3 import S3Service
 from typing import Any
 from datetime import datetime
+
 
 logger = get_logger(__name__) 
 
@@ -96,7 +99,7 @@ class AdminService:
         re_entered_password: str, 
         app_name: str, 
         invite_code: str
-        ) -> Any: 
+    ) -> Any: 
 
         try:
             subadmin = await session.get(Subadmin, subadmin_id)
@@ -131,7 +134,7 @@ class AdminService:
         self, 
         subadmin_id: UUID, 
         session: AsyncSession
-        ) -> Any:
+    ) -> Any:
         
         try:
             subadmin = await session.get(Subadmin, subadmin_id)
@@ -155,4 +158,42 @@ class AdminService:
             raise HTTPException(status_code=500, detail=f"Failed to fetch subadmin details: {str(e)}")
         
         except HTTPException as he:
+            raise he 
+        
+    async def get_all_subadmins(
+        self, 
+        session: AsyncSession
+    ) -> Any:
+        try:
+            # Query all Subadmin records
+            result = await session.execute(select(Subadmin))
+            subadmins = result.scalars().all()
+
+            # Prepare response data
+            response = []
+            for subadmin in subadmins:
+
+                # Placeholder for total_users and active_deals (to be computed)
+                total_users = 0  # Replace with actual logic (e.g., count related users)
+                active_deals = 0  # Replace with actual logic (e.g., count active deals)
+
+                response.append(SubadminDetails(
+                    subadmin_id=subadmin.id,
+                    name=subadmin.name,
+                    email=subadmin.email,
+                    invite_code=subadmin.invite_code or "",  # Handle null invite_code
+                    total_users=total_users,
+                    active_deals=active_deals,
+                    onboarding_date=subadmin.created_at.strftime("%d/%m/%Y")
+                ))
+
+            return {
+                "success":True,
+                "subadmins": response
+            }
+        except HTTPException as he:
             raise he
+        except Exception as e:
+            logger.error(f"Failed to fetch subadmin details: {str(e)}")
+            await session.rollback()
+            raise HTTPException(status_code=500, detail=f"Failed to fetch subadmin details: {str(e)}")

@@ -3,6 +3,7 @@ from starlette import status
 from src.db.session import get_session
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated, Any
+from uuid import UUID
 from src.services.deal import DealService
 from src.schemas.deal import (
     DealCreateRequest, DealCreateResponse, CompanyDetailsRequest, IndustryProblemRequest, CustomerSegmentRequest, 
@@ -130,7 +131,7 @@ async def get_all_deals(
     except Exception as e : 
         raise HTTPException(detail=str(e)) 
     
-@router.get("/mobile/{deal_id}")
+@router.get("/mobile/deal/{deal_id}")
 async def get_deal_by_id(
     deal_id: str,
     session: Annotated[AsyncSession, Depends(get_session)]
@@ -144,3 +145,16 @@ async def get_deal_by_id(
     except Exception as e: 
         raise HTTPException(detail=str(e))
     
+@router.get("/mobile/subadmin/{subadmin_id}")
+async def get_subadmin_deals(
+    subadmin_id: UUID,
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> Any :
+    try: 
+        result = await deal_service.get_deals_by_subadmin_id(
+            session = session,
+            subadmin_id = subadmin_id
+        )    
+        return result  
+    except Exception as e: 
+        raise HTTPException(detail=str(e))

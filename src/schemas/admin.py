@@ -1,4 +1,6 @@
 from pydantic import BaseModel, EmailStr
+from typing import List
+from uuid import UUID 
 
 class CreateProfileReq(BaseModel):
     name: str
@@ -20,6 +22,17 @@ class CreateProfileRes(BaseModel):
     password: str 
     invite_code: str
 
+class SubadminDetails(BaseModel): 
+    subadmin_id: UUID
+    name: str
+    email: EmailStr
+    invite_code: str
+    total_users: int
+    active_deals: int
+    onboarding_date: str  
+
+class GetSubadminRes(BaseModel):
+    subadmins: List[SubadminDetails]
 
 
 

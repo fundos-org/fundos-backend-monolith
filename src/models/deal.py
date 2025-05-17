@@ -1,6 +1,6 @@
 # deal/models/deal.py
-from sqlmodel import SQLModel, Field
-from typing import Optional
+from sqlmodel import SQLModel, Field, Relationship
+from typing import Optional, List
 from datetime import datetime
 from uuid import UUID, uuid4
 from enum import Enum
@@ -51,28 +51,31 @@ class RoundType(str, Enum):
 
 class Deal(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    fund_manager_id: UUID = Field(foreign_key="user.id")
-    title: str 
-    description: str
-    company_name: Optional[str]
-    about_company: Optional[str]
-    company_website: Optional[str]
-    industry: Optional[str]
-    problem_statement: Optional[str]
-    business_model: Optional[BusinessModel]
-    company_stage: Optional[CompanyStage]
-    target_customer_segment: Optional[TargetCustomerSegment]
-    current_valuation: Optional[float]
-    round_size: Optional[float]
-    syndicate_commitment: Optional[float]
-    conversion_terms: Optional[str]
-    instrument_type: Optional[InstrumentType]
-    agreed_to_terms: bool = False
+    fund_manager_id: UUID = Field(foreign_key="subadmin.id")
+    title: str = Field(default=None, nullable=True)
+    description: str = Field(default=None, nullable=True)
+    company_name: Optional[str] = Field(default=None, nullable=True)
+    about_company: Optional[str] = Field(default=None, nullable=True)
+    company_website: Optional[str] = Field(default=None, nullable=True)
+    industry: Optional[str] = Field(default=None, nullable=True)
+    problem_statement: Optional[str] = Field(default=None, nullable=True)
+    business_model: Optional[BusinessModel] = Field(default=None, nullable=True)
+    company_stage: Optional[CompanyStage] = Field(default=None, nullable=True)
+    target_customer_segment: Optional[TargetCustomerSegment] = Field(default=None, nullable=True)
+    current_valuation: Optional[float] = Field(default=None, nullable=True)
+    round_size: Optional[float] = Field(default=None, nullable=True)
+    syndicate_commitment: Optional[float] = Field(default=None, nullable=True)
+    conversion_terms: Optional[str] = Field(default=None, nullable=True)
+    instrument_type: Optional[InstrumentType] = Field(default=None, nullable=True)
+    agreed_to_terms: bool = Field(default=False, nullable=True)
 
-    logo_url: Optional[str]
-    pitch_deck_url: Optional[str]
-    pitch_video_url: Optional[str]
+    logo_url: Optional[str] = Field(default=None, nullable=True)
+    pitch_deck_url: Optional[str] = Field(default=None, nullable=True)
+    pitch_video_url: Optional[str] = Field(default=None, nullable=True)
 
     status: DealStatus = Field(default=DealStatus.OPEN)
     created_at: datetime = Field(default_factory=lambda: datetime.now())
-    updated_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = Field(default=None, nullable=True)
+
+    fund_manager: Optional["Subadmin"] = Relationship(back_populates="deals")  # type: ignore # noqa: F821
+    investments: List["Investment"] = Relationship(back_populates="deal")  # type: ignore # noqa: F821

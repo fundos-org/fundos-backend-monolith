@@ -3,14 +3,14 @@ from typing import Any, Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 from src.utils.dependencies import get_session
-from src.schemas.admin import (CreateProfileReq, CreateCredentialsReq, CreateProfileRes)
+from src.schemas.admin import (CreateProfileReq, CreateCredentialsReq, CreateProfileRes, GetSubadminRes)
 from src.services.admin import AdminService
 
 router = APIRouter() 
 
 admin_services = AdminService()
 
-@router.post("/create/profile")
+@router.post("/subadmins/create/profile")
 async def create_subadmin(
     session: Annotated[AsyncSession, Depends(get_session)], 
     data: CreateProfileReq = Depends(), 
@@ -30,7 +30,7 @@ async def create_subadmin(
 
     return result
 
-@router.post("/create/credentials")
+@router.post("/subadmins/create/credentials")
 async def create_credentials(
     session:Annotated[AsyncSession, Depends(get_session)], 
     data: CreateCredentialsReq,
@@ -49,7 +49,7 @@ async def create_credentials(
 
     return result
 
-@router.get("/get/{subadmin_id}")
+@router.get("/subadmins/{subadmin_id}")
 async def get_subadmin(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID
@@ -59,6 +59,18 @@ async def get_subadmin(
         session=session,
         subadmin_id=subadmin_id
         ) 
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="failed to get subadmin details")
+
+    return result
+
+@router.get("/subadmins/")
+async def get_all_subadmins(
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> GetSubadminRes: 
+    result = await admin_services.get_all_subadmins(
+        session=session
+    )
     if not result["success"]:
         raise HTTPException(status_code=400, detail="failed to get subadmin details")
 

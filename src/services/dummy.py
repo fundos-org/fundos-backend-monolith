@@ -1,9 +1,11 @@
 from fastapi import HTTPException
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
 from src.logging.logging_setup import get_logger # assuming you have a logger setup
 from pydantic import EmailStr
 from src.models.user import User, investorType
+from src.models.subadmin import Subadmin
 from src.utils.dependencies import get_user
 from uuid import UUID
 from src.services.s3 import S3Service
@@ -18,29 +20,48 @@ class DummyService:
         self.folder_prefix = "users/profile_pictures/"
         self.s3_service = S3Service(bucket_name=self.bucket_name, region_name="ap-south-1")
   
-    async def verify_invitation_code(self, invitation_code: str, session: AsyncSession) -> Dict[str, Any]:
+    async def verify_invitation_code(
+        self, 
+        invitation_code: str, 
+        session: AsyncSession    
+    ) -> Dict[str, Any]:
 
-        try: 
-            if invitation_code == "fundos": 
-                user = User(invitation_code=invitation_code, onboarding_status= "Invitation_verified")
+        try:
+            # Check if invitation code exists in Subadmin table
+            stmt = select(Subadmin).where(Subadmin.invite_code == invitation_code)
+            result = await session.execute(stmt)
+            subadmin = result.scalar_one_or_none()
+
+            if subadmin:
+                # Create new user with the valid invitation code
+                user = User(
+                    invitation_code=invitation_code,
+                    onboarding_status="Invitation_verified",
+                    fund_manager_id=subadmin.id  # Link user to subadmin
+                )
                 session.add(user)
                 await session.commit()
-                await session.refresh(user) 
+                await session.refresh(user)
 
                 return {
                     "success": True,
-                    "user_id": user.id
+                    "user_id": user.id,
+                    "fund_manager_id": subadmin.id
                 }
-            
-            else: 
+            else:
                 return {
-                    "success": False, 
+                    "success": False,
+                    "error": "Invalid invitation code"
                 }
-        except Exception as e: 
+
+        except Exception as e:
             logger.error(f"Request failed: {e}")
             raise HTTPException(status_code=500, detail="Internal request error")
 
-    async def send_phone_otp(self, phone_number: str) -> dict:
+    async def send_phone_otp(
+        self, 
+        phone_number: str
+    ) -> dict:
 
         try:
             return {
@@ -52,7 +73,13 @@ class DummyService:
             logger.error(f"Request failed: {e}")
             raise HTTPException(status_code=500, detail="Internal request error")
         
-    async def verify_phone_otp(self, user_id: UUID, otp_code: str, phone_number: str, session: AsyncSession) -> dict: 
+    async def verify_phone_otp(
+        self, 
+        user_id: UUID, 
+        otp_code: str, 
+        phone_number: str, 
+        session: AsyncSession
+    ) -> dict: 
 
         try:
             user = await session.get(User, user_id)
@@ -77,7 +104,13 @@ class DummyService:
             await session.rollback()
             raise HTTPException(status_code=500, detail="Internal server error")
         
-    async def set_user_details(self, user_id: UUID, first_name: str, last_name: str, session: AsyncSession) -> dict:
+    async def set_user_details(
+        self, 
+        user_id: UUID, 
+        first_name: str, 
+        last_name: str, 
+        session: AsyncSession
+    ) -> dict:
         
         try:
             user = await get_user(user_id=user_id, session=session)
@@ -97,7 +130,10 @@ class DummyService:
             await session.rollback()
             raise HTTPException(status_code=500, detail=f"Failed to update user details: {str(e)}")
         
-    async def send_email_otp(self, email: EmailStr) -> dict:
+    async def send_email_otp(
+        self, 
+        email: EmailStr
+    ) -> dict:
 
         try:
             return {
@@ -109,7 +145,10 @@ class DummyService:
             logger.error(f"Request failed: {e}")
             raise HTTPException(status_code=500, detail="Internal request error")
         
-    async def verify_email_otp(self, otp: str) -> dict: 
+    async def verify_email_otp(
+        self, 
+        otp: str
+    ) -> dict: 
 
         try: 
             if otp == "123456" :
@@ -122,7 +161,12 @@ class DummyService:
             logger.error(f"Request failed: {e}")
             raise HTTPException(status_code=500, detail="Internal request error") 
         
-    async def choose_investor_type(self, user_id: UUID, investor_type:investorType, session: AsyncSession) -> any :
+    async def choose_investor_type(
+        self, 
+        user_id: UUID, 
+        investor_type:investorType, 
+        session: AsyncSession
+    ) -> any :
         
         try:
             user = await get_user(user_id= user_id, session=session)
@@ -140,7 +184,12 @@ class DummyService:
             await session.rollback()
             raise HTTPException(status_code=500, detail=f"Failed to update user details: {str(e)}")
         
-    async def declaration_accepted( self, user_id: str, declaration_accepted: bool, session: AsyncSession) -> any : 
+    async def declaration_accepted( 
+        self, 
+        user_id: str, 
+        declaration_accepted: bool, 
+        session: AsyncSession
+    ) -> any : 
 
         try: 
             user = await get_user(user_id=user_id, session=session) 
@@ -159,7 +208,15 @@ class DummyService:
             await session.rollback()
             raise HTTPException(status_code=500, detail=f"Failed to update user details: {str(e)}")
         
-    async def set_professional_background( self, user_id: str, occupation: str, income_source: float, annual_income: float, capital_commitment: float, session: AsyncSession) -> any : 
+    async def set_professional_background( 
+        self, 
+        user_id: str, 
+        occupation: str, 
+        income_source: float, 
+        annual_income: float, 
+        capital_commitment: float, 
+        session: AsyncSession
+    ) -> any : 
 
         try: 
             user = await get_user(user_id=user_id, session=session) 
@@ -181,7 +238,12 @@ class DummyService:
             await session.rollback()
             raise HTTPException(status_code=500, detail=f"Failed to update user details: {str(e)}")
         
-    async def contribution_agreement(self, user_id: UUID, agreement_signed: bool, session: AsyncSession ) -> dict :
+    async def contribution_agreement(
+        self, 
+        user_id: UUID, 
+        agreement_signed: bool, 
+        session: AsyncSession
+    ) -> dict :
 
         try: 
             user = await get_user(user_id=user_id, session=session) 
@@ -200,7 +262,12 @@ class DummyService:
             await session.rollback()
             raise HTTPException(status_code=500, detail=f"Failed to update user details: {str(e)}")
         
-    async def upload_photograph(self, user_id: UUID, file: UploadFile, session: AsyncSession) -> dict:
+    async def upload_photograph(
+        self, 
+        user_id: UUID, 
+        file: UploadFile, 
+        session: AsyncSession
+    ) -> dict:
         """
         Uploads a user profile photograph to S3 and updates the user's profile_image_url in the database.
         
