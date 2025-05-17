@@ -47,13 +47,7 @@ class AdminService:
                 name=name,
                 email=email,
                 contact=contact,
-                about=about,
-                password="temporary_password",  # Set a default or temporary password
-                username=email,  # Optionally set username to email or another default
-                re_entered_password="temporary_password",  # Match password
-                created_at=datetime.now(),
-                app_name="temporary_app_name",  # Set a default or temporary app name 
-                invite_code="temporary_invite_code",  # Set a default or temporary invite code
+                about=about
             )
 
             # Add subadmin to the session
