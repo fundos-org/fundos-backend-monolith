@@ -2,14 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from starlette import status
 from src.db.session import get_session
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Annotated, List, Any
+from typing import Annotated, Any
 from src.services.deal import DealService
 from src.schemas.deal import (
     DealCreateRequest, DealCreateResponse, CompanyDetailsRequest, IndustryProblemRequest, CustomerSegmentRequest, 
-    ValuationRequest, SecuritiesRequest, DealDataResponse
+    ValuationRequest, SecuritiesRequest
 )
 
-router = APIRouter()
+router = APIRouter(tags=["subadmin"])
 
 # service initialization
 deal_service = DealService()

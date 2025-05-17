@@ -5,8 +5,6 @@ from enum import Enum
 from uuid import uuid4, UUID
 
 class Role(str, Enum):
-    ADMIN = "admin"
-    FUND_MANAGER = "fund_manager"
     INVESTOR = "investor"
     FOUNDER = "founder"
     MENTOR = "mentor"
@@ -49,7 +47,7 @@ class User(SQLModel, table=True):
     agreement_signed: bool = Field(default=True, nullable=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now().replace(tzinfo=None))
     updated_at: Optional[datetime] = Field(default=None, nullable=True)
-    fund_manager_id: Optional[UUID] = Field(foreign_key="user.id")  # For investors/founders under a fund manager
+    fund_manager_id: Optional[UUID] = Field(foreign_key="subadmin.id")  # For investors/founders under a fund manager
     kyc_status: KycStatus = Field(default=KycStatus.PENDING)  # pending, verified, rejected
     profile_image_url: Optional[str] = Field()
     # deals: List[uuid.UUID] = Field(foreign_key="deal.id")

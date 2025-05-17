@@ -23,7 +23,7 @@ user_service = UserService()
 
 router = APIRouter()
 
-@router.post('/aadhaar/otp/send')
+@router.post('/aadhaar/otp/send', tags= ["investor", "aadhaar"])
 async def verify_aadhaar(
     aadhaar_details: AadhaarRequest,
     session: Annotated[AsyncSession, Depends(get_session)]
@@ -47,7 +47,7 @@ async def verify_aadhaar(
             detail=f"Failed to send OTP: {str(e)}"
         )
 
-@router.post('/aadhaar/otp/verify', tags=["aadhaar"])
+@router.post('/aadhaar/otp/verify', tags=["investor", "aadhaar"])
 async def submit_aadhaar_otp(
     otp_details: SubmitOTPRequest,
     session: Annotated[AsyncSession, Depends(get_session)]
@@ -110,7 +110,7 @@ async def validate_aadhaar(
             detail=f"Failed to validate Aadhaar: {str(e)}"
         )
 
-@router.post('/pan/verify', tags=["pan"])
+@router.post('/pan/verify', tags=["pan", "investor"])
 async def verify_pan(
     pan_details: PanDetailsRequest,
     session: Annotated[AsyncSession, Depends(get_session)]
