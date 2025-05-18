@@ -13,13 +13,6 @@ class AadhaarResponse(BaseModel):
     code_verifier: str
     message: str
 
-# class SubmitOTPRequest(BaseModel):
-#     user_id: str
-#     otp: str
-#     transaction_id: str
-#     code_verifier: str
-#     fwdp: str
-
 class SubmitOTPRequest(BaseModel):
     user_id: str
     otp: str
@@ -38,12 +31,6 @@ class SubmitOTPResponse(BaseModel):
     address: Dict[str, str]
     image: str
     isXmlValid: str
-
-# class ResendOTPRequest(BaseModel):
-#     user_id: str
-#     aadhaar_number: str
-#     transaction_id: str
-#     fwdp: str
 
 class ResendOTPResponse(BaseModel):
     transaction_id: str
