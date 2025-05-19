@@ -5,7 +5,7 @@ from uuid import UUID
 from src.utils.dependencies import get_session
 from src.schemas.subadmin import (SubAdminSignInReq, SubAdminDashboardStatisticsRes, SubAdminDashboardTransactionsRes, 
                                   SubAdminDashboardActivitiesRes, SubAdminDashboardOverviewGraphRes, SubAdminDealsOverviewRes,
-                                  SubAdminDealsStatisticsRes)
+                                  SubAdminDealsStatisticsRes, SubAdminMembersStatisticsRes)
 from src.services.subadmin import SubAdminService
 
 router = APIRouter() 
@@ -116,6 +116,33 @@ async def deals_overview(
 
     return result
 
+@router.get("/members/statistics/{subadmin_id}")
+async def members_statistics(
+    session:Annotated[AsyncSession, Depends(get_session)], 
+    subadmin_id: UUID,
+    ) -> SubAdminMembersStatisticsRes: 
+    result = await subadmin_services.get_members_statistics(
+        session=session,
+        subadmin_id=subadmin_id
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="failed to set credentials")
 
+    return result
 
+@router.get("/members/addmember/{subadmin_id}/{email}")
+async def add_member(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    subadmin_id: UUID,
+    email: str
+) -> Any: 
 
+    result = await subadmin_services.add_members(
+        session=session,
+        subadmin_id=subadmin_id,
+        email=email
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="failed to get subadmin details")
+
+    return result

@@ -48,4 +48,12 @@ class SubAdminDealsOverviewRes(BaseModel):
     closed_deals: List
     success: bool
 
+class SubAdminMembersStatisticsRes(BaseModel):
+    subadmin_id: str
+    subadmin_name: str
+    invite_code: str
+    members: Dict
+    statistics: Dict
+    success: bool
+
 

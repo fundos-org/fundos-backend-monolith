@@ -1,6 +1,7 @@
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select, func
+from sqlalchemy.orm import joinedload
 from src.logging.logging_setup import get_logger
 from src.models.subadmin import Subadmin
 from src.models.deal import Deal, DealStatus
@@ -443,9 +444,9 @@ class SubAdminService:
                 User.fund_manager_id == subadmin_id,
                 User.role == Role.INVESTOR
             )
-        )
+        ).options(joinedload(User.investments))
         investors_result = await session.execute(investors_stmt)
-        investors = investors_result.scalars().all()
+        investors = investors_result.unique().scalars().all()
 
         investors_list = [
             {
@@ -463,9 +464,9 @@ class SubAdminService:
                 User.fund_manager_id == subadmin_id,
                 User.role == Role.FOUNDER
             )
-        )
+        ).options(joinedload(User.investments))
         startups_result = await session.execute(startups_stmt)
-        startups = startups_result.scalars().all() 
+        startups = startups_result.unique().scalars().all()
 
         # Fetch subadmin startups with the same filters as investors
         startups_list = [
@@ -507,6 +508,7 @@ class SubAdminService:
         return {
             "subadmin_id": str(subadmin.id),
             "subadmin_name": subadmin.name or "",
+            "invite_code": subadmin.invite_code,
             "members": subadmin_members,
             "statistics": statistics,
             "success":True
