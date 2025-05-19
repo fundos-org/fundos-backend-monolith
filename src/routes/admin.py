@@ -3,12 +3,28 @@ from typing import Any, Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 from src.utils.dependencies import get_session
-from src.schemas.admin import (CreateProfileReq, CreateCredentialsReq, CreateProfileRes, GetSubadminRes)
+from src.schemas.admin import (CreateProfileReq, CreateCredentialsReq, CreateProfileRes, GetSubadminRes, AdminSignInReq)
 from src.services.admin import AdminService
 
 router = APIRouter() 
 
 admin_services = AdminService()
+
+@router.post("/signin")
+async def signin_admin(
+    session: Annotated[AsyncSession, Depends(get_session)], 
+    data: AdminSignInReq = Depends(), 
+    ) -> Any:
+
+    result = await admin_services.admin_signin(
+        session=session,
+        username=data.username, 
+        password=data.password
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Invalid invitation code")
+
+    return result
 
 @router.post("/subadmins/create/profile")
 async def create_subadmin(

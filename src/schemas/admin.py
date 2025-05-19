@@ -35,5 +35,8 @@ class GetSubadminRes(BaseModel):
     subadmins: List[SubadminDetails]
 
 
-
+class AdminSignInReq(BaseModel):
+    username: str
+    password: str
+    
 

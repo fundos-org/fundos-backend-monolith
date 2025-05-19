@@ -19,6 +19,30 @@ class AdminService:
         self.bucket_name = "fundos-dev-bucket"
         self.folder_prefix = "subadmin/profile_pictures/"
         self.s3_service = S3Service(bucket_name=self.bucket_name, region_name="ap-south-1")
+
+    async def admin_signin(
+        self, 
+        session: AsyncSession, 
+        username: str, 
+        password: str
+    ) -> Any:
+        try:
+            if username == "admin" and password == "Fundos":
+                return {
+                    "message": "User signed in successfully",
+                    "success": True
+                }
+            else:
+                return {
+                    "message": "Invalid credentials",
+                    "success": False
+                }
+
+        except Exception as e:
+            logger.error(f"Failed to fetch subadmin details: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to fetch subadmin details: {str(e)}")
+        except HTTPException as he:
+            raise he
   
     async def create_subadmin_profile(
         self,
