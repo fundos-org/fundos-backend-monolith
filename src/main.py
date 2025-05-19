@@ -6,7 +6,7 @@ from src.routes.index import router as indexRouter
 from src.routes.kyc import router as kycRouter
 from src.routes.deal import router as dealsRouter 
 from src.routes.dummy import router as dummyRouter
-from src.routes.onboarding import router as onBoardingRouter
+# from src.routes.onboarding import router as onBoardingRouter
 from src.routes.admin import router as adminRouter
 from src.routes.subadmin import router as subadminRouter
 from src.utils.lifespan import lifespan
@@ -44,14 +44,14 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 # adding api Routers 
 app.include_router(router=indexRouter, prefix=f"{api_prefix}", tags=["index"])
-app.include_router(router=kycRouter, prefix=f"{api_prefix}/kyc", tags=["kyc"])
+app.include_router(router=kycRouter, prefix=f"{api_prefix}/kyc", tags=["investor"])
 app.include_router(router=dealsRouter, prefix=f"{api_prefix}/deals", tags=["deals"]) 
-app.include_router(router=onBoardingRouter, prefix=f"{api_prefix}/onboarding", tags=["live"])
+# app.include_router(router=onBoardingRouter, prefix=f"{api_prefix}/onboarding", tags=["live"])
 app.include_router(router=adminRouter, prefix=f"{api_prefix}/admin", tags=["admin"])
 app.include_router(router=subadminRouter, prefix=f"{api_prefix}/subadmin", tags=["subadmin"])
 
-# dummy api Routers
-app.include_router(router=dummyRouter, prefix=f"{api_prefix_v0}", tags=["test"])
+# Test api Routers
+app.include_router(router=dummyRouter, prefix=f"{api_prefix_v0}", tags=["test", "investor"])
 
 app_configs = AppConfigs()
 port = 8000

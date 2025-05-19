@@ -13,7 +13,7 @@ from src.schemas.kyc import (EmailVerifyOtpRequest, EmailVerifyOtpResponse, Agre
                             , OnBoardingResponse)
 from src.services.dummy import DummyService
 
-router = APIRouter(tags=["investor"]) 
+router = APIRouter() 
 
 # service initialization 
 dummy_service = DummyService()

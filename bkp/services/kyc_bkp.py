@@ -8,6 +8,10 @@ from src.schemas.kyc import (
     SubmitOTPRequest, ResendOTPRequest,
     PanDetailsRequest
 )
+from src.schemas.kyc_validation import (
+    ValidateAadhaarRequest, ValidatePanRequest,
+    PanAadhaarLinkRequest
+)
 from src.services.kyc import KycService
 from src.services.phone import PhoneService
 from src.services.user import UserService
@@ -19,7 +23,7 @@ user_service = UserService()
 
 router = APIRouter()
 
-@router.post('/aadhaar/otp/send')
+@router.post('/aadhaar/otp/send', tags= ["investor", "aadhaar"])
 async def verify_aadhaar(
     aadhaar_details: AadhaarRequest,
     session: Annotated[AsyncSession, Depends(get_session)]
@@ -43,7 +47,7 @@ async def verify_aadhaar(
             detail=f"Failed to send OTP: {str(e)}"
         )
 
-@router.post('/aadhaar/otp/verify')
+@router.post('/aadhaar/otp/verify', tags=["investor", "aadhaar"])
 async def submit_aadhaar_otp(
     otp_details: SubmitOTPRequest,
     session: Annotated[AsyncSession, Depends(get_session)]
@@ -64,7 +68,7 @@ async def submit_aadhaar_otp(
             detail=f"Failed to verify OTP: {str(e)}"
         )
 
-@router.post('/aadhaar/otp/resend')
+@router.post('/aadhaar/otp/resend', tags=["aadhaar"])
 async def resend_aadhaar_otp(
     otp_details: ResendOTPRequest,
     session: Annotated[AsyncSession, Depends(get_session)]
@@ -85,7 +89,28 @@ async def resend_aadhaar_otp(
             detail=f"Failed to resend OTP: {str(e)}"
         )
 
-@router.post('/pan/verify')
+@router.post("/aadhaar/validate", tags=["aadhaar"])
+async def validate_aadhaar(
+    validation_details: ValidateAadhaarRequest,
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> dict:
+    try:
+        response_data = await kyc_service.validate_aadhaar(
+            client_ref_num=validation_details.client_ref_num,
+            aadhaar_number=validation_details.aadhaar_number,
+            session=session
+        )
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content=dict(**response_data)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to validate Aadhaar: {str(e)}"
+        )
+
+@router.post('/pan/verify', tags=["pan", "investor"])
 async def verify_pan(
     pan_details: PanDetailsRequest,
     session: Annotated[AsyncSession, Depends(get_session)]
@@ -104,4 +129,48 @@ async def verify_pan(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to verify PAN: {str(e)}"
+        )
+
+@router.post("/pan/validate", tags=["pan"])
+async def validate_pan(
+    validation_details: ValidatePanRequest,
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> dict:
+    try:
+        response_data = await kyc_service.validate_pan(
+            client_ref_num=validation_details.client_ref_num,
+            pan_number=validation_details.pan_number,
+            full_name=validation_details.full_name,
+            session=session
+        )
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content=dict(**response_data)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to validate PAN: {str(e)}"
+        )
+
+@router.post("/pan/aadhaar/link", tags=["pan", "aadhaar"])
+async def validate_pan_aadhaar_linked(
+    validation_details: PanAadhaarLinkRequest,
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> dict:
+    try:
+        response_data = await kyc_service.validate_pan_aadhaar_link(
+            client_ref_num=validation_details.client_ref_num,
+            pan_number=validation_details.pan_number,
+            aadhaar_number=validation_details.aadhaar_number,
+            session=session
+        )
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content=dict(**response_data)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to validate PAN-Aadhaar link: {str(e)}"
         )

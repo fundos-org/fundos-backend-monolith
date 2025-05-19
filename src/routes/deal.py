@@ -131,7 +131,7 @@ async def get_all_deals(
     except Exception as e : 
         raise HTTPException(detail=str(e)) 
     
-@router.get("/mobile/deal/{deal_id}")
+@router.get("/mobile/deal/{deal_id}", tags=["investor"])
 async def get_deal_by_id(
     deal_id: str,
     session: Annotated[AsyncSession, Depends(get_session)]
@@ -145,7 +145,7 @@ async def get_deal_by_id(
     except Exception as e: 
         raise HTTPException(detail=str(e))
     
-@router.get("/mobile/subadmin/{fund_manager_id}")
+@router.get("/mobile/subadmin/{fund_manager_id}", tags=["investor"])
 async def get_subadmin_deals(
     fund_manager_id: UUID,
     session: Annotated[AsyncSession, Depends(get_session)]
