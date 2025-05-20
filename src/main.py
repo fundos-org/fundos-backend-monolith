@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from src.configs.app_configs import AppConfigs
+from src.configs.configs import app_config
 from src.routes.index import router as indexRouter
 from src.routes.kyc import router as kycRouter
 from src.routes.deal import router as dealsRouter 
@@ -53,16 +53,14 @@ app.include_router(router=subadminRouter, prefix=f"{api_prefix}/subadmin", tags=
 # Test api Routers
 app.include_router(router=dummyRouter, prefix=f"{api_prefix_v0}", tags=["test", "investor"])
 
-app_configs = AppConfigs()
-port = 8000
 
 @app.get("/")
 async def root(): 
-    return JSONResponse(status_code=200, content= {"message" : f"app running on localhost:{port}", "isSuccess": True})
+    return JSONResponse(status_code=200, content= {"message" : f"app running on localhost:{app_config.port}", "isSuccess": True})
 
 @app.get("/health")
 async def health():
-    return JSONResponse(status_code=200, content={"message" : f"server is healthy and up and running on Port: {port}","isSuccess": True})
+    return JSONResponse(status_code=200, content={"message" : f"server is healthy and up and running on Port: {app_config.port}","isSuccess": True})
 
 
 
