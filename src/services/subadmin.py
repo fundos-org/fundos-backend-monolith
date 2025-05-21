@@ -6,7 +6,8 @@ from src.logging.logging_setup import get_logger
 from src.models.subadmin import Subadmin
 from src.models.deal import Deal, DealStatus
 from src.models.user import User, KycStatus, Role
-from src.models.investment import Investment, PaymentStatus
+from src.models.investment import Investment 
+from src.models.transaction import PaymentStatus
 from uuid import UUID
 from src.services.s3 import S3Service
 from src.services.email import EmailService
