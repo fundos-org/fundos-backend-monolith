@@ -48,21 +48,21 @@ class AwsConfigs(BaseSettings):
 # Usage
 aws_config = AwsConfigs()
 
-class RedisConfigs(BaseSettings): 
-    redis_url: str
-    redis_port: int
-    redis_db: int
-    redis_password: str
+# class RedisConfigs(BaseSettings): 
+#     redis_url: str
+#     redis_port: int
+#     redis_db: int
+#     redis_password: str
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_prefix="",
-        case_sensitive=True,
-        extra="ignore"
-    )
+#     model_config = SettingsConfigDict(
+#         env_file=".env",
+#         env_prefix="",
+#         case_sensitive=True,
+#         extra="ignore"
+#     )
 
-# Usage 
-redis_config = RedisConfigs()
+# # Usage 
+# redis_config = RedisConfigs()
 
 class PaymentConfigs(BaseSettings):
     api_key: str = "c7036088-4387-4e56-b3dc-e3f81642fd70"
