@@ -65,6 +65,17 @@ class SubAdminService:
         subadmin_id: UUID
     ) -> Any:
         try:
+            static_data = {
+                "subadmin_id": "123e4567-e89b-12d3-a456-426614174000",
+                "subadmin_name": "John Doe",
+                "total_capital_committed": 5000000,
+                "listed_startups": 10,
+                "onboarded_investors": 25,
+                "deals_this_month": 3,
+                "success": True
+            }
+
+            return static_data
             # Fetch Subadmin
             subadmin = await session.get(Subadmin, subadmin_id)
             if not subadmin:
@@ -108,6 +119,8 @@ class SubAdminService:
             deals_this_month = await session.execute(deals_this_month_stmt)
             deals_this_month = deals_this_month.scalar() or 0
 
+
+
             result = {   
                         "subadmin_id": str(subadmin.id),
                         "subadmin_name" : subadmin.name or "",
@@ -134,6 +147,45 @@ class SubAdminService:
         session: AsyncSession
     ) -> Any:
         try:
+            static_data = {
+                "subadmin_id": "123e4567-e89b-12d3-a456-426614174000",
+                "subadmin_name": "John Doe",
+                "graph": [
+                    {"day_num": 1, "amount": 100000, "deal_count": 2},
+                    {"day_num": 2, "amount": 50000, "deal_count": 1},
+                    {"day_num": 3, "amount": 0, "deal_count": 0},
+                    {"day_num": 4, "amount": 200000, "deal_count": 3},
+                    {"day_num": 5, "amount": 150000, "deal_count": 2},
+                    {"day_num": 6, "amount": 0, "deal_count": 0},
+                    {"day_num": 7, "amount": 300000, "deal_count": 4},
+                    {"day_num": 8, "amount": 250000, "deal_count": 3},
+                    {"day_num": 9, "amount": 0, "deal_count": 0},
+                    {"day_num": 10, "amount": 100000, "deal_count": 1},
+                    {"day_num": 11, "amount": 0, "deal_count": 0},
+                    {"day_num": 12, "amount": 400000, "deal_count": 5},
+                    {"day_num": 13, "amount": 0, "deal_count": 0},
+                    {"day_num": 14, "amount": 200000, "deal_count": 2},
+                    {"day_num": 15, "amount": 0, "deal_count": 0},
+                    {"day_num": 16, "amount": 150000, "deal_count": 1},
+                    {"day_num": 17, "amount": 0, "deal_count": 0},
+                    {"day_num": 18, "amount": 0, "deal_count": 0},
+                    {"day_num": 19, "amount": 50000, "deal_count": 1},
+                    {"day_num": 20, "amount": 0, "deal_count": 0},
+                    {"day_num": 21, "amount": 300000, "deal_count": 3},
+                    {"day_num": 22, "amount": 0, "deal_count": 0},
+                    {"day_num": 23, "amount": 0, "deal_count": 0},
+                    {"day_num": 24, "amount": 100000, "deal_count": 2},
+                    {"day_num": 25, "amount": 0, "deal_count": 0},
+                    {"day_num": 26, "amount": 0, "deal_count": 0},
+                    {"day_num": 27, "amount": 200000, "deal_count": 2},
+                    {"day_num": 28, "amount": 0, "deal_count": 0},
+                    {"day_num": 29, "amount": 0, "deal_count": 0},
+                    {"day_num": 30, "amount": 150000, "deal_count": 1}
+                ],
+                "success": True
+            }
+
+            return static_data
             # Fetch Subadmin
             subadmin = await session.get(Subadmin, subadmin_id)
             if not subadmin:
@@ -178,6 +230,8 @@ class SubAdminService:
                     "deal_count": deal_count
                 })
 
+
+
             return {
                 "subadmin_id": str(subadmin.id),
                 "subadmin_name": subadmin.name or "",
@@ -192,6 +246,7 @@ class SubAdminService:
                 status_code=500,
                 detail=f"Failed to fetch overview graph: {str(e)}"
             )
+            
 
     async def get_activities(
         self,
@@ -199,6 +254,36 @@ class SubAdminService:
         subadmin_id: UUID
     ) -> Any:
         try:
+            static_data = {
+                "subadmin_id": "123e4567-e89b-12d3-a456-426614174000",
+                "subadmin_name": "John Doe",
+                "transactions": [
+                    {
+                        "transaction_id": "a1b2c3d4-e5f6-7890-g1h2-3i4j5k6l7m8n",
+                        "investor": "Alice Smith",
+                        "invested_in": "TechStartup Inc",
+                        "amount": "100000",
+                        "transaction_date": "2025-05-20T10:00:00"
+                    },
+                    {
+                        "transaction_id": "b2c3d4e5-f6g7-8901-h2i3-4j5k6l7m8n9o",
+                        "investor": "Bob Johnson",
+                        "invested_in": "GreenEnergy Co",
+                        "amount": "50000",
+                        "transaction_date": "2025-05-19T15:30:00"
+                    },
+                    {
+                        "transaction_id": "c3d4e5f6-g7h8-9012-i3j4-5k6l7m8n9o0p",
+                        "investor": "Carol Williams",
+                        "invested_in": "HealthTech Ltd",
+                        "amount": "200000",
+                        "transaction_date": "2025-05-18T09:45:00"
+                    }
+                ],
+                "success": True
+            }
+
+            return static_data
             # Fetch Subadmin
             subadmin = await session.get(Subadmin, subadmin_id)
             if not subadmin:
@@ -225,6 +310,8 @@ class SubAdminService:
                 for investment in investments
             ]
 
+        
+
             return {
                 "subadmin_id": str(subadmin.id),
                 "subadmin_name": subadmin.name or "",
@@ -246,6 +333,43 @@ class SubAdminService:
         subadmin_id: UUID
     ) -> Any:
         try:
+            static_data = {
+                "subadmin_id": "123e4567-e89b-12d3-a456-426614174000",
+                "subadmin_name": "John Doe",
+                "transactions": [
+                    {
+                        "transaction_id": "a1b2c3d4-e5f6-7890-g1h2-3i4j5k6l7m8n",
+                        "investor": "Alice Smith",
+                        "invested_in": "TechStartup Inc",
+                        "amount": 100000,
+                        "transaction_date": "2025-05-20T10:00:00"
+                    },
+                    {
+                        "transaction_id": "b2c3d4e5-f6g7-8901-h2i3-4j5k6l7m8n9o",
+                        "investor": "Bob Johnson",
+                        "invested_in": "GreenEnergy Co",
+                        "amount": 50000,
+                        "transaction_date": "2025-05-19T15:30:00"
+                    },
+                    {
+                        "transaction_id": "c3d4e5f6-g7h8-9012-i3j4-5k6l7m8n9o0p",
+                        "investor": "Carol Williams",
+                        "invested_in": "HealthTech Ltd",
+                        "amount": 200000,
+                        "transaction_date": "2025-05-18T09:45:00"
+                    },
+                    {
+                        "transaction_id": "d4e5f6g7-h8i9-0123-j4k5-6l7m8n9o0p1q",
+                        "investor": "David Brown",
+                        "invested_in": "AI Solutions",
+                        "amount": 150000,
+                        "transaction_date": "2025-05-17T12:00:00"
+                    }
+                ],
+                "success": True
+            }
+
+            return static_data
             # Fetch Subadmin
             subadmin = await session.get(Subadmin, subadmin_id)
             if not subadmin:
@@ -272,6 +396,8 @@ class SubAdminService:
                 for investment in investments
             ]
 
+
+
             return {
                 "subadmin_id": str(subadmin.id),
                 "subadmin_name": subadmin.name or "",
@@ -293,6 +419,18 @@ class SubAdminService:
         subadmin_id: UUID
     ) -> Any:
         try:
+
+            static_data = {
+                "subadmin_id": "123e4567-e89b-12d3-a456-426614174000",
+                "subadmin_name": "John Doe",
+                "live_deals": 5,
+                "closed_deals": 3,
+                "total_capital_raised": 8000000,
+                "deals_this_month": 2,
+                "success": True
+            }
+
+            return static_data
             # Fetch Subadmin
             subadmin = await session.get(Subadmin, subadmin_id)
             if not subadmin:
@@ -364,6 +502,37 @@ class SubAdminService:
         subadmin_id: UUID
     ) -> Any:
         try:
+            static_data = {
+                "subadmin_id": "123e4567-e89b-12d3-a456-426614174000",
+                "subadmin_name": "John Doe",
+                "active_deals": [
+                    {
+                        "deal_id": "e5f6g7h8-i9j0-1234-k5l6-7m8n9o0p1q2r",
+                        "company_name": "TechStartup Inc",
+                        "status": "OPEN",
+                        "round_size": 1000000,
+                        "created_at": "2025-05-10T08:00:00"
+                    },
+                    {
+                        "deal_id": "f6g7h8i9-j0k1-2345-l6m7-8n9o0p1q2r3s",
+                        "company_name": "GreenEnergy Co",
+                        "status": "ON_HOLD",
+                        "round_size": 500000,
+                        "created_at": "2025-05-08T14:00:00"
+                    }
+                ],
+                "closed_deals": [
+                    {
+                        "deal_id": "g7h8i9j0-k1l2-3456-m7n8-9o0p1q2r3s4t",
+                        "company_name": "HealthTech Ltd",
+                        "status": "CLOSED",
+                        "round_size": 2000000,
+                        "created_at": "2025-04-15T09:00:00"
+                    }
+                ],
+                "success": True
+            }
+            return static_data 
             # Fetch Subadmin
             subadmin = await session.get(Subadmin, subadmin_id)
             if not subadmin:
@@ -433,6 +602,56 @@ class SubAdminService:
         session: AsyncSession,
         subadmin_id: UUID
     ) -> Any:
+        
+        static_data = {
+            "subadmin_id": "123e4567-e89b-12d3-a456-426614174000",
+            "subadmin_name": "John Doe",
+            "invite_code": "INVITE2025",
+            "members": {
+                "investors": [
+                    {
+                        "user_id": "h8i9j0k1-l2m3-4567-n8o9-0p1q2r3s4t5u",
+                        "first_name": "Alice",
+                        "last_name": "Smith",
+                        "email": "alice.smith@example.com",
+                        "capital_committed": 100000,
+                        "kyc_status": "VERIFIED"
+                    },
+                    {
+                        "user_id": "i9j0k1l2-m3n4-5678-o9p0-1q2r3s4t5u6v",
+                        "first_name": "Bob",
+                        "last_name": "Johnson",
+                        "email": "bob.johnson@example.com",
+                        "capital_committed": 50000,
+                        "kyc_status": "PENDING"
+                    }
+                ],
+                "startups": [
+                    {
+                        "user_id": "j0k1l2m3-n4o5-6789-p0q1-2r3s4t5u6v7w",
+                        "first_name": "Carol",
+                        "last_name": "Williams",
+                        "email": "carol.williams@example.com",
+                        "capital_committed": 0,
+                        "kyc_status": "VERIFIED"
+                    }
+                ]
+            },
+            "statistics": {
+                "investors_statistics": {
+                    "onboarded": 2,
+                    "kyc_pending": 1,
+                    "started_investing": 1
+                },
+                "startups_statistics": {
+                    "onboarded": 1,
+                    "kyc_pending": 0,
+                    "started_investing": 0
+                }
+            },
+            "success": True
+            }
+        return static_data
         # fetch subadmin 
         subadmin = await session.get(Subadmin, subadmin_id)
         if not subadmin:
@@ -521,6 +740,16 @@ class SubAdminService:
         email: str
     ) -> Any:
         try:
+            static_data = {
+                "user_id": "",
+                "first_name": "",
+                "last_name": "",
+                "email": "new.user@example.com",
+                "role": "",
+                "success": True
+            }
+            return static_data
+
             # fetch subadmin 
             subadmin = await session.get(Subadmin, subadmin_id)
             if not subadmin:
@@ -529,21 +758,37 @@ class SubAdminService:
             # fetch user with email
             user = await session.get(User, email)
             if not user:
-                # if not in team send the email to this user
-                if await self.email_service.send_invitation_email(
+                # if user not in user db (send invite) 
+                email_response = await self.email_service.send_invitation_email(
                     email=email,
                     invite_code=subadmin.invite_code,
                     subadmin_name=subadmin.name or "",
                     user_name="",  # todo: fetch user name from db
                     apk_link="https://example.com/invite"
-                )["success"]:
-                    pass 
-                else:
+                )
+
+                is_email_sent = email_response.get("success", False)
+                if not is_email_sent:
                     raise HTTPException(status_code=400, detail="Failed to send invitation email")
-            
-            # check if user is already a member of subadmin
-            elif user.fund_manager_id == subadmin_id:
-                raise HTTPException(status_code=400, detail="User is already a member of this subadmin")
+                
+            else: 
+                # if user is not already a member of subadmin
+                if user.fund_manager_id == subadmin_id:
+                    logger.error(f"{user.first_name} {user.last_name} is already a member of subadmin {subadmin.name}") 
+                    raise HTTPException(status_code=400, detail="User is already a member of this subadmin")
+                else: 
+                    # if user not in subadmin team (send invite) 
+                    email_response = await self.email_service.send_invitation_email(
+                        email=email,
+                        invite_code=subadmin.invite_code,
+                        subadmin_name=subadmin.name or "",
+                        user_name="",  # todo: fetch user name from db
+                        apk_link="https://example.com/invite"
+                    )
+
+                    is_email_sent: bool = email_response.get("success", False)
+                    if not is_email_sent:
+                        raise HTTPException(status_code=400, detail="Failed to send invitation email")
 
             return {
                 "user_id": str(user.id),
@@ -552,7 +797,10 @@ class SubAdminService:
                 "email": user.email or "",
                 "role": user.role or "",
                 "success": True
-            }       
+            }  
+        except HTTPException as he:
+            logger.error(f"Failed to add member: {str(he)}")
+            raise he     
         except Exception as e:
             await session.rollback()
             raise HTTPException(status_code=500, detail=f"Failed to add member: {str(e)}")

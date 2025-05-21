@@ -78,3 +78,19 @@ class PaymentConfigs(BaseSettings):
 
 # Usage
 payment_configs = PaymentConfigs()
+
+class MailConfigs(BaseSettings):
+    zeptomail_api_key: str = "Zoho-enczapikey PHtE6r0IQe26iWB59BQG7KC7Q8akM417r7k2JFYVt9tKC/cGTE0A+o95m2TmoxwrUPATRvbOydhqs+uV4b3TIW7qND5IXWqyqK3sx/VYSPOZsbq6x00btVkSdUzbU47vctZp3CHRudffNA=="
+    from_email: str = "noreply@fundos.solutions"
+    zeptomail_url: str = "https://api.zeptomail.com/v1.1/email"
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_prefix="ZEPTOMAIL_",
+        case_sensitive=True,
+        extra="ignore"
+    )
+
+# Usage
+mail_configs = MailConfigs()
+
