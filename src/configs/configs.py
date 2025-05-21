@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class AppConfigs(BaseSettings):
     env: str = "DEV"
-    port: str = "8000"
+    PORT: str = "8000"
     debug: bool = True
     host: str = "0.0.0.0"
     
@@ -26,7 +26,7 @@ class DbConfigs(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_file=".env",
-        env_prefix="",
+        env_prefix="db",
         case_sensitive=True,
         extra="ignore"
     )
