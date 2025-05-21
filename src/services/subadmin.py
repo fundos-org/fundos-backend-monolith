@@ -6,8 +6,8 @@ from src.logging.logging_setup import get_logger
 from src.models.subadmin import Subadmin
 from src.models.deal import Deal, DealStatus
 from src.models.user import User, KycStatus, Role
-from src.models.investment import Investment 
-from src.models.transaction import PaymentStatus
+from src.models.investment import Investment  
+from src.models.transaction import TransactionStatus
 from uuid import UUID
 from src.services.s3 import S3Service
 from src.services.email import EmailService
@@ -86,7 +86,7 @@ class SubAdminService:
             investment_stmt = select(func.sum(Investment.amount)).join(Deal).where(
                 and_(
                     Deal.fund_manager_id == subadmin_id,
-                    Investment.payment_status == PaymentStatus.COMPLETED
+                    Investment.payment_status == TransactionStatus.COMPLETED
                 )
             )
             total_capital_committed = await session.execute(investment_stmt)
@@ -206,7 +206,7 @@ class SubAdminService:
                 investment_stmt = select(func.sum(Investment.amount)).join(Deal).where(
                     and_(
                         Deal.fund_manager_id == subadmin_id,
-                        Investment.payment_status == PaymentStatus.COMPLETED,
+                        Investment.payment_status == TransactionStatus.COMPLETED,
                         Investment.created_at >= day_start,
                         Investment.created_at < day_end
                     )
@@ -294,7 +294,7 @@ class SubAdminService:
             investment_stmt = select(Investment, User, Deal).join(User, Investment.investor_id == User.id).join(Deal, Investment.deal_id == Deal.id).where(
                 and_(
                     Deal.fund_manager_id == subadmin_id,
-                    Investment.payment_status == PaymentStatus.COMPLETED
+                    Investment.payment_status == TransactionStatus.COMPLETED
                 )
             ).order_by(Investment.created_at.desc()).limit(10)
             result = await session.execute(investment_stmt)
@@ -380,7 +380,7 @@ class SubAdminService:
             investment_stmt = select(Investment, User, Deal).join(User, Investment.investor_id == User.id).join(Deal, Investment.deal_id == Deal.id).where(
                 and_(
                     Deal.fund_manager_id == subadmin_id,
-                    Investment.payment_status == PaymentStatus.COMPLETED
+                    Investment.payment_status == TransactionStatus.COMPLETED
                 )
             ).order_by(Investment.created_at.desc())
             result = await session.execute(investment_stmt)
@@ -461,7 +461,7 @@ class SubAdminService:
             total_capital_raised_stmt = select(func.sum(Investment.amount)).join(Deal).where(
                 and_(
                     Deal.fund_manager_id == subadmin_id,
-                    Investment.payment_status == PaymentStatus.COMPLETED
+                    Investment.payment_status == TransactionStatus.COMPLETED
                 )
             )
             total_capital_raised = await session.execute(total_capital_raised_stmt)
