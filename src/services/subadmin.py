@@ -627,40 +627,38 @@ class SubAdminService:
 
                 # Return placeholder response for non-existing user
                 return {
-                    "user_id": "",
-                    "first_name": "",
-                    "last_name": "",
-                    "email": email,
-                    "role": Role.INVESTOR,  # Default role
+                    "message": f"Invitation email sent to {email}",
                     "success": True
                 }
             else:
                 # If user exists, check if already a member of subadmin
                 if user.fund_manager_id == subadmin_id:
                     logger.error(f"{user.first_name} {user.last_name} is already a member of subadmin {subadmin.name}")
-                    raise HTTPException(status_code=400, detail="User is already a member of this subadmin")
+                    return {
+                        "message": f"{user.first_name} {user.last_name} is already a member of this subadmin",
+                        "success": False
+                    }
+
+                else: 
+                    # user exits but not a part of this subadmin
                 
-                # Send invite to existing user
-                email_response = await self.email_service.send_invitation_email(
-                    email=email,
-                    invite_code=subadmin.invite_code,
-                    subadmin_name=subadmin.name or "",
-                    user_name=f"{user.first_name or ''} {user.last_name or ''}".strip(),
-                    apk_link="https://example.com/invite"
-                )
+                    # Send invite to existing user as he is not in this subadmin team
+                    email_response = await self.email_service.send_invitation_email(
+                        email=email,
+                        invite_code=subadmin.invite_code,
+                        subadmin_name=subadmin.name or "",
+                        user_name=f"{user.first_name or ''} {user.last_name or ''}".strip(),
+                        apk_link="https://example.com/invite"
+                    )
 
-                is_email_sent = email_response.get("success", False)
-                if not is_email_sent:
-                    raise HTTPException(status_code=400, detail="Failed to send invitation email")
+                    is_email_sent = email_response.get("success", False)
+                    if not is_email_sent:
+                        raise HTTPException(status_code=400, detail="Failed to send invitation email")
 
-                return {
-                    "user_id": str(user.id),
-                    "first_name": user.first_name or "",
-                    "last_name": user.last_name or "",
-                    "email": user.email or "",
-                    "role": user.role,
-                    "success": True
-                }
+                    return {
+                        "message": f"Invitation sent to {email}",
+                        "success": True
+                    }
         except HTTPException as he:
             logger.error(f"Failed to add member: {str(he)}")
             raise he

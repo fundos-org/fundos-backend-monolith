@@ -3,6 +3,13 @@ from typing import Optional, Dict
 from uuid import UUID
 from src.models.user import investorType
 
+class UserOnboardingStartRequest(BaseModel):
+    invitation_code: str
+    
+class UserOnboardingStartResponse(BaseModel):
+    user_id: UUID
+    message: str
+    
 class AadhaarRequest(BaseModel):
     user_id: str
     aadhaar_number: str
@@ -82,21 +89,16 @@ class EmailSendOtpRequest(BaseModel):
 
 class EmailSendOtpResponse(BaseModel):
     message: str
-    otp: str
+    success: bool
 
 class EmailVerifyOtpRequest(BaseModel):
+    user_id: UUID
+    email: EmailStr
     otp: str 
 
 class EmailVerifyOtpResponse(BaseModel):
     message: str 
     success: bool
-
-class OnBoardingRequest(BaseModel):
-    pass 
-
-class OnBoardingResponse(BaseModel):
-    message: str
-    user_id: UUID 
 
 class UserDetailsRequest(BaseModel):
     user_id: UUID
@@ -155,18 +157,6 @@ class AgreementRequest(BaseModel):
 class AgreementResponse(BaseModel):
     message: str
     user_id: UUID 
-
-class KYCCreate(BaseModel):
-    aadhaar_number: str
-    pan_number: str
-    bank_account_number: str
-    bank_ifsc: str
-
-class KYCOut(BaseModel):
-    id: int
-    user_id: int
-    status: str
-    verification_details: Optional[str] 
 
 class ResendOTPRequest(BaseModel):
     user_id: str

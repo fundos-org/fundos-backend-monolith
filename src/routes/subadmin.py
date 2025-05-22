@@ -130,7 +130,7 @@ async def members_statistics(
 
     return result
 
-@router.get("/members/addmember/{subadmin_id}/{email}")
+@router.post("/members/addmember/{subadmin_id}/{email}")
 async def add_member(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID,

@@ -9,6 +9,7 @@ from src.models.subadmin import Subadmin
 from src.utils.dependencies import get_user
 from uuid import UUID
 from src.services.s3 import S3Service
+from src.services.email import EmailService
 from typing import Dict, Any
 from datetime import datetime
 
@@ -19,7 +20,87 @@ class DummyService:
         self.bucket_name = "fundos-dev-bucket"
         self.folder_prefix = "users/profile_pictures/"
         self.s3_service = S3Service(bucket_name=self.bucket_name, region_name="ap-south-1")
-  
+        self.email_service = EmailService()
+    
+    async def investor_signin_email(
+        self, 
+        session: AsyncSession, 
+        email: EmailStr
+    ) -> Any:
+        try:
+            # Fetch user from the database
+            stmt = select(User).where(
+                User.email == email
+            )
+
+            result = await session.execute(stmt)
+            user = result.scalar_one_or_none() 
+
+            if user:
+                response =await self.email_service.send_email_otp(
+                    email=email, 
+                    subject = "OTP Code for Sign to Fundos"
+                )
+                if response.get("success"): 
+                    return {
+                        "message": f"An otp send to {email} for verification",
+                        "success": True
+                    }
+            else:
+                return {
+                    "message": "User not found in fundos",
+                    "success": False
+                }
+
+        except Exception as e:
+            logger.error(f"Request failed: {e}")
+            raise HTTPException(status_code=500, detail=f"Internal request error : {str(e)}")
+    
+    async def investor_signin_email_verify(
+        self, 
+        session: AsyncSession,
+        email: EmailStr,
+        otp_code: str
+    )-> Any:
+        try: 
+            # Verify the OTP
+            response = await self.email_service.verify_email_otp(
+                email=email,
+                otp_code=otp_code    
+            )
+
+            if response.get("success"):
+                # Fetch user from the database
+                stmt = select(User).where(
+                    User.email == email
+                )
+
+                result = await session.execute(stmt)
+                user = result.scalar_one_or_none() 
+
+                if user:
+                    return {
+                        "message": f"User {user.first_name} signed in successfully",
+                        "user_name": str(user.first_name) + " " + str(user.last_name),
+                        "fund_manager_id": str(user.fund_manager_id),
+                        "success": True
+                    }
+                else:
+                    return {
+                        "message": "User not found in fundos",
+                        "user_id": None,
+                        "fund_manager_id": None,
+                        "success": False
+                    }
+            else:
+                return {
+                    "message": "Invalid OTP",
+                    "success": False
+                }
+        except Exception as e:
+            logger.error(f"Request failed: {e}")
+            raise HTTPException(status_code=500, detail=f"Internal request error : {str(e)}")
+        
     async def verify_invitation_code(
         self, 
         invitation_code: str, 
@@ -133,13 +214,25 @@ class DummyService:
     async def send_email_otp(
         self, 
         email: EmailStr
-    ) -> dict:
+    ) -> Dict[str, Any]:
 
         try:
-            return {
-                "message" : f"otp sent to: {email}", 
-                "otp" : "123456" 
-            }  
+            # Send OTP to the email
+            response = await self.email_service.send_email_otp(
+                email=email,
+                subject="OTP Code for Fundos",
+            ) 
+
+            if response.get("success"):
+                return {
+                    "message": f"OTP sent to: {email}",
+                    "success": True
+                } 
+            else: 
+                return {
+                    "message": "Failed to send OTP",
+                    "success": False
+                }
 
         except Exception as e:
             logger.error(f"Request failed: {e}")
@@ -147,17 +240,40 @@ class DummyService:
         
     async def verify_email_otp(
         self, 
-        otp: str
-    ) -> dict: 
+        user_id: UUID, 
+        session: AsyncSession,
+        otp: str, 
+        email: EmailStr
+    ) -> Dict[str, Any]: 
 
         try: 
-            if otp == "123456" :
+            # Verify the OTP
+            response = await self.email_service.verify_email_otp(
+                email=email,
+                otp_code=otp    
+            )
+
+            if response.get("success"):
+                # Fetch user from the database
+                user = await session.get(User, user_id)
+                user.email = email 
+
+                await session.commit()
+                await session.refresh(user)
+
                 return {
-                    "message" : "otp code matched",
-                    "success" : True
+                    "message": f"email verified for user: {user_id}",
+                    "success": True
+                }
+                
+            else: 
+                return {
+                    "message": "Invalid OTP",
+                    "success": False
                 }
             
         except Exception as e : 
+            await session.rollback()
             logger.error(f"Request failed: {e}")
             raise HTTPException(status_code=500, detail="Internal request error") 
         

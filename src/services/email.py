@@ -1,6 +1,7 @@
 import random
 import string
-import httpx
+import smtplib
+from email.message import EmailMessage
 import redis
 import os
 from fastapi import HTTPException
@@ -10,10 +11,12 @@ from src.configs.configs import mail_configs
 
 logger = get_logger(__name__)
 
-# Zoho ZeptoMail configuration
-ZEPTOMAIL_API_KEY = mail_configs.zeptomail_api_key
+# Zoho ZeptoMail SMTP configuration
+SMTP_SERVER = "smtp.zeptomail.in"
+SMTP_PORT = 587
+SMTP_USERNAME = "emailapikey"
+SMTP_PASSWORD = "PHtE6r0IQe26iWB59BQG7KC7Q8akM417r7k2JFYVt9tKC/cGTE0A+o95m2TmoxwrUPATRvbOydhqs+uV4b3TIW7qND5IXWqyqK3sx/VYSPOZsbq6x00btVkSdUzbU47vctZp3CHRudffNA=="  # Strip whitespace
 FROM_EMAIL = mail_configs.from_email
-ZEPTOMAIL_URL = mail_configs.zeptomail_url
 
 # Redis configuration
 REDIS_HOST = os.getenv("REDIS_HOST", "redis")
@@ -23,7 +26,11 @@ CACHE_TTL = 300  # 5 minutes in seconds, aligned with KycService
 
 class EmailService:
     def __init__(self):
-        self.api_key = ZEPTOMAIL_API_KEY
+        self.smtp_server = SMTP_SERVER
+        self.smtp_port = SMTP_PORT
+        self.smtp_username = SMTP_USERNAME
+        self.smtp_password = SMTP_PASSWORD
+        
         self.redis = redis.Redis(
             host=REDIS_HOST,
             port=REDIS_PORT,
@@ -43,20 +50,8 @@ class EmailService:
         """Generate Redis key for rate limiting."""
         return f"email:rate_limit:{email}"
 
-    def get_auth_header(self) -> dict:
-        """Return headers for Zoho ZeptoMail API authentication."""
-        return {
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "Authorization": self.api_key
-        }
-
-    async def send_email_otp(
-        self, 
-        email: str, 
-        subject: str = "Your Verification Code"
-    ) -> Any:
-        """Send an OTP email using Zoho ZeptoMail."""
+    async def send_email_otp(self, email: str, subject: str = "Your Verification Code") -> Any:
+        """Send an OTP email using Zoho ZeptoMail SMTP."""
         try:
             # Check rate limit (60-second interval)
             rate_limit_key = self._get_rate_limit_key(email)
@@ -75,22 +70,25 @@ class EmailService:
                 logger.error(f"Redis error while storing OTP: {str(e)}")
                 raise HTTPException(status_code=500, detail="Failed to store OTP in cache")
 
-            body = f"Your OTP code is: {otp_code}"
-            payload = {
-                "from": {"address": FROM_EMAIL, "name": "FundOS"},
-                "to": [{"email_address": {"address": email, "name": ""}}],
-                "subject": subject,
-                "htmlbody": f"<div><b>{body}</b></div>"
-            }
+            # Prepare email
+            body = f"Hi, Welcome to Fundos. \n Your OTP code is: {otp_code}"
+            msg = EmailMessage()
+            msg['Subject'] = subject
+            msg['From'] = f"fundos <{FROM_EMAIL}>"
+            msg['To'] = email
+            msg.set_content(body)  # Plain text
+            msg.add_alternative(f"<div><b>{body}</b></div>", subtype='html')  # HTML content
 
-            headers = self.get_auth_header()
-
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(ZEPTOMAIL_URL, json=payload, headers=headers)
-
-            if response.status_code >= 400:
-                logger.error(f"ZeptoMail API error: {response.text}")
-                raise HTTPException(status_code=response.status_code, detail="Failed to send OTP email")
+            # Send email via SMTP
+            try:
+                with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=30.0) as server:
+                    server.starttls()
+                    server.login(self.smtp_username, self.smtp_password)
+                    server.send_message(msg)
+                logger.info(f"OTP email sent successfully to {email}")
+            except smtplib.SMTPException as e:
+                logger.error(f"SMTP error while sending OTP email: {str(e)}")
+                raise HTTPException(status_code=500, detail=f"Failed to send OTP email: {str(e)}")
 
             # Set rate limit key (60 seconds)
             try:
@@ -99,19 +97,15 @@ class EmailService:
                 logger.error(f"Redis error while setting rate limit: {str(e)}")
                 raise HTTPException(status_code=500, detail="Failed to set rate limit")
 
-            return {"message": "OTP sent successfully"}
+            return {"message": "OTP sent successfully", "success": True}
         except redis.RedisError as e:
             logger.error(f"Redis error: {str(e)}")
             raise HTTPException(status_code=500, detail="Internal error with cache service")
         except Exception as e:
             logger.error(f"Failed to send OTP email: {str(e)}")
-            raise HTTPException(status_code=500, detail="Internal error while sending OTP email")
+            raise HTTPException(status_code=500, detail=f"Internal error while sending OTP email: {str(e)}")
 
-    async def verify_email_otp(
-        self, 
-        email: str, 
-        otp_code: str
-    ) -> Any:
+    async def verify_email_otp(self, email: str, otp_code: str) -> Any:
         """Verify the OTP for the given email."""
         try:
             cache_key = self._get_cache_key(email)
@@ -133,7 +127,7 @@ class EmailService:
                 logger.error(f"Redis error while deleting OTP: {str(e)}")
                 raise HTTPException(status_code=500, detail="Failed to clear OTP cache")
 
-            return {"message": "Email verified successfully"}
+            return {"message": "Email verified successfully", "success": True}
         except redis.RedisError as e:
             logger.error(f"Redis error: {str(e)}")
             raise HTTPException(status_code=500, detail="Internal error with cache service")
@@ -151,7 +145,7 @@ class EmailService:
         user_name: str = "",
         apk_link: str = "https://example.com/invite"
     ) -> Dict[str, str]:
-        """Send an invitation email using Zoho ZeptoMail."""
+        """Send an invitation email using Zoho ZeptoMail SMTP."""
         try:
             invite_link = f"{apk_link}?invite_code={invite_code}&email={email}"
             subject = "You have been invited to join a subadmin team"
@@ -165,27 +159,30 @@ class EmailService:
                 </div>
             """
 
-            payload = {
-                "from": {"address": FROM_EMAIL, "name": "FundOS"},
-                "to": [{"email_address": {"address": email, "name": user_name or ""}}],
-                "subject": subject,
-                "htmlbody": body_html
-            }
+            # Prepare email
+            msg = EmailMessage()
+            msg['Subject'] = subject
+            msg['From'] = f"fundos <{FROM_EMAIL}>"
+            msg['To'] = email
+            msg.set_content(f"You have been invited by {subadmin_name or 'the team'} to join their subadmin team. Please click on the link to accept: {invite_link}")
+            msg.add_alternative(body_html, subtype='html')
 
-            headers = self.get_auth_header()
-
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(ZEPTOMAIL_URL, json=payload, headers=headers)
-
-            if response.status_code >= 400:
-                logger.error(f"ZeptoMail API error: {response.text}")
-                raise HTTPException(status_code=response.status_code, detail="Failed to send invitation email")
+            # Send email via SMTP
+            try:
+                with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=30.0) as server:
+                    server.starttls()
+                    server.login(self.smtp_username, self.smtp_password)
+                    server.send_message(msg)
+                logger.info(f"Invitation email sent successfully to {email}")
+            except smtplib.SMTPException as e:
+                logger.error(f"SMTP error while sending invitation email: {str(e)}")
+                raise HTTPException(status_code=500, detail=f"Failed to send invitation email: {str(e)}")
 
             return {
-                "message": "Invitation sent successfully", 
+                "message": "Invitation sent successfully",
                 "success": True
             }
 
         except Exception as e:
             logger.error(f"Failed to send invitation email: {str(e)}")
-            raise HTTPException(status_code=500, detail="Failed to send invitation email")
+            raise HTTPException(status_code=500, detail=f"Failed to send invitation email: {str(e)}")

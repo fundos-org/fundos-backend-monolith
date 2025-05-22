@@ -1,33 +1,66 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from starlette import status
-from pydantic import BaseModel 
-from uuid import UUID 
+from pydantic import EmailStr
+from src.logging.logging_setup import get_logger
 from src.db.session import get_session 
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Annotated
+from typing import Annotated, Dict, Any
 from src.schemas.kyc import (EmailVerifyOtpRequest, EmailVerifyOtpResponse, AgreementRequest, AgreementResponse, 
                             DeclarationRequest, DeclarationResponse, ChooseInvestorRequest, ChooseInvestorResponse, 
                             PhoneNumSendOtpRequest, EmailSendOtpRequest, EmailSendOtpResponse, PhoneNumSendOtpResponse, 
                             PhoneNumVerifyOtpRequest, PhoneNumVerifyOtpResponse, UserDetailsRequest, UserDetailsResponse, 
                             ProfessionalBackgroundRequest, ProfessionalBackgroundResponse, PhotoUploadRequest, PhotoUploadResponse
-                            , OnBoardingResponse)
+                            , UserOnboardingStartResponse, UserOnboardingStartRequest)
 from src.services.dummy import DummyService
+from src.services.email import EmailService
 
 router = APIRouter() 
 
 # service initialization 
 dummy_service = DummyService()
+email_service = EmailService()
 
-# schemas : will move to schemas folder 
-class UserOnboardingStartRequest(BaseModel):
-    invitation_code: str
+logger = get_logger(__name__)
+
+@router.post("/investor/signin/email/send-otp")
+async def signin_investor_send_email_otp(
+    session: Annotated[AsyncSession, Depends(get_session)], 
+    email: EmailStr, 
+) -> Dict[str, Any]:
+
+    result = await dummy_service.investor_signin_email(
+        session=session,
+        email=email
+    )
     
-class UserOnboardingStartResponse(BaseModel):
-    user_id: UUID
-    message: str
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Invalid invitation code")
 
-@router.post("/invitation/validate")
-async def validate_invitation(data: UserOnboardingStartRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> OnBoardingResponse:
+    return result
+
+@router.post("/investor/signin/verify-otp")
+async def signup_investor_verify_email_otp(
+    session: Annotated[AsyncSession, Depends(get_session)], 
+    email: EmailStr, 
+    otp: str
+) -> Dict[str, Any]:
+
+    result = await dummy_service.investor_signin_email_verify(
+        session=session,
+        email=email,
+        otp_code=otp
+    )
+    
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Invalid invitation code")
+
+    return result
+
+@router.post("/user/invitation/validate")
+async def validate_invitation(
+    data: UserOnboardingStartRequest, 
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> UserOnboardingStartResponse:
     
     result: dict = await dummy_service.verify_invitation_code(
         invitation_code = data.invitation_code,
@@ -36,18 +69,23 @@ async def validate_invitation(data: UserOnboardingStartRequest, session: Annotat
     if not result["success"]:
         raise HTTPException(status_code=400, detail="Invalid invitation code")
 
-    return OnBoardingResponse(user_id=result["user_id"], message="new user added")
+    return UserOnboardingStartResponse(user_id=result["user_id"], message="new user added")
 
-@router.post('/phone/otp/send')
-async def send_phone_otp(onboarding_details: PhoneNumSendOtpRequest) -> PhoneNumSendOtpResponse :
+@router.post('/user/phone/otp/send')
+async def send_phone_otp(
+    data: PhoneNumSendOtpRequest
+) -> PhoneNumSendOtpResponse :
     
     result = await dummy_service.send_phone_otp(
-        phone_number=onboarding_details.phone_number
+        phone_number=data.phone_number
     )
     return PhoneNumSendOtpResponse(**result) 
     
-@router.post('/phone/otp/verify')
-async def verify_phone_otp(data: PhoneNumVerifyOtpRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> PhoneNumVerifyOtpResponse :
+@router.post('/user/phone/otp/verify')
+async def verify_phone_otp(
+    data: PhoneNumVerifyOtpRequest, 
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> PhoneNumVerifyOtpResponse :
 
     result = await dummy_service.verify_phone_otp(
         otp_code= data.otp, 
@@ -59,35 +97,75 @@ async def verify_phone_otp(data: PhoneNumVerifyOtpRequest, session: Annotated[As
     return PhoneNumVerifyOtpResponse(**result)
 
 @router.post("/user/details")
-async def store_user_details(user_details: UserDetailsRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> UserDetailsResponse:
+async def store_user_details(
+    data: UserDetailsRequest, 
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> UserDetailsResponse:
 
     result = await dummy_service.set_user_details(
-        user_id = user_details.user_id,
-        first_name= user_details.first_name,
-        last_name=user_details.last_name,
+        user_id = data.user_id,
+        first_name= data.first_name,
+        last_name=data.last_name,
         session=session
     )
 
     return UserDetailsResponse(**result) 
 
-@router.post('/email/otp/send')
-async def send_email_otp(onboarding_details: EmailSendOtpRequest) -> EmailSendOtpResponse :
-    
-    result = await dummy_service.send_email_otp(
-        email=onboarding_details.email
-    )
-    return EmailSendOtpResponse(**result)  
+@router.post('/user/email/otp/send')
+async def send_email_otp(
+    data: EmailSendOtpRequest
+) -> EmailSendOtpResponse:
+    try:
+        result = await dummy_service.send_email_otp(
+            email=data.email
+        )
 
-@router.post('/email/otp/verify')
-async def verify_email_otp(data: EmailVerifyOtpRequest) -> EmailVerifyOtpResponse :
+        return EmailSendOtpResponse(
+            message=result["message"],
+            success=True
+        )
+    except HTTPException as he:
+        logger.error(f"HTTP error in send_email_otp: {he.detail}")
+        raise he
+    except Exception as e:
+        logger.error(f"Unexpected error in send_email_otp: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error while sending OTP"
+        )
 
-    result = await dummy_service.verify_email_otp(
-        otp= data.otp
-    )
-    return EmailVerifyOtpResponse(**result)
+@router.post('/user/email/otp/verify')
+async def verify_email_otp(
+    data: EmailVerifyOtpRequest, 
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> EmailVerifyOtpResponse:
+    try:
+        result = await dummy_service.verify_email_otp(
+            user_id = data.user_id,
+            email=data.email,
+            otp=data.otp, 
+            session=session
+            
+        )
+        return EmailVerifyOtpResponse(
+            message=result["message"],
+            success=result["success"]
+        )
+    except HTTPException as he:
+        logger.error(f"HTTP error in verify_email_otp: {he.detail}")
+        raise he
+    except Exception as e:
+        logger.error(f"Unexpected error in verify_email_otp: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error while verifying OTP"
+        )
 
 @router.post("/user/choose-investor-type")
-async def choose_investor_type(data: ChooseInvestorRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> ChooseInvestorResponse :
+async def choose_investor_type(
+    data: ChooseInvestorRequest, 
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> ChooseInvestorResponse :
 
     result = await dummy_service.choose_investor_type(
         user_id=data.user_id,
@@ -98,7 +176,10 @@ async def choose_investor_type(data: ChooseInvestorRequest, session: Annotated[A
     return ChooseInvestorResponse(**result)
 
 @router.post("/user/declaration")
-async def declaration(data: DeclarationRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> DeclarationResponse: 
+async def declaration(
+    data: DeclarationRequest, 
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> DeclarationResponse: 
 
     result = await dummy_service.declaration_accepted(
         user_id=data.user_id, 
@@ -109,11 +190,14 @@ async def declaration(data: DeclarationRequest, session: Annotated[AsyncSession,
     return DeclarationResponse(**result) 
 
 @router.post("/user/professional-background") 
-async def professional_back(data: ProfessionalBackgroundRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> ProfessionalBackgroundResponse: 
+async def professional_back(
+    data: ProfessionalBackgroundRequest, 
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> ProfessionalBackgroundResponse: 
     
     result = await dummy_service.set_professional_background(
         user_id = data.user_id,
-        occupation = data.income_source,
+        occupation = data.occupation,
         income_source = data.income_source,
         annual_income = data.annual_income,
         capital_commitment = data.capital_commitment,
@@ -123,7 +207,10 @@ async def professional_back(data: ProfessionalBackgroundRequest, session: Annota
     return ProfessionalBackgroundResponse(**result)
 
 @router.post("/user/sign-agreement")
-async def sign_agreement(data: AgreementRequest, session: Annotated[AsyncSession, Depends(get_session)]) -> AgreementResponse: 
+async def sign_agreement(
+    data: AgreementRequest, 
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> AgreementResponse: 
 
     result = await dummy_service.contribution_agreement(
         user_id=data.user_id,
@@ -134,7 +221,10 @@ async def sign_agreement(data: AgreementRequest, session: Annotated[AsyncSession
     return AgreementResponse(**result)
 
 @router.post("/user/upload-photo")
-async def upload_photo( session: Annotated[AsyncSession, Depends(get_session)], data: PhotoUploadRequest = Depends(), image: UploadFile = File(...)) -> PhotoUploadResponse:
+async def upload_photo( 
+    session: Annotated[AsyncSession, Depends(get_session)], 
+    data: PhotoUploadRequest = Depends(), image: UploadFile = File(...)
+) -> PhotoUploadResponse:
     try:
         result = await dummy_service.upload_photograph(
             user_id=data.user_id,
