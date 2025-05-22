@@ -22,6 +22,16 @@ class TransactionDetail(BaseModel):
     amount: float
     transaction_date: str
 
+class OnboardingDetail(BaseModel):
+    investor_id: str
+    investor_name: str
+    joined_date: str 
+
+class InvestorKycDetail(BaseModel):
+    investor_id: str
+    investor_name: str
+    kyc_completed_date: KycStatus
+
 class SubAdminDashboardTransactionsRes(BaseModel):
     subadmin_id: str
     subadmin_name: str
@@ -42,7 +52,9 @@ class SubAdminDashboardOverviewGraphRes(BaseModel):
 class SubAdminDashboardActivitiesRes(BaseModel):
     subadmin_id: str
     subadmin_name: str
-    transactions: List[TransactionDetail]
+    transaction_activities: List[TransactionDetail]
+    onboarding_activities: List[OnboardingDetail]
+    investor_kyc_activities: List[InvestorKycDetail]
     success: bool
 
 class SubAdminDealsStatisticsRes(BaseModel):

@@ -12,8 +12,13 @@ from src.services.s3 import S3Service
 from src.services.email import EmailService
 from uuid import UUID
 from datetime import datetime, timedelta
-from sqlalchemy import and_
+from sqlalchemy import and_ 
 
+# sample data for frontend 
+from src.utils.dummy_data import (
+    activities_data,
+    transaction_data
+)
 logger = get_logger(__name__)
 
 class SubAdminService:
@@ -203,6 +208,7 @@ class SubAdminService:
         subadmin_id: UUID
     ) -> dict:
         try:
+            return activities_data
             # Fetch Subadmin
             subadmin = await session.get(Subadmin, subadmin_id)
             if not subadmin:
@@ -258,6 +264,7 @@ class SubAdminService:
         subadmin_id: UUID
     ) -> dict:
         try:
+            return transaction_data
             # Fetch Subadmin
             subadmin = await session.get(Subadmin, subadmin_id)
             if not subadmin:
@@ -280,7 +287,7 @@ class SubAdminService:
             result = await session.execute(transaction_stmt)
             transactions = result.all()
 
-            transaction_details = [
+            transaction_activities = [
                 {
                     "transaction_id": str(transaction.Transaction.id),
                     "investor": f"{transaction.User.first_name} {transaction.User.last_name or ''}".strip(),
@@ -291,10 +298,51 @@ class SubAdminService:
                 for transaction in transactions
             ]
 
+            # Fetch all investors who joined using this subadmin
+            investor_joined_stmt = select(User).where(
+                and_(
+                    User.invitation_code == subadmin.invite_code,
+                    User.role == Role.INVESTOR
+                )
+            ).order_by(User.created_at.desc())
+            result = await session.execute(investor_joined_stmt)
+            investors_joined = result.scalars().all()
+
+            onboarding_activities = [
+                {
+                    "investor_id": str(investor.id),
+                    "investor_name": f"{investor.first_name} {investor.last_name or ''}".strip(),
+                    "joined_date": investor.created_at.isoformat()
+                }
+                for investor in investors_joined
+            ]
+
+            # Fetch all investors who completed KYC
+            investor_kyc_stmt = select(User).where(
+                and_(
+                    User.invitation_code == subadmin.invite_code,
+                    User.role == Role.INVESTOR,
+                    User.kyc_status == KycStatus.VERIFIED
+                )
+            ).order_by(User.updated_at.desc())
+            result = await session.execute(investor_kyc_stmt)
+            investors_kyc = result.scalars().all()
+
+            investor_kyc_activities = [
+                {
+                    "investor_id": str(investor.id),
+                    "investor_name": f"{investor.first_name} {investor.last_name or ''}".strip(),
+                    "kyc_completed_date": investor.updated_at.isoformat()
+                }
+                for investor in investors_kyc
+            ]
+
             return {
                 "subadmin_id": str(subadmin.id),
                 "subadmin_name": subadmin.name or "",
-                "transactions": transaction_details,
+                "transaction_activities": transaction_activities,
+                "onboarding_activities": onboarding_activities,
+                "investor_kyc_activities": investor_kyc_activities,
                 "success": True
             }
         except HTTPException as he:
