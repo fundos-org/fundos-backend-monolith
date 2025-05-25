@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
 
 class AppConfigs(BaseSettings):
     env: str = "DEV"
@@ -94,3 +95,17 @@ class MailConfigs(BaseSettings):
 # Usage
 mail_configs = MailConfigs()
 
+class ZohoConfigs(BaseSettings):
+    zoho_client_id = os.getenv("ZOHO_CLIENT_ID") or "1000.HV5DRVU8JJN4QDSSX2UG24TU5539SK"
+    zoho_client_secret = os.getenv("ZOHO_CLIENT_SECRET") or "789827012f3380e26d0408648b7f4d702cfd8bf995"
+    zoho_refresh_token = os.getenv("ZOHO_REFRESH_TOKEN") or "1000.fdcc4342e7597414eed476837c2dbebe.03c4d33175919ce6dea6907551d1c447"
+    zoho_redirect_uri = os.getenv("ZOHO_REDIRECT_URI") or "https%3A%2F%2Fsign.zoho.in"
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_prefix="",
+        case_sensitive=True,
+        extra="ignore"
+    )
+
+zoho_configs = ZohoConfigs() 

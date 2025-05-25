@@ -77,7 +77,8 @@ async def send_phone_otp(
 ) -> PhoneNumSendOtpResponse :
     
     result = await dummy_service.send_phone_otp(
-        phone_number=data.phone_number
+        phone_number=data.phone_number, 
+        session=Annotated[AsyncSession, Depends(get_session)]
     )
     return PhoneNumSendOtpResponse(**result) 
     

@@ -141,14 +141,34 @@ class DummyService:
 
     async def send_phone_otp(
         self, 
-        phone_number: str
+        phone_number: str, 
+        session: AsyncSession
     ) -> dict:
 
         try:
-            return {
-                "message" : f"otp sent to: {phone_number}", 
-                "otp" : "123456" 
-            }  
+
+            stmt = select(User).where(
+                User.phone_number == phone_number
+            ) 
+
+            result = await session.execute(stmt)
+            user = result.scalar_one_or_none()
+
+            if not user:
+                return {
+                    "message" : f"otp sent to: {phone_number}", 
+                    "otp" : "123456", 
+                    "onboarding_status": "PENDING",
+                    "success": True
+
+                } 
+            else:
+                return {
+                    "message" : f"otp sent to: {phone_number}", 
+                    "otp" : "123456", 
+                    "onboarding_status": "COMPLETED",
+                    "success": True
+                }  
 
         except Exception as e:
             logger.error(f"Request failed: {e}")
@@ -176,7 +196,8 @@ class DummyService:
 
             return {
                 "message": "Phone num verified", 
-                "user_id": f"{user_id}"
+                "user_id": f"{user_id}",
+                "success": True
             }
         except HTTPException as he:
             raise he

@@ -65,6 +65,9 @@ class PhoneNumSendOtpRequest(BaseModel):
 class PhoneNumSendOtpResponse(BaseModel):
     message: str
     otp: str
+    onboarding_status: str
+    success: bool
+
 
 class PhoneNumVerifyOtpRequest(BaseModel):
     phone_number: str
@@ -74,6 +77,7 @@ class PhoneNumVerifyOtpRequest(BaseModel):
 class PhoneNumVerifyOtpResponse(BaseModel):
     message: str
     user_id: str
+    success: bool
 
 class OTPVerificationRequest(BaseModel):
     session_uuid: str
