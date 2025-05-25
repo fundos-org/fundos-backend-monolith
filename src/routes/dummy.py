@@ -73,12 +73,13 @@ async def validate_invitation(
 
 @router.post('/user/phone/otp/send')
 async def send_phone_otp(
-    data: PhoneNumSendOtpRequest
+    data: PhoneNumSendOtpRequest,
+    session: Annotated[AsyncSession, Depends(get_session)]
 ) -> PhoneNumSendOtpResponse :
     
     result = await dummy_service.send_phone_otp(
         phone_number=data.phone_number, 
-        session=Annotated[AsyncSession, Depends(get_session)]
+        session=session
     )
     return PhoneNumSendOtpResponse(**result) 
     

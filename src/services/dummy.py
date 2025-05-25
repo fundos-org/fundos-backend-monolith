@@ -141,16 +141,13 @@ class DummyService:
 
     async def send_phone_otp(
         self, 
+        session: AsyncSession,
         phone_number: str, 
-        session: AsyncSession
     ) -> dict:
 
         try:
 
-            stmt = select(User).where(
-                User.phone_number == phone_number
-            ) 
-
+            stmt = select(User).where(User.phone_number == phone_number)
             result = await session.execute(statement=stmt)
             user = result.scalar_one_or_none()
 
