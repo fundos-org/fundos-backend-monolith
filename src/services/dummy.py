@@ -151,7 +151,7 @@ class DummyService:
                 User.phone_number == phone_number
             ) 
 
-            result = await session.execute(stmt)
+            result = await session.execute(statement=stmt)
             user = result.scalar_one_or_none()
 
             if not user:
