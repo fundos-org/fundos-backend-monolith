@@ -75,19 +75,19 @@ async def validate_invitation(
 async def send_phone_otp(
     data: PhoneNumSendOtpRequest,
     session: Annotated[AsyncSession, Depends(get_session)]
-) -> PhoneNumSendOtpResponse :
+) -> Any :
     
     result = await dummy_service.send_phone_otp(
         phone_number=data.phone_number, 
         session=session
     )
-    return PhoneNumSendOtpResponse(**result) 
+    return result 
     
 @router.post('/user/phone/otp/verify')
 async def verify_phone_otp(
     data: PhoneNumVerifyOtpRequest, 
     session: Annotated[AsyncSession, Depends(get_session)]
-) -> PhoneNumVerifyOtpResponse :
+) -> Any :
 
     result = await dummy_service.verify_phone_otp(
         otp_code= data.otp, 
@@ -96,7 +96,7 @@ async def verify_phone_otp(
         session=session
     )
 
-    return PhoneNumVerifyOtpResponse(**result)
+    return result
 
 @router.post("/user/details")
 async def store_user_details(
