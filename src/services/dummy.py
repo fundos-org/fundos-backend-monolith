@@ -147,25 +147,11 @@ class DummyService:
 
         try:
 
-            stmt = select(User).where(User.phone_number == phone_number)
-            result = await session.execute(statement=stmt)
-            user = result.scalar_one_or_none()
-
-            if not user:
-                return {
-                    "message" : f"otp sent to: {phone_number}", 
-                    "otp" : "123456", 
-                    "onboarding_status": "PENDING",
-                    "success": True
-
-                } 
-            else:
-                return {
-                    "message" : f"otp sent to: {phone_number}", 
-                    "otp" : "123456", 
-                    "onboarding_status": "COMPLETED",
-                    "success": True
-                }  
+            return {
+                "message" : f"otp sent to: {phone_number}", 
+                "otp" : "123456", 
+                "success": True
+            } 
 
         except Exception as e:
             logger.error(f"Request failed: {e}")
@@ -180,22 +166,30 @@ class DummyService:
     ) -> dict: 
 
         try:
-            user = await session.get(User, user_id)
+            if otp_code != "123456":
+                return {
+                    "message": "Invalid OTP",
+                    "success": False
+                }
+            
+            stmt = select(User).where(User.phone_number == phone_number)
+            result = await session.execute(statement=stmt)
+            user = result.scalar_one_or_none()
+
             if not user:
-                raise HTTPException(status_code=404, detail="Deal not found")
+                return {
+                    "message" : f"otp verified.", 
+                    "onboarding_status": "PENDING",
+                    "success": True
 
-            if otp_code == "123456": 
-                user.phone_number = phone_number
-                user.updated_at = datetime.now()
-
-                await session.commit()
-                await session.refresh(user)
-
-            return {
-                "message": "Phone num verified", 
-                "user_id": f"{user_id}",
-                "success": True
-            }
+                } 
+            else:
+                return {
+                    "message" : f"otp verified.", 
+                    "onboarding_status": "COMPLETED",
+                    "success": True
+                } 
+            
         except HTTPException as he:
             raise he
         except Exception as e:
