@@ -181,13 +181,13 @@ class DummyService:
                     "message" : f"otp verified.", 
                     "onboarding_status": "PENDING",
                     "success": True
-
                 } 
             else:
                 return {
                     "message" : f"otp verified.", 
                     "onboarding_status": "COMPLETED",
-                    "success": True
+                    "success": True,
+                    "user_id": user.fund_manager_id
                 } 
             
         except HTTPException as he:

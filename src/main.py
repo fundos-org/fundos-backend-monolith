@@ -7,6 +7,7 @@ from src.routes.kyc import router as kycRouter
 from src.routes.deal import router as dealsRouter 
 from src.routes.dummy import router as dummyRouter
 # from src.routes.onboarding import router as onBoardingRouter
+from src.routes.bank import router as bankRouter
 from src.routes.admin import router as adminRouter
 from src.routes.subadmin import router as subadminRouter
 from src.utils.lifespan import lifespan
@@ -49,6 +50,7 @@ app.include_router(router=dealsRouter, prefix=f"{api_prefix}/deals", tags=["deal
 # app.include_router(router=onBoardingRouter, prefix=f"{api_prefix}/onboarding", tags=["live"])
 app.include_router(router=adminRouter, prefix=f"{api_prefix}/admin", tags=["admin"])
 app.include_router(router=subadminRouter, prefix=f"{api_prefix}/subadmin", tags=["subadmin"])
+app.include_router(router=bankRouter, prefix=f"{api_prefix_v0}", tags=["test", "bank"])
 
 # Test api Routers
 app.include_router(router=dummyRouter, prefix=f"{api_prefix_v0}", tags=["test", "investor"])

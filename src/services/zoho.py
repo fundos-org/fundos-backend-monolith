@@ -5,6 +5,7 @@ import redis
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.user import User
+from src.models.kyc import KYC
 from src.logging.logging_setup import get_logger
 from datetime import datetime
 from uuid import UUID
@@ -79,17 +80,13 @@ class ZohoService:
             logger.error(f"Error generating Zoho token: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Error generating Zoho token: {str(e)}")
 
-    async def create_document_from_template(self, user_id: str, session: AsyncSession) -> dict:
+    async def create_document_from_template(self, user_id: UUID, session: AsyncSession) -> dict:
         """Create a document from a Zoho Sign template with user data."""
-        try:
-            user_id_uuid = UUID(user_id)
-        except ValueError:
-            logger.error(f"Invalid user_id format: {user_id}")
-            raise HTTPException(status_code=400, detail="Invalid user_id format")
-
-        user = await session.get(User, user_id_uuid)
-        if not user:
-            logger.error(f"User not found: {user_id}")
+        
+        user = await session.get(User, user_id)
+        kyc = await session.get(KYC, user_id)
+        if not user or not kyc:
+            logger.error(f"User not found: {user_id} or kyc record not found : {user_id}")
             raise HTTPException(status_code=404, detail="User not found")
 
         token = await self.get_access_token()
@@ -112,10 +109,17 @@ class ZohoService:
                         "date": date,
                         "month": month,
                         "fullName": f"{user.first_name} {user.last_name}" if user.first_name and user.last_name else "",
-                        "lastName": user.last_name or "",
+                        "address": user.address or "",
+                        "phone": user.phone_number or "",
                         "email": user.email or "",
+                        "fatherName": user.father_name or "",
+                        "type": "", 
+                        "panNumber": kyc.pan_number or "",
                         "capitalCommitmentAmount": str(user.capital_commitment) if user.capital_commitment else "",
-                        "capitalCommitmentWord": capital_commitment_word
+                        "capitalCommitmentWord": capital_commitment_word,
+                        "title": user.last_name or "", 
+                        "residence": user.address or "", 
+                        "dateOfBirth": user.date_of_birth or "",
                     },
                     "field_boolean_data": {},
                     "field_date_data": {},
@@ -128,6 +132,7 @@ class ZohoService:
                         "recipient_name": f"{user.first_name} {user.last_name}" if user.first_name and user.last_name else "Investor",
                         "recipient_email": user.email,
                         "action_id": "80016000000046056",
+                        "action_type": "SIGN",
                         "signing_order": 1,
                         "role": "Applicant",
                         "verify_recipient": False,
@@ -137,6 +142,7 @@ class ZohoService:
                         "recipient_name": "Amit",
                         "recipient_email": "amit@fundos.solutions",
                         "action_id": "80016000000081530",
+                        "action_type": "SIGN",
                         "signing_order": 2,
                         "role": "Signatory",
                         "verify_recipient": False,
@@ -146,6 +152,7 @@ class ZohoService:
                         "recipient_name": "Iswar",
                         "recipient_email": "ishwarkoki@gmail.com",
                         "action_id": "80016000000081528",
+                        "action_type": "SIGN",
                         "signing_order": 3,
                         "role": "Signatory",
                         "verify_recipient": False,
