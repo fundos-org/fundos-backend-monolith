@@ -20,16 +20,29 @@ class investorType(str, Enum):
     Individual = "individual"
     Entity = "entity"
 
+class OnboardingStatus(str, Enum):
+    Not_Started = "Not Started"
+    Invitation_Code_Verified = "Invitation Code Verified"
+    Phone_Number_Verified = "Phone Number Verified"
+    Email_Verified = "Email Verified"
+    Zoho_Document_Sent = "Zoho Document Sent"
+    Bank_Account_Verified = "Bank Account Verified"
+    In_Progress = "In Progress"
+    Completed = "Completed"
+    Pending = "Pending"
+
 class User(SQLModel, table=True):
     id: UUID = Field(primary_key=True, default_factory=uuid4)
     invitation_code: str = Field(index=True, foreign_key="subadmin.invite_code")
-    onboarding_status: str = Field(default="Not Started")
+    onboarding_status: Optional[OnboardingStatus] = Field(default=OnboardingStatus.Not_Started)
     email: Optional[str] = Field(unique=True, index=True, default=None)
     phone_number: Optional[str] = Field(unique=True, index=True, default=None)
     hashed_password: Optional[str] = Field(default=None)
     role: Role = Field(default=Role.INVESTOR)
     first_name: Optional[str] = Field(default=None)
     last_name: Optional[str] = Field(default=None)
+    full_name: Optional[str] = Field(default=None)
+    father_name: Optional[str] = Field(default=None)
     investor_type: investorType = Field(default=investorType.Individual)
     declaration_accepted: bool = Field(default=True)
     gender: Optional[str] = Field(default=None)

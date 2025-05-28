@@ -4,7 +4,7 @@ import json
 import redis
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.models.user import User
+from src.models.user import User, OnboardingStatus
 from src.models.kyc import KYC
 from src.logging.logging_setup import get_logger
 from datetime import datetime
@@ -192,12 +192,6 @@ class ZohoService:
                 )
                 logger.info(f"Cached Zoho metadata for user_id: {user_id}")
 
-                # Update onboarding_status
-                user.onboarding_status = "Document Created"
-                session.add(user)
-                await session.commit()
-                await session.refresh(user)
-
                 return metadata
         except Exception as e:
             logger.error(f"Error creating document: {str(e)}")
@@ -282,11 +276,6 @@ class ZohoService:
                     raise HTTPException(status_code=response.status_code, detail="Failed to apply e-stamp")
             
                 data = response.json()
-                # Update onboarding_status
-                user.onboarding_status = "E-Stamp Applied"
-                session.add(user)
-                await session.commit()
-                await session.refresh(user)
 
                 return {
                     "data": data,
@@ -332,7 +321,7 @@ class ZohoService:
 
                 user = await session.get(User, UUID(user_id))
                 if user:
-                    user.onboarding_status = "Sent for Signing"
+                    user.onboarding_status = OnboardingStatus.Zoho_Document_Sent
                     session.add(user)
                     await session.commit()
                     await session.refresh(user)
@@ -388,7 +377,7 @@ class ZohoService:
             f.write(pdf_data)
 
         user.signed_document = f"/signed_document/{os.path.basename(file_path)}"
-        user.onboarding_status = "Completed"
+        user.onboarding_status = "COMPLETED"
         user.agreement_signed = True
         session.add(user)
         await session.commit()

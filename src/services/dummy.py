@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 from src.logging.logging_setup import get_logger # assuming you have a logger setup
 from pydantic import EmailStr
-from src.models.user import User, investorType
+from src.models.user import User, investorType, OnboardingStatus
 from src.models.subadmin import Subadmin
 from src.utils.dependencies import get_user
 from uuid import UUID
@@ -100,7 +100,64 @@ class DummyService:
         except Exception as e:
             logger.error(f"Request failed: {e}")
             raise HTTPException(status_code=500, detail=f"Internal request error : {str(e)}")
+
+    async def send_phone_otp_signin(
+        self, 
+        session: AsyncSession,
+        phone_number: str, 
+    ) -> dict:
+
+        try:
+
+            return {
+                "message" : f"otp sent to: {phone_number}", 
+                "otp" : "123456", 
+                "success": True
+            } 
+
+        except Exception as e:
+            logger.error(f"Request failed: {e}")
+            raise HTTPException(status_code=500, detail="Internal request error")
         
+    async def verify_phone_otp_signin(
+        self,  
+        otp_code: str, 
+        phone_number: str, 
+        session: AsyncSession
+    ) -> dict: 
+
+        try:
+            if otp_code != "123456":
+                return {
+                    "message": "Invalid OTP",
+                    "success": False
+                }
+            
+            stmt = select(User).where(User.phone_number == phone_number)
+            result = await session.execute(statement=stmt)
+            user = result.scalar_one_or_none()
+
+            if not user:
+                return {
+                    "message" : f"otp verified.", 
+                    "onboarding_status": f"{OnboardingStatus.Pending.name}",
+                    "success": True
+                } 
+            else:
+                return {
+                    "message" : f"otp verified.", 
+                    "onboarding_status": f"{OnboardingStatus.Completed.name}",
+                    "success": True,
+                    "fund_manager_id": user.fund_manager_id
+                } 
+            
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            logger.error(f"Failed to update company details: {str(e)}")
+            await session.rollback()
+            raise HTTPException(status_code=500, detail="Internal server error")
+         
     async def verify_invitation_code(
         self, 
         invitation_code: str, 
@@ -117,7 +174,7 @@ class DummyService:
                 # Create new user with the valid invitation code
                 user = User(
                     invitation_code=invitation_code,
-                    onboarding_status="Invitation_verified",
+                    onboarding_status=OnboardingStatus.Invitation_Code_Verified,
                     fund_manager_id=subadmin.id  # Link user to subadmin
                 )
                 session.add(user)
@@ -172,23 +229,22 @@ class DummyService:
                     "success": False
                 }
             
-            stmt = select(User).where(User.phone_number == phone_number)
-            result = await session.execute(statement=stmt)
-            user = result.scalar_one_or_none()
-
-            if not user:
+            user = await session.get(User, user_id)
+            if user:
+                user.onboarding_status = OnboardingStatus.Phone_Number_Verified.name
+                user.phone_number  = phone_number
+                await session.commit()
+                await session.refresh(user)
                 return {
-                    "message" : f"otp verified.", 
-                    "onboarding_status": "PENDING",
+                    "message" : f"otp verified.",
+                    "onboarding_status": f"{OnboardingStatus.Phone_Number_Verified.name}",
                     "success": True
                 } 
             else:
                 return {
-                    "message" : f"otp verified.", 
-                    "onboarding_status": "COMPLETED",
-                    "success": True,
-                    "fund_manager_id": user.fund_manager_id
-                } 
+                    "message" : f"User with {user_id} doesn't exist", 
+                    "success": True
+                }
             
         except HTTPException as he:
             raise he
@@ -269,6 +325,7 @@ class DummyService:
                 # Fetch user from the database
                 user = await session.get(User, user_id)
                 user.email = email 
+                user.onboarding_status = OnboardingStatus.Email_Verified
 
                 await session.commit()
                 await session.refresh(user)
@@ -442,6 +499,7 @@ class DummyService:
 
             # Update user in database
             user.profile_image_url = image_url
+            user.onboarding_status = OnboardingStatus.Completed
             await session.commit()
             await session.refresh(user)
 

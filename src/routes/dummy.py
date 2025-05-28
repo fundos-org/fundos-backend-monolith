@@ -38,7 +38,7 @@ async def signin_investor_send_email_otp(
 
     return result
 
-@router.post("/investor/signin/verify-otp")
+@router.post("/investor/signin/email/verify-otp")
 async def signup_investor_verify_email_otp(
     session: Annotated[AsyncSession, Depends(get_session)], 
     email: EmailStr, 
@@ -49,6 +49,40 @@ async def signup_investor_verify_email_otp(
         session=session,
         email=email,
         otp_code=otp
+    )
+    
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Invalid invitation code")
+
+    return result
+
+@router.post("/investor/signin/phone/send-otp")
+async def signin_investor_send_phone_otp(
+    session: Annotated[AsyncSession, Depends(get_session)], 
+    phone_number: str, 
+) -> Dict[str, Any]:
+
+    result = await dummy_service.send_phone_otp_signin(
+        session=session,
+        phone_number=phone_number
+    )
+    
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Invalid invitation code")
+
+    return result
+
+@router.post("/investor/signin/phone/verify-otp")
+async def signup_investor_verify_phone_otp(
+    session: Annotated[AsyncSession, Depends(get_session)], 
+    phone_number: str, 
+    otp: str
+) -> Dict[str, Any]:
+
+    result = await dummy_service.verify_phone_otp_signin(
+        session=session,
+        otp_code=otp, 
+        phone_number=phone_number
     )
     
     if not result["success"]:
