@@ -34,7 +34,7 @@ async def signin_investor_send_email_otp(
     )
     
     if not result["success"]:
-        raise HTTPException(status_code=400, detail="Invalid invitation code")
+        raise HTTPException(status_code=400, detail=f"{result['message']}")
 
     return result
 
@@ -68,7 +68,7 @@ async def signin_investor_send_phone_otp(
     )
     
     if not result["success"]:
-        raise HTTPException(status_code=400, detail="Invalid invitation code")
+        raise HTTPException(status_code=400, detail=f"{result['message']}")
 
     return result
 
@@ -86,7 +86,7 @@ async def signup_investor_verify_phone_otp(
     )
     
     if not result["success"]:
-        raise HTTPException(status_code=400, detail="Invalid invitation code")
+        raise HTTPException(status_code=400, detail=f"{result['message']}")
 
     return result
 

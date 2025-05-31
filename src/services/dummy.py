@@ -108,16 +108,29 @@ class DummyService:
     ) -> dict:
 
         try:
+            # Fetch user from the database
+            stmt = select(User).where(
+                User.phone_number == phone_number
+            )
 
-            return {
-                "message" : f"otp sent to: {phone_number}", 
-                "otp" : "123456", 
-                "success": True
-            } 
+            result = await session.execute(stmt)
+            user = result.scalar_one_or_none() 
+
+            if user:
+                return {
+                    "message": f"An otp send to {phone_number} for verification",
+                    "otp": "123456",
+                    "success": True
+                }
+            else:
+                return {
+                    "message": "User not found in fundos",
+                    "success": False
+                }
 
         except Exception as e:
             logger.error(f"Request failed: {e}")
-            raise HTTPException(status_code=500, detail="Internal request error")
+            raise HTTPException(status_code=500, detail=f"Internal request error : {str(e)}")
         
     async def verify_phone_otp_signin(
         self,  
@@ -135,21 +148,22 @@ class DummyService:
             
             stmt = select(User).where(User.phone_number == phone_number)
             result = await session.execute(statement=stmt)
-            user = result.scalar_one_or_none()
+            user: User = result.scalars().first()   
 
-            if not user:
+            if user.onboarding_status != OnboardingStatus.Completed.name:
                 return {
                     "message" : f"otp verified.", 
-                    "onboarding_status": f"{OnboardingStatus.Pending.name}",
-                    "success": True
-                } 
-            else:
-                return {
-                    "message" : f"otp verified.", 
-                    "onboarding_status": f"{OnboardingStatus.Completed.name}",
+                    "onboarding_status": user.onboarding_status,
                     "success": True,
                     "fund_manager_id": user.fund_manager_id
-                } 
+                }
+            else: 
+                return {
+                    "message" : f"otp verified.", 
+                    "onboarding_status": user.onboarding_status,
+                    "success": True,
+                    "fund_manager_id": user.fund_manager_id
+                }
             
         except HTTPException as he:
             raise he
@@ -174,7 +188,7 @@ class DummyService:
                 # Create new user with the valid invitation code
                 user = User(
                     invitation_code=invitation_code,
-                    onboarding_status=OnboardingStatus.Invitation_Code_Verified,
+                    onboarding_status=OnboardingStatus.Invitation_Code_Verified.name,
                     fund_manager_id=subadmin.id  # Link user to subadmin
                 )
                 session.add(user)
@@ -183,13 +197,14 @@ class DummyService:
 
                 return {
                     "success": True,
+                    "message": "User created successfully",
                     "user_id": user.id,
                     "fund_manager_id": subadmin.id
                 }
             else:
                 return {
                     "success": False,
-                    "error": "Invalid invitation code"
+                    "message": "Error: Invalid invitation code"
                 }
 
         except Exception as e:
@@ -232,18 +247,20 @@ class DummyService:
             user = await session.get(User, user_id)
             if user:
                 user.onboarding_status = OnboardingStatus.Phone_Number_Verified.name
-                user.phone_number  = phone_number
+                user.phone_number = phone_number
                 await session.commit()
                 await session.refresh(user)
                 return {
                     "message" : f"otp verified.",
                     "onboarding_status": f"{OnboardingStatus.Phone_Number_Verified.name}",
+                    "user_id":f"{user_id}",
                     "success": True
+
                 } 
             else:
                 return {
                     "message" : f"User with {user_id} doesn't exist", 
-                    "success": True
+                    "success": False
                 }
             
         except HTTPException as he:
@@ -434,13 +451,14 @@ class DummyService:
             user = await get_user(user_id=user_id, session=session) 
 
             user.agreement_signed = agreement_signed
+            user.onboarding_status = OnboardingStatus.Zoho_Document_Sent.name
 
             await session.commit()
             await session.refresh(user) 
 
             return {
                 "message": "User signed agreement ",
-                "user_id": user.id,
+                "user_id": user_id,
             }
 
         except Exception as e:
@@ -499,7 +517,7 @@ class DummyService:
 
             # Update user in database
             user.profile_image_url = image_url
-            user.onboarding_status = OnboardingStatus.Completed
+            user.onboarding_status = OnboardingStatus.Completed.name
             await session.commit()
             await session.refresh(user)
 
