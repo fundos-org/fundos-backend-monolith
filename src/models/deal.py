@@ -51,8 +51,6 @@ class RoundType(str, Enum):
 class Deal(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     fund_manager_id: UUID = Field(foreign_key="subadmin.id")
-    title: str = Field(default=None, nullable=True)
-    description: str = Field(default=None, nullable=True)
     company_name: Optional[str] = Field(default=None, nullable=True)
     about_company: Optional[str] = Field(default=None, nullable=True)
     company_website: Optional[str] = Field(default=None, nullable=True)

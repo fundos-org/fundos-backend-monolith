@@ -338,7 +338,6 @@ class DealService:
                 "valuation_type": "Priced",
                 "fund_raised_till_now": 0,
                 "logo_url": deal.logo_url,
-                "fund_manager_id": deal.fund_manager_id,
             }
             return deal_data
         except HTTPException as he:
@@ -377,6 +376,7 @@ class DealService:
             response: Dict = {
                 "subadmin_name": subadmin.name,
                 "user_name": f"{user.first_name} {user.last_name}",
+                "subadmin_id": subadmin_id
             }
 
             # Prepare response
@@ -390,8 +390,6 @@ class DealService:
                     "round_size": deal.round_size,
                     "commitment": deal.syndicate_commitment,
                     "logo_url": deal.logo_url,
-                    "fund_manager_id": deal.fund_manager_id,
-                    "fund_manager_name": subadmin.name
                 }
                 deals_data.append(deal_data)
 
