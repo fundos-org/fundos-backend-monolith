@@ -5,10 +5,12 @@ from src.models.user import investorType
 
 class UserOnboardingStartRequest(BaseModel):
     invitation_code: str
+    phone_number: str
     
 class UserOnboardingStartResponse(BaseModel):
     user_id: UUID
     message: str
+    success: bool 
     
 class AadhaarRequest(BaseModel):
     user_id: str

@@ -57,12 +57,12 @@ async def signup_investor_verify_email_otp(
     return result
 
 @router.get("/user/phone/otp/send")
-async def signin_investor_send_phone_otp(
+async def user_send_phone_otp(
     session: Annotated[AsyncSession, Depends(get_session)], 
     phone_number: str, 
 ) -> Dict[str, Any]:
 
-    result = await dummy_service.send_phone_otp_signin(
+    result = await dummy_service.send_phone_otp(
         session=session,
         phone_number=phone_number
     )
@@ -73,13 +73,13 @@ async def signin_investor_send_phone_otp(
     return result
 
 @router.get("/user/phone/otp/verify")
-async def signup_investor_verify_phone_otp(
+async def user_verify_phone_otp(
     session: Annotated[AsyncSession, Depends(get_session)], 
     phone_number: str, 
     otp: str
 ) -> Dict[str, Any]:
 
-    result = await dummy_service.verify_phone_otp_signin(
+    result = await dummy_service.verify_phone_otp(
         session=session,
         otp_code=otp, 
         phone_number=phone_number
@@ -94,58 +94,24 @@ async def signup_investor_verify_phone_otp(
 async def validate_invitation(
     data: UserOnboardingStartRequest, 
     session: Annotated[AsyncSession, Depends(get_session)]
-) -> UserOnboardingStartResponse:
+) -> Dict[str, Any]:
     
     result: dict = await dummy_service.verify_invitation_code(
         invitation_code = data.invitation_code,
         session=session
     ) 
     if not result["success"]:
+        logger.error(f"Error in validate_invitation: {result['message']}")
         raise HTTPException(status_code=400, detail="Invalid invitation code")
-
-    return UserOnboardingStartResponse(user_id=result["user_id"], message="new user added")
-
-@router.post('/user/phone/otp/send')
-async def send_phone_otp(
-    data: PhoneNumSendOtpRequest,
-    session: Annotated[AsyncSession, Depends(get_session)]
-) -> Any :
     
-    result = await dummy_service.send_phone_otp(
-        phone_number=data.phone_number, 
-        session=session
-    )
-    return result 
-    
-@router.post('/user/phone/otp/verify')
-async def verify_phone_otp(
-    data: PhoneNumVerifyOtpRequest, 
-    session: Annotated[AsyncSession, Depends(get_session)]
-) -> Any :
+    response: Dict = {
+        "user_id": result["user_id"],
+        "message": "new user added",
+        "success": True
+    }
+    logger.info(f"validate_invitation response: {response}")
 
-    result = await dummy_service.verify_phone_otp(
-        otp_code= data.otp, 
-        phone_number=data.phone_number, 
-        user_id=data.user_id,
-        session=session
-    )
-
-    return result
-
-# @router.post("/user/details")
-# async def store_user_details(
-#     data: UserDetailsRequest, 
-#     session: Annotated[AsyncSession, Depends(get_session)]
-# ) -> UserDetailsResponse:
-
-#     result = await dummy_service.set_user_details(
-#         user_id = data.user_id,
-#         first_name= data.first_name,
-#         last_name=data.last_name,
-#         session=session
-#     )
-
-#     return UserDetailsResponse(**result) 
+    return response
 
 @router.post('/user/email/otp/send')
 async def send_email_otp(

@@ -2,6 +2,7 @@ from fastapi import HTTPException
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
+from src.services.phone import PhoneService
 from src.logging.logging_setup import get_logger # assuming you have a logger setup
 from pydantic import EmailStr
 from src.models.user import User, investorType, OnboardingStatus
@@ -11,7 +12,6 @@ from uuid import UUID
 from src.services.s3 import S3Service
 from src.services.email import EmailService
 from typing import Dict, Any
-from datetime import datetime
 
 logger = get_logger(__name__) 
 
@@ -21,6 +21,7 @@ class DummyService:
         self.folder_prefix = "users/profile_pictures/"
         self.s3_service = S3Service(bucket_name=self.bucket_name, region_name="ap-south-1")
         self.email_service = EmailService()
+        self.phone_service = PhoneService()
     
     async def investor_signin_email(
         self, 
@@ -101,11 +102,11 @@ class DummyService:
             logger.error(f"Request failed: {e}")
             raise HTTPException(status_code=500, detail=f"Internal request error : {str(e)}")
 
-    async def send_phone_otp_signin(
+    async def send_phone_otp(
         self, 
         session: AsyncSession,
         phone_number: str, 
-    ) -> dict:
+    ) -> Dict[str, Any]:
 
         try:
             # Fetch user from the database
@@ -114,25 +115,23 @@ class DummyService:
             )
 
             result = await session.execute(stmt)
-            user = result.scalar_one_or_none() 
+            user = result.scalars().first() 
 
             if user:
+                result = await self.phone_service.send_phone_otp(
+                    phone_number=phone_number,
+                    user_name=user.full_name,
+                    country="india", 
+                    process="signin"
+                )
 
-                if user.onboarding_status == OnboardingStatus.Completed.name:
-                    result = await self.phone_service.send_phone_otp(
-                        phone_number=phone_number,
-                        user_name="Investor",
-                        country="india", 
-                        process="signin"
-                    )
-
-                    if not result["success"]:
-                        return {
-                            "message": f"Failed to send OTP to {phone_number}", 
-                            "success": False
-                        }
-                    else:
-                        return result
+                if not result["success"]:
+                    return {
+                        "message": f"Failed to send OTP to {phone_number}", 
+                        "success": False
+                    }
+                else:
+                    return result
                     
             else: 
                 result = await self.phone_service.send_phone_otp(
@@ -153,38 +152,44 @@ class DummyService:
             logger.error(f"Request failed: {e}")
             raise HTTPException(status_code=500, detail=f"Internal request error : {str(e)}")
         
-    async def verify_phone_otp_signin(
+    async def verify_phone_otp(
         self,  
         otp_code: str, 
         phone_number: str, 
         session: AsyncSession
-    ) -> dict: 
+    ) -> Dict[str, Any]: 
 
         try:
-            if otp_code != "123456":
-                return {
-                    "message": "Invalid OTP",
-                    "success": False
-                }
+            result = await self.phone_service.verify_phone_otp(
+                phone_number=phone_number,
+                otp=otp_code, 
+                country="india"
+            )
+
+            if not result["success"]:
+                return result # Failure response
             
             stmt = select(User).where(User.phone_number == phone_number)
             result = await session.execute(statement=stmt)
-            user: User = result.scalars().first()   
+            user = result.scalars().first()
 
-            if user.onboarding_status != OnboardingStatus.Completed.name:
-                return {
+            if user:  
+                response = {
                     "message" : f"otp verified.", 
                     "onboarding_status": user.onboarding_status,
-                    "success": True,
-                    "fund_manager_id": user.fund_manager_id
+                    "fund_manager_id": user.fund_manager_id,
+                    "success": True
                 }
+
+                return response
+            
             else: 
-                return {
-                    "message" : f"otp verified.", 
-                    "onboarding_status": user.onboarding_status,
-                    "success": True,
-                    "fund_manager_id": user.fund_manager_id
-                }
+                user = User(
+                    phone_number=phone_number,
+                    onboarding_status=OnboardingStatus.Phone_Number_Verified.name
+                )
+                session.add(user)
+                await session.commit()
             
         except HTTPException as he:
             raise he
@@ -195,11 +200,19 @@ class DummyService:
          
     async def verify_invitation_code(
         self, 
-        invitation_code: str, 
+        invitation_code: str,
+        phone_number: str,
         session: AsyncSession    
     ) -> Dict[str, Any]:
 
         try:
+
+            # Validate phone number: must be exactly the expected length and digits only
+            if not phone_number.isdigit():
+                raise HTTPException(status_code=400, detail="Phone number must contain only digits")
+            if len(phone_number) != 10:
+                raise HTTPException(status_code=400, detail=f"Phone number must be 10 digits")
+
             # Check if invitation code exists in Subadmin table
             stmt = select(Subadmin).where(Subadmin.invite_code == invitation_code)
             result = await session.execute(stmt)
@@ -210,6 +223,7 @@ class DummyService:
                 user = User(
                     invitation_code=invitation_code,
                     onboarding_status=OnboardingStatus.Invitation_Code_Verified.name,
+                    phone_number=phone_number,
                     fund_manager_id=subadmin.id  # Link user to subadmin
                 )
                 session.add(user)
@@ -231,80 +245,7 @@ class DummyService:
         except Exception as e:
             logger.error(f"Request failed: {e}")
             raise HTTPException(status_code=500, detail="Internal request error")
-
-    async def send_phone_otp(
-        self, 
-        session: AsyncSession,
-        phone_number: str, 
-    ) -> dict:
-
-        try:
-            # Send OTP using the Phone Service class
-            result = await self.phone_service.send_phone_otp(
-                phone_number=phone_number,
-                user_name="Investor",
-                country="india", 
-                process="signup"
-            )
-
-            if not result["success"]:
-                return {
-                    "message": f"Failed to send OTP to {phone_number}", 
-                    "success": False
-                }
-            else:
-                return result
-        except Exception as e:
-            logger.error(f"Request failed: {e}")
-            raise HTTPException(status_code=500, detail="Internal Server error while sending OTP")
-        
-    async def verify_phone_otp(
-        self, 
-        user_id: UUID, 
-        otp_code: str, 
-        phone_number: str, 
-        session: AsyncSession
-    ) -> dict: 
-
-        try:
-            result = await self.phone_service.verify_phone_otp(
-                phone_number=phone_number,
-                otp=otp_code, 
-                country="india"
-            )
-
-            if not result["success"]:
-                return {
-                    "message": "Invalid OTP",
-                    "success": False
-                }
-            
-            else: 
-                user = await session.get(User, user_id)
-                if user:
-                    user.onboarding_status = OnboardingStatus.Phone_Number_Verified.name
-                    user.phone_number = phone_number
-                    await session.commit()
-                    await session.refresh(user)
-                    return {
-                        "message" : f"otp verified.",
-                        "onboarding_status": f"{OnboardingStatus.Phone_Number_Verified.name}",
-                        "user_id":f"{user_id}",
-                        "success": True
-                    } 
-                else:
-                    return {
-                        "message" : f"User with {user_id} doesn't exist", 
-                        "success": False
-                    }
-            
-        except HTTPException as he:
-            raise he
-        except Exception as e:
-            logger.error(f"Failed to Verify OTP: {str(e)}")
-            await session.rollback()
-            raise HTTPException(status_code=500, detail="Internal server error")
-        
+       
     async def set_user_details(
         self, 
         user_id: UUID, 
