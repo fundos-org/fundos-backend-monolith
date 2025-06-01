@@ -40,8 +40,6 @@ class DealService:
         try:
             deal_row = Deal(
                 fund_manager_id=fund_manager_id,
-                title="New Deal Draft",
-                description="Draft deal created", 
                 status= DealStatus.OPEN, 
                 created_at=datetime.now()
             )
@@ -397,7 +395,7 @@ class DealService:
             return response
         
         except Exception as e:
-            logger.error(f"Failed to retrieve deals by subadmin ID: {str(e)}")
+            logger.error(f"Failed to retrieve deals by User ID: {str(e)}")
             await session.rollback()
             raise HTTPException(status_code=500, detail="Internal server error")
         except HTTPException as he:

@@ -50,7 +50,11 @@ class EmailService:
         """Generate Redis key for rate limiting."""
         return f"email:rate_limit:{email}"
 
-    async def send_email_otp(self, email: str, subject: str = "Your Verification Code") -> Any:
+    async def send_email_otp(
+        self, 
+        email: str, 
+        subject: str = "Your Verification Code"
+    ) -> Any:
         """Send an OTP email using Zoho ZeptoMail SMTP."""
         try:
             # Check rate limit (60-second interval)
@@ -105,7 +109,11 @@ class EmailService:
             logger.error(f"Failed to send OTP email: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Internal error while sending OTP email: {str(e)}")
 
-    async def verify_email_otp(self, email: str, otp_code: str) -> Any:
+    async def verify_email_otp(
+        self, 
+        email: str, 
+        otp_code: str
+    ) -> Any:
         """Verify the OTP for the given email."""
         try:
             cache_key = self._get_cache_key(email)

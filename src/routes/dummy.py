@@ -98,6 +98,7 @@ async def validate_invitation(
     
     result: dict = await dummy_service.verify_invitation_code(
         invitation_code = data.invitation_code,
+        phone_number=data.phone_number, 
         session=session
     ) 
     if not result["success"]:
