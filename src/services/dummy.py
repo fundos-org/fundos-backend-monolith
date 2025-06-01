@@ -10,7 +10,6 @@ from src.utils.dependencies import get_user
 from uuid import UUID
 from src.services.s3 import S3Service
 from src.services.email import EmailService
-from src.services.phone import PhoneService
 from typing import Dict, Any
 from datetime import datetime
 
@@ -22,7 +21,6 @@ class DummyService:
         self.folder_prefix = "users/profile_pictures/"
         self.s3_service = S3Service(bucket_name=self.bucket_name, region_name="ap-south-1")
         self.email_service = EmailService()
-        self.phone_service = PhoneService()
     
     async def investor_signin_email(
         self, 
@@ -103,7 +101,7 @@ class DummyService:
             logger.error(f"Request failed: {e}")
             raise HTTPException(status_code=500, detail=f"Internal request error : {str(e)}")
 
-    async def send_phone_otp(
+    async def send_phone_otp_signin(
         self, 
         session: AsyncSession,
         phone_number: str, 
@@ -116,7 +114,7 @@ class DummyService:
             )
 
             result = await session.execute(stmt)
-            user = result.scalars().first() 
+            user = result.scalar_one_or_none() 
 
             if user:
 
@@ -163,13 +161,7 @@ class DummyService:
     ) -> dict: 
 
         try:
-            result = await self.phone_service.verify_phone_otp(
-                phone_number=phone_number,
-                otp=otp_code, 
-                country="india"
-            )
-
-            if not result["success"]:
+            if otp_code != "123456":
                 return {
                     "message": "Invalid OTP",
                     "success": False
@@ -179,15 +171,20 @@ class DummyService:
             result = await session.execute(statement=stmt)
             user: User = result.scalars().first()   
 
-            response: Dict = {
-                "message" : f"otp verified.", 
-                "onboarding_status": user.onboarding_status,
-                "success": True,
-                "fund_manager_id": user.fund_manager_id, 
-                "user_id": user.id
-            }
-
-            return response
+            if user.onboarding_status != OnboardingStatus.Completed.name:
+                return {
+                    "message" : f"otp verified.", 
+                    "onboarding_status": user.onboarding_status,
+                    "success": True,
+                    "fund_manager_id": user.fund_manager_id
+                }
+            else: 
+                return {
+                    "message" : f"otp verified.", 
+                    "onboarding_status": user.onboarding_status,
+                    "success": True,
+                    "fund_manager_id": user.fund_manager_id
+                }
             
         except HTTPException as he:
             raise he

@@ -109,20 +109,3 @@ class ZohoConfigs(BaseSettings):
     )
 
 zoho_configs = ZohoConfigs() 
-
-
-class MSG91Configs(BaseSettings):
-    msg91_authkey: str = "453616AKdWaDgFt6833fe3bP1"
-    msg91_signup_template_id: str = "6839be0ed6fc05746f76b593"
-    msg91_signin_template_id: str = "683bf6d4d6fc05320619bde2"
-    msg91_otp_api: str = "https://control.msg91.com/api/v5/otp"
-    msg91_verify_api: str = "https://control.msg91.com/api/v5/otp/verify"
-
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_prefix="",
-        case_sensitive=True,
-        extra="ignore"
-    )
-
-msg91_configs = MSG91Configs()

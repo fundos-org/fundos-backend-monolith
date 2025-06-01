@@ -119,6 +119,18 @@ async def update_securities(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update securities details: {str(e)}")
 
+@router.get("/mobile/all-deals")
+async def get_all_deals(
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> Any: 
+    try: 
+        result = await deal_service.get_all_deals(
+            session=session
+        ) 
+        return result
+    except Exception as e : 
+        raise HTTPException(detail=str(e)) 
+    
 @router.get("/mobile/deal/{deal_id}", tags=["investor"])
 async def get_deal_by_id(
     deal_id: str,

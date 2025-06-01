@@ -1,9 +1,8 @@
 from datetime import datetime
 from fastapi import HTTPException, UploadFile
-from typing import Any, Dict
+from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from src.models.subadmin import Subadmin
 from src.logging.logging_setup import get_logger
 from sqlmodel import UUID
 from src.models.deal import Deal, DealStatus
@@ -301,12 +300,37 @@ class DealService:
             logger.error(f"Failed to update securities details: {str(e)}")
             await session.rollback()
             raise HTTPException(status_code=500, detail="Internal server error")
-             
+        
+    async def get_all_deals(
+        self, 
+        session: AsyncSession
+    ) -> Any :
+        """
+        Retrieves all deals from the database.
+
+        Args:
+            session: SQLAlchemy AsyncSession for database operations
+
+        Returns:
+            List[Deal]: List of all deals
+
+        Raises:
+            HTTPException: If fetching deals fails
+        """
+        try:
+            result = await session.execute(select(Deal))
+            deals = result.scalars().all()
+            return deals
+        except Exception as e:
+            logger.error(f"Failed to retrieve all deals: {str(e)}")
+            await session.rollback()
+            raise HTTPException(status_code=500, detail="Internal server error")
+        
     async def get_deal_by_id(
         self, 
         deal_id: UUID, 
         session: AsyncSession
-    ) -> Any:
+    ) -> Deal:
         """
         Retrieves a deal by its ID.
 
@@ -324,22 +348,7 @@ class DealService:
             deal = await get_deal(deal_id=deal_id, session=session)
             if not deal:
                 raise HTTPException(status_code=404, detail="Deal not found")
-            
-            deal_data = {
-                "deal_id": deal.id,
-                "description": deal.about_company,  
-                "title": deal.company_name, 
-                "current_valuation": deal.current_valuation,
-                "round_size": deal.round_size,
-                "minimum_investment": "5L",
-                "commitment": deal.syndicate_commitment,
-                "instruments": deal.instrument_type,
-                "valuation_type": "Priced",
-                "fund_raised_till_now": 0,
-                "logo_url": deal.logo_url,
-                "fund_manager_id": deal.fund_manager_id,
-            }
-            return deal_data
+            return deal
         except HTTPException as he:
             raise he
         except Exception as e:
@@ -356,35 +365,7 @@ class DealService:
             statement = select(Deal).where(Deal.fund_manager_id == subadmin_id)
             results = await session.execute(statement)
             deals = results.scalars().all()
-
-            # fetch subadmin details
-            statement = select(Subadmin).where(Subadmin.id == subadmin_id)
-            results = await session.execute(statement)
-            subadmin = results.scalars().one()
-
-            response: Dict = {
-                "subadmin_name": subadmin.name,
-            }
-
-            # Prepare response
-            deals_data = []
-            for deal in deals:
-                deal_data = {
-                    "deal_id": deal.id,
-                    "description": deal.about_company,  
-                    "title": deal.company_name, 
-                    "current_valuation": deal.current_valuation,
-                    "round_size": deal.round_size,
-                    "commitment": deal.syndicate_commitment,
-                    "logo_url": deal.logo_url,
-                    "fund_manager_id": deal.fund_manager_id,
-                    "fund_manager_name": subadmin.name
-                }
-                deals_data.append(deal_data)
-
-            response["deals_data"] = deals_data
-            return response
-        
+            return deals
         except Exception as e:
             logger.error(f"Failed to retrieve deals by subadmin ID: {str(e)}")
             await session.rollback()
