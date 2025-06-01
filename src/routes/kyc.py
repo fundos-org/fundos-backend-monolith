@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
-from typing import Annotated
+from typing import Annotated, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 from src.schemas.kyc import (
     AadhaarRequest, AadhaarResponse,
     SubmitOTPRequest, ResendOTPRequest,
-    PanDetailsRequest
+    PanDetailsRequest, PanBankLinkRequest
 )
 from src.services.kyc import KycService
 from src.services.phone import PhoneService
@@ -104,4 +104,24 @@ async def verify_pan(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to verify PAN: {str(e)}"
+        )
+
+@router.post('/pan/bank/link/verify')
+async def verify_pan_bank_link(
+    pan_details: PanBankLinkRequest,
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> Any:  
+    try:
+        response = await kyc_service.verify_pan_bank_link(
+            user_id=pan_details.user_id,
+            pan_number=pan_details.pan_number,
+            bank_account_number=pan_details.bank_account_number,
+            ifsc_code=pan_details.ifsc_code,
+            session=session
+        )
+        return response
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to verify PAN to Bank Account link: {str(e)}"
         )

@@ -135,33 +135,27 @@ class DummyService:
                         }
                     else:
                         return result
-                
-                else: 
-                    result = await self.phone_service.send_phone_otp(
+                    
+            else: 
+                result = await self.phone_service.send_phone_otp(
                         phone_number=phone_number,
                         user_name="Investor",
                         country="india", 
                         process="signup"
                     )
-                    if not result["success"]:
-                        return {
-                            "message": f"Failed to send OTP to {phone_number}", 
-                            "success": False
-                        }
-                    else:
-                        return result
-
-            else: 
-                return {
-                    "message": "User not found in fundos",
-                    "success": False
-                }
+                if not result["success"]:
+                    return {
+                        "message": f"Failed to send OTP to {phone_number}", 
+                        "success": False
+                    }
+                else:
+                    return result
 
         except Exception as e:
             logger.error(f"Request failed: {e}")
             raise HTTPException(status_code=500, detail=f"Internal request error : {str(e)}")
         
-    async def verify_phone_otp(
+    async def verify_phone_otp_signin(
         self,  
         otp_code: str, 
         phone_number: str, 
@@ -240,7 +234,80 @@ class DummyService:
         except Exception as e:
             logger.error(f"Request failed: {e}")
             raise HTTPException(status_code=500, detail="Internal request error")
-      
+
+    async def send_phone_otp(
+        self, 
+        session: AsyncSession,
+        phone_number: str, 
+    ) -> dict:
+
+        try:
+            # Send OTP using the Phone Service class
+            result = await self.phone_service.send_phone_otp(
+                phone_number=phone_number,
+                user_name="Investor",
+                country="india", 
+                process="signup"
+            )
+
+            if not result["success"]:
+                return {
+                    "message": f"Failed to send OTP to {phone_number}", 
+                    "success": False
+                }
+            else:
+                return result
+        except Exception as e:
+            logger.error(f"Request failed: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server error while sending OTP")
+        
+    async def verify_phone_otp(
+        self, 
+        user_id: UUID, 
+        otp_code: str, 
+        phone_number: str, 
+        session: AsyncSession
+    ) -> dict: 
+
+        try:
+            result = await self.phone_service.verify_phone_otp(
+                phone_number=phone_number,
+                otp=otp_code, 
+                country="india"
+            )
+
+            if not result["success"]:
+                return {
+                    "message": "Invalid OTP",
+                    "success": False
+                }
+            
+            else: 
+                user = await session.get(User, user_id)
+                if user:
+                    user.onboarding_status = OnboardingStatus.Phone_Number_Verified.name
+                    user.phone_number = phone_number
+                    await session.commit()
+                    await session.refresh(user)
+                    return {
+                        "message" : f"otp verified.",
+                        "onboarding_status": f"{OnboardingStatus.Phone_Number_Verified.name}",
+                        "user_id":f"{user_id}",
+                        "success": True
+                    } 
+                else:
+                    return {
+                        "message" : f"User with {user_id} doesn't exist", 
+                        "success": False
+                    }
+            
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            logger.error(f"Failed to Verify OTP: {str(e)}")
+            await session.rollback()
+            raise HTTPException(status_code=500, detail="Internal server error")
+        
     async def set_user_details(
         self, 
         user_id: UUID, 

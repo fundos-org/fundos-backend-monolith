@@ -56,7 +56,7 @@ async def signup_investor_verify_email_otp(
 
     return result
 
-@router.post("/user/phone/otp/send")
+@router.get("/user/phone/otp/send")
 async def signin_investor_send_phone_otp(
     session: Annotated[AsyncSession, Depends(get_session)], 
     phone_number: str, 
@@ -72,7 +72,7 @@ async def signin_investor_send_phone_otp(
 
     return result
 
-@router.post("/user/phone/otp/verify")
+@router.get("/user/phone/otp/verify")
 async def signup_investor_verify_phone_otp(
     session: Annotated[AsyncSession, Depends(get_session)], 
     phone_number: str, 

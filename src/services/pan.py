@@ -40,3 +40,26 @@ class PANService:
             raise HTTPException(status_code=400, detail=data.get("message", "PAN verification failed"))
 
         return data.get("result", {})
+
+    async def verify_pan_bank_link(self, unique_id: str, pan_number: str, bank_account_number: str, ifsc_code: str) -> dict:
+        url = f"{self.base_url}/validation/kyc/v1/pan_account_link"
+        payload = {
+            "client_ref_num": unique_id,
+            "pan": pan_number,
+            "account_number": bank_account_number,
+            "ifsc": ifsc_code
+        }
+        headers = self.get_auth_header()
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(url, json=payload, headers=headers)
+
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail="Failed to verify PAN to Bank Account link")
+
+        data = response.json()
+
+        if data.get("result_code") != 101:
+            raise HTTPException(status_code=400, detail=data.get("message", "PAN to Bank Account link verification failed"))
+
+        return data.get("result", {})

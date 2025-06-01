@@ -166,3 +166,9 @@ class ResendOTPRequest(BaseModel):
     user_id: str
     aadhaar_number: str
 
+class PanBankLinkRequest(BaseModel):
+    user_id: str
+    pan_number: str
+    bank_account_number: str
+    ifsc_code: str
+

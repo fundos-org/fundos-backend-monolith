@@ -11,7 +11,6 @@ from src.models.user import User
 from src.logging.logging_setup import get_logger
 from datetime import datetime
 
-
 # Configure logging
 logger = get_logger(__name__)
 
@@ -60,7 +59,12 @@ class KycService:
         return f"kyc:rate_limit:{str(user_id)}"
 
     # Aadhaar Methods
-    async def send_aadhaar_otp(self, user_id: str, aadhaar_number: str, session: AsyncSession) -> dict:
+    async def send_aadhaar_otp(
+        self, 
+        user_id: str, 
+        aadhaar_number: str, 
+        session: AsyncSession
+    ) -> dict:
         try:
             # Validate user_id as UUID
             UUID(user_id)
@@ -105,7 +109,13 @@ class KycService:
 
         return response_data
 
-    async def submit_aadhaar_otp(self, user_id: str, otp: str, session: AsyncSession, share_code: str = "1234") -> dict:
+    async def submit_aadhaar_otp(
+        self, 
+        user_id: str, 
+        otp: str, 
+        session: AsyncSession, 
+        share_code: str = "1234"
+    ) -> dict:
         # Convert UUID to string for Redis
         cache_key = self._get_cache_key(user_id)
         cached_data = self.redis.get(cache_key)
@@ -202,7 +212,6 @@ class KycService:
                 updated_at=datetime.now()
             )
             session.add(kyc)
-            
 
         await session.merge(user)
         await session.commit()
@@ -215,7 +224,12 @@ class KycService:
 
         return model
 
-    async def resend_aadhaar_otp(self, user_id: str, aadhaar_number: str, session: AsyncSession) -> dict:
+    async def resend_aadhaar_otp(
+        self, 
+        user_id: str, 
+        aadhaar_number: str, 
+        session: AsyncSession
+    ) -> dict:
         try:
             # Validate user_id as UUID
             UUID(user_id)
@@ -236,6 +250,7 @@ class KycService:
             raise HTTPException(status_code=400, detail="No active Aadhaar OTP session found")
 
         cached_data = json.loads(cached_data)
+        transaction_id = cached_data["transaction_id"]
         transaction_id = cached_data["transaction_id"]
         fwdp = cached_data["fwdp"]
 
@@ -289,7 +304,12 @@ class KycService:
         return response_data
 
     # PAN Methods
-    async def verify_pan(self, user_id: str, pan_number: str, session: AsyncSession) -> dict:
+    async def verify_pan(
+        self, 
+        user_id: str, 
+        pan_number: str, 
+        session: AsyncSession
+    ) -> dict:
         try:
             UUID(user_id)
         except ValueError:
@@ -324,7 +344,6 @@ class KycService:
 
         if pan_status:
             logger.info(f"pan status: {pan_status}")
-
         else: 
             logger.error(f"pan status: {pan_status}") 
             
@@ -374,4 +393,67 @@ class KycService:
 
         return result
 
-    
+    async def verify_pan_bank_link(
+        self, 
+        user_id: str, 
+        pan_number: str, 
+        bank_account_number: str, 
+        ifsc_code: str, 
+        session: AsyncSession
+    ) -> dict:
+        try:
+            UUID(user_id)
+        except ValueError:
+            logger.error(f"Invalid user_id format: {user_id}")
+            raise HTTPException(status_code=400, detail="Invalid user_id format")
+
+        url = f"{self.validation_base_url}/misc/v1/pan-account-linkage"
+        payload = {
+            "client_ref_num": f"pan-bank-{user_id}",
+            "pan": pan_number,
+            "account_number": bank_account_number,
+            "ifsc": ifsc_code
+        }
+        headers = self.get_auth_header_basic()
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(url, json=payload, headers=headers)
+
+        if response.status_code != 200:
+            logger.error(f"PAN to Bank Account link verification failed: {response.status_code} {response.text}")
+            raise HTTPException(status_code=response.status_code, detail="Failed to verify PAN to Bank Account link")
+
+        data = response.json()
+        logger.info(f"PAN to Bank Account link verification response: {data}")
+
+        if data.get("result_code") != 101:
+            raise HTTPException(status_code=400, detail=data.get("message", "PAN to Bank Account link verification unsuccessful"))
+
+        result = data.get("result", {})
+
+        # Fetch user from database
+        uuid_obj = UUID(user_id)
+        user = await session.get(User, uuid_obj)
+        if not user:
+            logger.error(f"User not found: {user_id}")
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Update or create KYC record
+        kyc = await session.get(KYC, user_id)
+        if kyc:
+            kyc.bank_account_number = bank_account_number
+            kyc.bank_ifsc = ifsc_code
+            kyc.pan_bank_linked = result.get("linked_status", False)
+            kyc.status = KycStatus.VERIFIED if result.get("linked_status", False) else KycStatus.PENDING
+            kyc.updated_at = datetime.now()
+            await session.merge(kyc)
+        else: 
+            return {
+                "message": "KYC record not found",
+                "success": False,
+            }
+
+        await session.commit()
+        await session.refresh(kyc)
+
+        return result

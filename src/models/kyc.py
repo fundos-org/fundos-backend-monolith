@@ -14,6 +14,7 @@ class KYC(SQLModel, table=True):
     bank_account_number: Optional[str]  # Encrypted
     bank_ifsc: Optional[str]
     status: KycStatus = Field(default=KycStatus.PENDING)  # pending, verified, rejected
+    pan_bank_linked: Optional[bool] = Field(default=False)
     # verification_details: Optional[str]  # JSON string from Digitap API 
     created_at: datetime = Field(default_factory=datetime.now(timezone.utc)) 
     updated_at: datetime = Field(default=datetime.now(timezone.utc))
