@@ -348,13 +348,22 @@ class DealService:
             await session.rollback()
             raise HTTPException(status_code=500, detail="Internal server error")
 
-    async def get_deals_by_subadmin_id(
+    async def get_deals_by_user_id(
         self, 
-        subadmin_id: UUID,
         user_id: UUID,  
         session: AsyncSession
     ) -> Any: 
         try:
+            # fetch user details 
+            statement = select(User).where(User.id == user_id)
+            results = await session.execute(statement)
+            user = results.scalars().one()
+
+            # subadmin details 
+
+            subadmin_id = user.fund_manager_id
+
+            # fetch subadmin id
             statement = select(Deal).where(Deal.fund_manager_id == subadmin_id)
             results = await session.execute(statement)
             deals = results.scalars().all()
@@ -364,15 +373,10 @@ class DealService:
             results = await session.execute(statement)
             subadmin = results.scalars().one()
 
-            # fetch user details 
-            statement = select(User).where(User.id == user_id)
-            results = await session.execute(statement)
-            user = results.scalars().one()
-
+            # Prepare response
             response: Dict = {
                 "subadmin_name": subadmin.name,
-                "user_name": user.full_name
-                
+                "user_name": f"{user.first_name} {user.last_name}",
             }
 
             # Prepare response

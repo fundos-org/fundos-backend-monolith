@@ -133,16 +133,14 @@ async def get_deal_by_id(
     except Exception as e: 
         raise HTTPException(detail=str(e))
     
-@router.get("/mobile/subadmin/{fund_manager_id}", tags=["investor"])
+@router.get("/mobile/deals/{user_id}", tags=["investor"])
 async def get_subadmin_deals(
-    fund_manager_id: UUID,
     user_id: UUID,
     session: Annotated[AsyncSession, Depends(get_session)]
 ) -> Any :
     try: 
-        result = await deal_service.get_deals_by_subadmin_id(
+        result = await deal_service.get_deals_by_user_id(
             session = session,
-            subadmin_id = fund_manager_id, 
             user_id = user_id
         )
         return result  
