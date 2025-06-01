@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from starlette import status
 from src.db.session import get_session
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,7 +6,9 @@ from typing import Annotated, Any
 from uuid import UUID
 from src.services.deal import DealService
 from src.schemas.deal import (
-    DealCreateRequest, DealCreateResponse, CompanyDetailsRequest, IndustryProblemRequest, CustomerSegmentRequest, 
+    DealCreateRequest, DealCreateResponse, 
+    CompanyDetailsRequest, IndustryProblemRequest, 
+    CustomerSegmentRequest, 
     ValuationRequest, SecuritiesRequest
 )
 
@@ -119,30 +121,30 @@ async def update_securities(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update securities details: {str(e)}")
 
-@router.get("/mobile/deal/{deal_id}", tags=["investor"])
+@router.get("/", tags=["investor"])
 async def get_deal_by_id(
-    deal_id: str,
-    session: Annotated[AsyncSession, Depends(get_session)]
-) -> Any :
-    try: 
+    session: Annotated[AsyncSession, Depends(get_session)], 
+    deal_id: str = Query(..., description="ID of the deal"),
+) -> Any:
+    try:
         result = await deal_service.get_deal_by_id(
-            session = session,
-            deal_id = deal_id
-        )    
-        return result  
-    except Exception as e: 
-        raise HTTPException(detail=str(e))
-    
-@router.get("/mobile/deals/{user_id}", tags=["investor"])
-async def get_subadmin_deals(
-    user_id: UUID,
-    session: Annotated[AsyncSession, Depends(get_session)]
-) -> Any :
-    try: 
-        result = await deal_service.get_deals_by_user_id(
-            session = session,
-            user_id = user_id
+            session=session,
+            deal_id=deal_id
         )
-        return result  
-    except Exception as e: 
-        raise HTTPException(detail=str(e))
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/user-deals", tags=["investor"])
+async def get_subadmin_deals(
+    session: Annotated[AsyncSession, Depends(get_session)], 
+    user_id: UUID = Query(..., description="ID of the user id"),
+) -> Any:
+    try:
+        result = await deal_service.get_deals_by_user_id(
+            session=session,
+            user_id=user_id
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
