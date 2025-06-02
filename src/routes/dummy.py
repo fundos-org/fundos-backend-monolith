@@ -75,14 +75,16 @@ async def user_send_phone_otp(
 @router.get("/user/phone/otp/verify")
 async def user_verify_phone_otp(
     session: Annotated[AsyncSession, Depends(get_session)], 
-    phone_number: str, 
-    otp: str
+    phone_number: str,
+    otp: str, 
+    invitation_code: str
 ) -> Dict[str, Any]:
 
     result = await dummy_service.verify_phone_otp(
         session=session,
         otp_code=otp, 
-        phone_number=phone_number
+        phone_number=phone_number, 
+        invitation_code=invitation_code
     )
     
     if not result["success"]:
@@ -239,3 +241,23 @@ async def upload_photo(
         raise he
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to upload photo: {str(e)}")
+
+# Use with caution 
+
+@router.delete("/user/delete")
+async def delete_user_record(
+    phone_number: str,
+    invitation_code: str, 
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> Dict[str, Any]: 
+    try:
+        result = await dummy_service.delete_user_record(
+            phone_number=phone_number,
+            invitation_code=invitation_code,
+            session=session
+        )
+        return result
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to delete user record: {str(e)}")

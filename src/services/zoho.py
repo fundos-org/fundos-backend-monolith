@@ -80,58 +80,61 @@ class ZohoService:
             logger.error(f"Error generating Zoho token: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Error generating Zoho token: {str(e)}")
 
-    async def create_document_from_template(self, user_id: UUID, session: AsyncSession) -> dict:
-        """Create a document from a Zoho Sign template with user data."""
-        
-        user = await session.get(User, user_id)
-        kyc = await session.get(KYC, user_id)
-        if not user or not kyc:
-            logger.error(f"User not found: {user_id} or kyc record not found : {user_id}")
-            raise HTTPException(status_code=404, detail="User not found")
-
-        token = await self.get_access_token()
-        day = f"{datetime.now().day:02d}"
-        month = datetime.now().strftime("%B")
-        year = str(datetime.now().year)
+    async def get_payload(self, user: User, kyc: KYC) -> dict:
+        """Generate Zoho Sign payload for MCA template based on provided JSON structure."""
+        # Calculate date fields
+        current_date = datetime.now()
+        day = f"{current_date.day:02d}"
+        month = current_date.strftime("%B")
+        year = str(current_date.year)
         date = f"{month} {day} {year}"
-        capital_commitment_word = num2words(
-            number=float(user.capital_commitment), 
-            lang="en_IN", 
-            to="currency", 
-            currency = "INR") if user.capital_commitment else ""
 
-        payload = {
+        # Calculate capital commitment in words
+        capital_commitment_in_word = (
+            num2words(
+                number=float(user.capital_commitment),
+                lang="en_IN",
+                to="currency",
+                currency="INR"
+            ) if user.capital_commitment else ""
+        )
+
+        return {
             "templates": {
                 "field_data": {
                     "field_text_data": {
                         "day": day,
-                        "year": year,
-                        "date": date,
                         "month": month,
-                        "fullName": f"{user.first_name} {user.last_name}" if user.first_name and user.last_name else "",
+                        "year": year,
+                        "name": user.full_name or "",
                         "address": user.address or "",
                         "phone": user.phone_number or "",
                         "email": user.email or "",
-                        "fatherName": user.father_name or "",
-                        "type": "", 
-                        "panNumber": kyc.pan_number or "",
-                        "capitalCommitmentAmount": str(user.capital_commitment) if user.capital_commitment else "",
-                        "capitalCommitmentWord": capital_commitment_word,
-                        "title": user.last_name or "", 
-                        "residence": user.address or "", 
-                        "dateOfBirth": user.date_of_birth or "",
+                        "father_name": user.father_name or "",
+                        "entity_type": user.investor_type,  # Not available in User/KYC models, default to empty
+                        "law": "Not Applicable",  # Not available in User/KYC models, default to empty
+                        "pan_number": kyc.pan_number or "",
+                        "phone_number": user.phone_number or "",  # Duplicate of phone for consistency
+                        "capital_commitment": str(user.capital_commitment),
+                        "capital_commitment_words": capital_commitment_in_word,
+                        "resident": user.address or "",  # Using address as resident
+                        "tax_identity_number": "Not Applicable",  # Not available in User/KYC models, default to empty
+                        "place_of_birth": "Not Applicable",  # Not available in User/KYC models, default to empty
                     },
                     "field_boolean_data": {},
-                    "field_date_data": {},
+                    "field_date_data": {
+                        "date": date,
+                        "date_of_birth": user.date_of_birth or "01 January 1970"
+                    },
                     "field_radio_data": {},
                     "field_checkboxgroup_data": {}
                 },
                 "notes": "",
                 "actions": [
                     {
-                        "recipient_name": f"{user.first_name} {user.last_name}" if user.first_name and user.last_name else "Investor",
+                        "recipient_name": user.full_name if user.full_name else "Investor",
                         "recipient_email": user.email,
-                        "action_id": "80016000000046056",
+                        "action_id": "80016000000197416",
                         "action_type": "SIGN",
                         "signing_order": 1,
                         "role": "Applicant",
@@ -141,7 +144,7 @@ class ZohoService:
                     {
                         "recipient_name": "Amit",
                         "recipient_email": "amit@fundos.solutions",
-                        "action_id": "80016000000081530",
+                        "action_id": "80016000000197418",
                         "action_type": "SIGN",
                         "signing_order": 2,
                         "role": "Signatory",
@@ -151,7 +154,7 @@ class ZohoService:
                     {
                         "recipient_name": "Iswar",
                         "recipient_email": "ishwarkoki@gmail.com",
-                        "action_id": "80016000000081528",
+                        "action_id": "80016000000207922",
                         "action_type": "SIGN",
                         "signing_order": 3,
                         "role": "Signatory",
@@ -161,7 +164,19 @@ class ZohoService:
                 ]
             }
         }
+    
+    async def create_document_from_template(self, user_id: UUID, session: AsyncSession) -> dict:
+        """Create a document from a Zoho Sign template with user data."""
+        user = await session.get(User, user_id)
+        kyc = await session.get(KYC, user_id)
+        if not user or not kyc:
+            logger.error(f"User not found: {user_id} or kyc record not found: {user_id}")
+            raise HTTPException(status_code=404, detail="User not found")
 
+        # Generate payload using get_payload
+        payload = await self.get_payload(user, kyc)
+
+        token = await self.get_access_token()
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
@@ -199,7 +214,6 @@ class ZohoService:
 
     async def apply_estamp(self, user_id: UUID, session: AsyncSession) -> dict:
         """Apply e-stamp to the MCA document."""
-        
         user = await session.get(User, user_id)
         if not user:
             logger.error(f"User not found: {user_id}")
@@ -217,8 +231,6 @@ class ZohoService:
         document_id = metadata["document_id"]
 
         token = await self.get_access_token()
-        # Use FormData for multipart/form-data
-        from io import BytesIO
         form_data = {
             "data": json.dumps({
                 "requests": {
@@ -234,7 +246,7 @@ class ZohoService:
                                 "document_category": os.getenv("DOCUMENT_CATEGORY") or "1",
                                 "duty_payer_phone_number": "7400160348",
                                 "first_party_name": "Thirty3art Ventures LLP and Ors",
-                                "second_party_name": "Mitcon Credentia Trusteeship S Ltd", 
+                                "second_party_name": "Mitcon Credentia Trusteeship S Ltd",
                                 "consideration_amount": os.getenv("STAMP_AMOUNT") or "100",
                                 "document_reference_no": "111",
                                 "duty_payer_email_id": "Artventures.operations@gmail.com",
@@ -245,7 +257,7 @@ class ZohoService:
                                 },
                                 "first_party_address": {
                                     "country": "India",
-                                    "street_address": " C-203, Badhwar Apartment, South West Delhi",
+                                    "street_address": "C-203, Badhwar Apartment, South West Delhi",
                                     "city": "New Delhi",
                                     "state": "DL",
                                     "pincode": "110075"
@@ -274,13 +286,12 @@ class ZohoService:
                 if response.status_code != 200:
                     logger.error(f"Failed to apply e-stamp: {response.status_code} {response.text}")
                     raise HTTPException(status_code=response.status_code, detail="Failed to apply e-stamp")
-            
-                data = response.json()
 
+                data = response.json()
                 return {
                     "data": data,
                     "request_id": request_id,
-                    "document_id": document_id, 
+                    "document_id": document_id,
                     "success": True
                 }
         except Exception as e:

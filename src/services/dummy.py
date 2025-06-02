@@ -1,7 +1,9 @@
 from fastapi import HTTPException
 from fastapi import UploadFile
+from sqlalchemy import and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
+from src.models.kyc import KYC
 from src.services.phone import PhoneService
 from src.logging.logging_setup import get_logger # assuming you have a logger setup
 from pydantic import EmailStr
@@ -105,7 +107,7 @@ class DummyService:
     async def send_phone_otp(
         self, 
         session: AsyncSession,
-        phone_number: str, 
+        phone_number: str,
     ) -> Dict[str, Any]:
 
         try:
@@ -156,6 +158,7 @@ class DummyService:
         self,  
         otp_code: str, 
         phone_number: str, 
+        invitation_code: str, 
         session: AsyncSession
     ) -> Dict[str, Any]: 
 
@@ -169,14 +172,20 @@ class DummyService:
             if not result["success"]:
                 return result # Failure response
             
-            stmt = select(User).where(User.phone_number == phone_number)
+            stmt = select(User).where(
+                and_(
+                    User.phone_number == phone_number,
+                    User.invitation_code == invitation_code
+                )
+            )
             result = await session.execute(statement=stmt)
-            user = result.scalars().first()
+            user = result.scalar_one_or_none()  
 
             if user:  
                 response = {
                     "message" : f"otp verified.", 
                     "onboarding_status": user.onboarding_status,
+                    "user_id": user.id, 
                     "fund_manager_id": user.fund_manager_id,
                     "success": True
                 }
@@ -184,12 +193,30 @@ class DummyService:
                 return response
             
             else: 
-                user = User(
-                    phone_number=phone_number,
-                    onboarding_status=OnboardingStatus.Phone_Number_Verified.name
-                )
-                session.add(user)
-                await session.commit()
+                # Check if invitation code exists in Subadmin table
+                stmt = select(Subadmin).where(Subadmin.invite_code == invitation_code)
+                result = await session.execute(stmt)
+                subadmin = result.scalar_one_or_none()
+
+                if subadmin:
+                    # Create new user with the valid invitation code
+                    user = User(
+                        invitation_code=invitation_code,
+                        onboarding_status=OnboardingStatus.Invitation_Code_Verified.name,
+                        phone_number=phone_number,
+                        fund_manager_id=subadmin.id  # Link user to subadmin
+                    )
+                    session.add(user)
+                    await session.commit()
+                    await session.refresh(user)
+
+                    return {
+                        "success": True,
+                        "message": "User created successfully",
+                        "onboarding_status": user.onboarding_status,
+                        "user_id": user.id,
+                        "fund_manager_id": subadmin.id
+                    }
             
         except HTTPException as he:
             raise he
@@ -514,3 +541,50 @@ class DummyService:
             )
         finally:
             await file.close()
+
+    async def delete_user_record(
+        self, 
+        phone_number: str, 
+        invitation_code: str,
+        session: AsyncSession,
+    ) -> Dict[str, Any]:
+        try:
+            statement = select(User).where(
+                and_(
+                    User.phone_number == phone_number,
+                    User.invitation_code == invitation_code
+                )
+            )
+            result = await session.execute(statement)
+            user = result.scalars().first()
+
+            if user:
+                stmt = select(KYC).where(KYC.user_id == user.id)
+                result = await session.execute(stmt)
+                kyc = result.scalars().first()
+
+                if kyc:
+                    await session.delete(kyc)
+                    await session.commit()
+
+                await session.delete(user)
+                await session.commit()
+
+                response = {
+                    "message": "User record deleted successfully",
+                    "success": True
+                }
+            else:
+                response = {
+                    "message": "User not found",
+                    "success": False
+                }
+                
+            return response
+                
+        except Exception as e:
+            logger.error(f"Failed to delete user record: {str(e)}")
+            await session.rollback()
+            raise HTTPException(status_code=500, detail=f"Failed to delete user record: {str(e)}")
+            
+        
