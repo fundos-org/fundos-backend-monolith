@@ -1,9 +1,13 @@
+from tempfile import SpooledTemporaryFile
+from typing import Any, Dict
 import httpx
 import os
 import json
 import redis
-from fastapi import HTTPException
+from fastapi import HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
+from src.models.deal import Deal
+from src.services.s3 import S3Service
 from src.models.user import User, OnboardingStatus
 from src.models.kyc import KYC
 from src.logging.logging_setup import get_logger
@@ -17,7 +21,7 @@ logger = get_logger(__name__)
 
 ZOHO_BASE_URL = "https://sign.zoho.in/api/v1"
 ZOHO_AUTH_URL = "https://accounts.zoho.in/oauth/v2/token"
-REDIS_HOST = os.getenv("REDIS_HOST", "redis")
+REDIS_HOST = "localhost" #os.getenv("REDIS_HOST", "redis") 
 REDIS_PORT = 6379
 REDIS_DB = 0
 CACHE_TTL = 604800  # 7 days for Zoho metadata
@@ -26,22 +30,32 @@ class ZohoService:
     def __init__(self):
         self.base_url = ZOHO_BASE_URL
         self.auth_url = ZOHO_AUTH_URL
-        self.client_id = zoho_configs.zoho_client_id or os.getenv("ZOHO_CLIENT_ID")
-        self.client_secret = zoho_configs.zoho_client_secret or os.getenv("ZOHO_CLIENT_SECRET")
-        self.refresh_token = zoho_configs.zoho_refresh_token or os.getenv("ZOHO_REFRESH_TOKEN")
-        self.redirect_uri = zoho_configs.zoho_redirect_uri or os.getenv("ZOHO_REDIRECT_URI")
+        self.client_id = zoho_configs.zoho_client_id 
+        self.client_secret = zoho_configs.zoho_client_secret
+        self.refresh_token = zoho_configs.zoho_refresh_token
+        self.redirect_uri = zoho_configs.zoho_redirect_uri 
+        self.drawdown_template_id = zoho_configs.drawdown_template_id
+        self.management_fee_percentage = 2
+        self.gst_percentage = 18
         self.redis = redis.Redis(
             host=REDIS_HOST,
             port=REDIS_PORT,
             db=REDIS_DB,
             decode_responses=True
         )
+        self.s3_service = S3Service(bucket_name="fundos-dev-bucket", region_name="ap-south-1")
 
-    def _get_cache_key(self, user_id: str, key: str) -> str:
+    def _get_cache_key(
+        self, 
+        user_id: str, 
+        key: str
+    ) -> str:
         """Generate user-specific Redis cache key."""
         return f"zoho:{user_id}:{key}"
 
-    async def get_access_token(self) -> str:
+    async def get_access_token(
+        self
+    ) -> str:
         """Generate or retrieve cached Zoho access token."""
         cache_key = self._get_cache_key("global", "access_token")
         cached_token = self.redis.get(cache_key)
@@ -80,7 +94,11 @@ class ZohoService:
             logger.error(f"Error generating Zoho token: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Error generating Zoho token: {str(e)}")
 
-    async def get_payload(self, user: User, kyc: KYC) -> dict:
+    async def get_payload(
+        self, 
+        user: User, 
+        kyc: KYC
+    ) -> dict:
         """Generate Zoho Sign payload for MCA template based on provided JSON structure."""
         # Calculate date fields
         current_date = datetime.now()
@@ -165,7 +183,11 @@ class ZohoService:
             }
         }
     
-    async def create_document_from_template(self, user_id: UUID, session: AsyncSession) -> dict:
+    async def create_document_from_template(
+        self, 
+        user_id: UUID, 
+        session: AsyncSession
+    ) -> dict:
         """Create a document from a Zoho Sign template with user data."""
         user = await session.get(User, user_id)
         kyc = await session.get(KYC, user_id)
@@ -212,7 +234,11 @@ class ZohoService:
             logger.error(f"Error creating document: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Error creating document: {str(e)}")
 
-    async def apply_estamp(self, user_id: UUID, session: AsyncSession) -> dict:
+    async def apply_estamp(
+        self, 
+        user_id: UUID, 
+        session: AsyncSession
+    ) -> dict:
         """Apply e-stamp to the MCA document."""
         user = await session.get(User, user_id)
         if not user:
@@ -298,7 +324,11 @@ class ZohoService:
             logger.error(f"Error applying e-stamp: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Error applying e-stamp: {str(e)}")
 
-    async def send_document_for_signing(self, user_id: str, session: AsyncSession) -> dict:
+    async def send_document_for_signing(
+        self, 
+        user_id: str, 
+        session: AsyncSession
+    ) -> dict:
         """Send the e-stamped MCA document to three signers."""
         metadata_key = self._get_cache_key(user_id, "metadata")
         metadata = self.redis.get(metadata_key)
@@ -332,7 +362,7 @@ class ZohoService:
 
                 user = await session.get(User, UUID(user_id))
                 if user:
-                    user.onboarding_status = OnboardingStatus.Zoho_Document_Sent
+                    user.onboarding_status = OnboardingStatus.Zoho_Document_Sent.name
                     session.add(user)
                     await session.commit()
                     await session.refresh(user)
@@ -341,8 +371,86 @@ class ZohoService:
         except Exception as e:
             logger.error(f"Error sending document: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Error sending document: {str(e)}")
+        
+    async def download_signed_document(
+        self, 
+        request_id: str, 
+        action_id: str, 
+        session: AsyncSession
+    ) -> dict:
+        """Download a signed Zoho Sign document and upload to S3."""
+        # Find user_id from Redis metadata
+        user_id = None
+        for key in self.redis.keys("zoho:*:metadata"):
+            metadata = json.loads(self.redis.get(key) or "{}")
+            if metadata.get("request_id") == request_id and action_id in metadata.get("action_ids", []):
+                user_id = key.split(":")[1]
+                break
 
-    async def handle_webhook(self, payload: dict, session: AsyncSession) -> dict:
+        if not user_id:
+            logger.error(f"No user found for request_id: {request_id}, action_id: {action_id}")
+            raise HTTPException(status_code=404, detail="User not found for request_id and action_id")
+
+        user = await session.get(User, UUID(user_id))
+        if not user:
+            logger.error(f"User not found in database: {user_id}")
+            raise HTTPException(status_code=404, detail="User not found")
+
+        token = await self.get_access_token()
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(
+                f"{self.base_url}/requests/{request_id}/pdf",
+                headers={"Authorization": f"Bearer {token}"}
+            )
+            if response.status_code != 200:
+                logger.error(f"Failed to download PDF: {response.status_code} {response.text}")
+                raise HTTPException(status_code=response.status_code, detail="Failed to download PDF")
+
+            pdf_data = response.content
+
+        # Create an UploadFile object from PDF bytes
+        with SpooledTemporaryFile(max_size=10_000_000, mode='wb') as temp_file:
+            temp_file.write(pdf_data)
+            temp_file.seek(0)
+            upload_file = UploadFile(
+                filename=f"{user_id}-{request_id}-{int(datetime.now().timestamp())}.pdf",
+                file=temp_file,
+                content_type="application/pdf"
+            )
+            # Upload to S3
+            object_key = await self.s3_service.upload_and_get_key(
+                object_id=UUID(user_id),
+                file=upload_file,
+                bucket_name="fundos-dev-bucket",
+                folder_prefix="signed_documents/"
+            )
+
+        # Update user record
+        user.zoho_document_key = object_key
+        user.onboarding_status = OnboardingStatus.Completed.name
+        user.agreement_signed = True
+        session.add(user)
+        try:
+            await session.commit()
+            await session.refresh(user)
+        except Exception as e:
+            logger.error(f"Failed to update user: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to update user: {str(e)}")
+
+        # Update Redis metadata
+        metadata_key = self._get_cache_key(user_id, "metadata")
+        metadata = json.loads(self.redis.get(metadata_key) or "{}")
+        metadata["is_signed"] = True
+        self.redis.setex(metadata_key, CACHE_TTL, json.dumps(metadata))
+
+        logger.info(f"Signed document uploaded to S3 for user_id: {user_id}, request_id: {request_id}")
+        return {"success": True, "user_id": user_id, "file_path": user.zoho_document_key}
+    
+    async def handle_webhook(
+        self, 
+        payload: dict, 
+        session: AsyncSession
+    ) -> dict:
         """Handle Zoho Sign webhook for DOCUMENT_COMPLETED."""
         notification_type = payload.get("notifications", {}).get("operation_type")
         if notification_type != "DOCUMENT_COMPLETED":
@@ -401,3 +509,142 @@ class ZohoService:
 
         logger.info(f"User {user_id} onboarded successfully for request_id: {request_id}")
         return {"success": True, "user_id": user_id}
+    
+    async def get_drawdown_payload(
+        self, 
+        user: User, 
+        deal: Deal, 
+        investment_amount: float
+    ) -> Dict:
+        """
+        Construct and return the drawdown notice payload with dynamic data
+        pulled from the User and Deal models.
+        """
+
+        try:
+            # Sample extraction logic — adjust field names as per actual model
+            investor_name = "Investor"
+            investor_email = "email"
+            investment_scheme = "Sample Scheme" # need to add a field for this in deal model
+            company_name = "Company name" 
+            capital_commitment = 100000000000.00
+            investment_amount_str = f"{investment_amount:,.2f}"
+
+            # calculate management fee
+            investment_commission = investment_amount * (self.management_fee_percentage / 100)
+            gst = investment_commission * (self.gst_percentage / 100)
+            total_fee = investment_commission + gst 
+
+            management_fee_str = f"{total_fee:,.2f}" # management fee
+
+            # calculate total payable
+            total_payable = investment_amount + total_fee
+            total_payable_str = f"{total_payable:,.2f}" # total payable
+
+            capital_commitment_str = f"{capital_commitment:,.2f}"
+
+            drawdown_so_far = 10000000000.00 + total_payable # need to add a field for this in user model : user.drawdown_amount
+            drawdown_so_far = f"{drawdown_so_far:,.2f}"
+
+            undrawn_capital_commitment = capital_commitment - total_payable 
+            undrawn_commitment = f"{undrawn_capital_commitment:,.2f}"
+
+            # Construct the payload
+            payload = {
+                "templates": {
+                    "field_data": {
+                        "field_text_data": {
+                            "investor": investor_name,
+                            "investment_scheme": investment_scheme,
+                            "company_name": company_name,
+                            "Investment_amount": investment_amount_str,
+                            "management_fee": management_fee_str,
+                            "total_payable": total_payable_str,
+                            "capital_commitment": capital_commitment_str,
+                            "drawdown_so_far": drawdown_so_far,
+                            "undrawn_capital_commitment": undrawn_commitment,
+                        },
+                        "field_boolean_data": {},
+                        "field_date_data": {
+                            "date": datetime.today().strftime("%d %B %Y")  # Example: "04 June 2025"
+                        },
+                        "field_radio_data": {},
+                        "field_checkboxgroup_data": {},
+                    },
+                    "notes": "",
+                    "actions": [
+                        {
+                            "recipient_name": "Iswar",
+                            "recipient_email": "ishwarkoki@gmail.com",
+                            "action_id": "80016000000209128",
+                            "action_type": "SIGN",
+                            "signing_order": 1,
+                            "role": "Investor",
+                            "verify_recipient": False,
+                            "private_notes": ""
+                        }
+                    ]
+                }
+            }
+
+            return payload
+        
+        except AttributeError as e:
+            logger.error(f"AttributeError: Missing or incorrect attribute in the database model, details: {e}")
+            raise HTTPException(status_code=500, detail="Missing or incorrect attribute in the database model.")
+        
+        except TypeError as e:
+            logger.error(f"TypeError: Incorrect data type for the attribute, details: {e}")
+            raise HTTPException(status_code=500, detail=f"Incorrect data type for the attribute, details: {e}")
+        
+        except Exception as e:
+            logger.error(f"Error occurred while generating drawdown payload: {e}")
+            raise HTTPException(status_code=500, detail="Error occurred while generating drawdown payload")
+        
+    async def send_drawdown_notice(
+        self, 
+        user_id: UUID, 
+        deal_id: UUID,
+        session: AsyncSession
+    ) -> Any: 
+        try:
+            user = await session.get(User, user_id)
+            deal = await session.get(Deal, deal_id)
+            
+            if not user or not deal:
+                raise HTTPException(status_code=404, detail="User or deal not found")
+            
+            token = await self.get_access_token()
+            if not token:
+                raise HTTPException(status_code=401, detail="Unauthorized")
+            
+            payload = await self.get_drawdown_payload(
+                user, 
+                deal,
+                10000.00
+            )
+            
+            if not payload:
+                raise HTTPException(status_code=500, detail="Failed to generate drawdown payload")
+            
+            logger.info(f"Sending drawdown notice for user_id: {user_id}, deal_id: {deal_id}")
+
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{self.base_url}/templates/{self.drawdown_template_id}/createdocument",
+                    headers={"Authorization": f"Zoho-oauthtoken {token}", "Content-Type": "application/json"},
+                    json=payload
+                )
+                if response.status_code != 200:
+                    logger.error(f"Failed to create document: {response.status_code} {response.text}")
+                    raise HTTPException(status_code=response.status_code, detail="Failed to create document")
+                
+                data = response.json()
+
+                return data
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to create drawdown: {str(e)}")
+            
+        finally:
+            await session.close()

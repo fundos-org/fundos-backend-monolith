@@ -68,9 +68,11 @@ class Deal(SQLModel, table=True):
     logo_url: Optional[str] = Field(default=None, nullable=True)
     pitch_deck_url: Optional[str] = Field(default=None, nullable=True)
     pitch_video_url: Optional[str] = Field(default=None, nullable=True)
-    status: DealStatus = Field(default=DealStatus.OPEN)
+    status: DealStatus = Field(default=DealStatus.ON_HOLD)
     created_at: datetime = Field(default_factory=lambda: datetime.now())
     updated_at: Optional[datetime] = Field(default=None, nullable=True)
+    # isa_uploaded: bool = Field(default=False, nullable=True)
+    # isa_doc_url: Optional[str] = Field(default=None, nullable=True)
     
     # Relationships
     fund_manager: Optional["Subadmin"] = Relationship(back_populates="deals") # type: ignore # noqa: F821

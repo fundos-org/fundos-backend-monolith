@@ -174,3 +174,12 @@ async def validate_pan_aadhaar_linked(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to validate PAN-Aadhaar link: {str(e)}"
         )
+    
+# Handle cors middle (added via nginx)
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],  # Allow all origins
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )

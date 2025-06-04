@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 from fastapi import UploadFile
-from sqlalchemy import and_
+from sqlalchemy import and_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 from src.models.kyc import KYC
@@ -13,7 +13,7 @@ from src.utils.dependencies import get_user
 from uuid import UUID
 from src.services.s3 import S3Service
 from src.services.email import EmailService
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 logger = get_logger(__name__) 
 
@@ -108,123 +108,155 @@ class DummyService:
         self, 
         session: AsyncSession,
         phone_number: str,
+        invite_code: Optional[str] = None
     ) -> Dict[str, Any]:
-
         try:
-            # Fetch user from the database
-            stmt = select(User).where(
-                User.phone_number == phone_number
-            )
-
+            # Check if user already exists in the database
+            stmt = select(User).where(User.phone_number == phone_number)
             result = await session.execute(stmt)
-            user = result.scalars().first() 
+            user = result.scalars().first()
 
             if user:
+                # Repeated flow: User exists
                 result = await self.phone_service.send_phone_otp(
                     phone_number=phone_number,
-                    user_name=user.full_name,
+                    user_name=user.full_name or "Investor",
                     country="india", 
                     process="signin"
                 )
+                if not result["success"]:
+                    return {
+                        "message": f"Failed to send OTP to {phone_number}", 
+                        "success": False
+                    }
+                return {
+                    "user_id": user.id,
+                    "subadmin_id": user.fund_manager_id,
+                    "onboarding_status": user.onboarding_status,
+                    "message": "OTP sent successfully",
+                    "success": True
+                }
+            else:
+                # First-time user flow
+                if not invite_code:
+                    # If invite code is not provided, indicate it’s needed
+                    return {
+                        "need_invite_code": True,
+                        "message": "Invite code required for new user",
+                        "success": False
+                    }
 
-                if not result["success"]:
+                # Validate invite code by checking the Subadmin table
+                stmt = select(Subadmin).where(Subadmin.invite_code == invite_code)
+                result = await session.execute(stmt)
+                subadmin = result.scalar_one_or_none()
+
+                if not subadmin:
                     return {
-                        "message": f"Failed to send OTP to {phone_number}", 
+                        "message": "Invalid invite code",
                         "success": False
                     }
-                else:
-                    return result
-                    
-            else: 
+
+                # Send OTP for signup
                 result = await self.phone_service.send_phone_otp(
-                        phone_number=phone_number,
-                        user_name="Investor",
-                        country="india", 
-                        process="signup"
-                    )
+                    phone_number=phone_number,
+                    user_name="Investor",
+                    country="india", 
+                    process="signup"
+                )
                 if not result["success"]:
                     return {
                         "message": f"Failed to send OTP to {phone_number}", 
                         "success": False
                     }
-                else:
-                    return result
+                return {
+                    "message": "OTP sent successfully for signup",
+                    "success": True
+                }
 
         except Exception as e:
             logger.error(f"Request failed: {e}")
-            raise HTTPException(status_code=500, detail=f"Internal request error : {str(e)}")
-        
+            raise HTTPException(status_code=500, detail=f"Internal request error: {str(e)}")
+
     async def verify_phone_otp(
-        self,  
+        self, 
         otp_code: str, 
         phone_number: str, 
-        invitation_code: str, 
-        session: AsyncSession
-    ) -> Dict[str, Any]: 
-
+        session: AsyncSession,
+        invite_code: Optional[str] = None, 
+    ) -> Dict[str, Any]:
         try:
+            # Verify the OTP
             result = await self.phone_service.verify_phone_otp(
                 phone_number=phone_number,
                 otp=otp_code, 
                 country="india"
             )
-
             if not result["success"]:
-                return result # Failure response
-            
-            stmt = select(User).where(
-                and_(
-                    User.phone_number == phone_number,
-                    User.invitation_code == invitation_code
-                )
-            )
-            result = await session.execute(statement=stmt)
-            user = result.scalar_one_or_none()  
-
-            if user:  
-                response = {
-                    "message" : f"otp verified.", 
-                    "onboarding_status": user.onboarding_status,
-                    "user_id": user.id, 
-                    "fund_manager_id": user.fund_manager_id,
-                    "success": True
+                return {
+                    "message": "OTP verification failed",
+                    "success": False
                 }
 
-                return response
-            
-            else: 
-                # Check if invitation code exists in Subadmin table
-                stmt = select(Subadmin).where(Subadmin.invite_code == invitation_code)
+            # Check if user exists
+            stmt = select(User).where(User.phone_number == phone_number)
+            result = await session.execute(stmt)
+            user = result.scalar_one_or_none()
+
+            if user:
+                # Repeated flow: Existing user (login)
+                return {
+                    "user_id": user.id,
+                    "subadmin_id": user.fund_manager_id,
+                    "onboarding_status": user.onboarding_status,
+                    "message": "OTP verified successfully",
+                    "success": True
+                }
+            else:
+                # First-time user flow: Create new user
+                if not invite_code:
+                    return {
+                        "message": "Invite code required for new user",
+                        "success": False
+                    }
+
+                # Validate invite code
+                stmt = select(Subadmin).where(Subadmin.invite_code == invite_code)
                 result = await session.execute(stmt)
                 subadmin = result.scalar_one_or_none()
 
-                if subadmin:
-                    # Create new user with the valid invitation code
-                    user = User(
-                        invitation_code=invitation_code,
-                        onboarding_status=OnboardingStatus.Invitation_Code_Verified.name,
-                        phone_number=phone_number,
-                        fund_manager_id=subadmin.id  # Link user to subadmin
-                    )
-                    session.add(user)
-                    await session.commit()
-                    await session.refresh(user)
-
+                if not subadmin:
                     return {
-                        "success": True,
-                        "message": "User created successfully",
-                        "onboarding_status": user.onboarding_status,
-                        "user_id": user.id,
-                        "fund_manager_id": subadmin.id
+                        "message": "Invalid invite code",
+                        "success": False
                     }
-            
+
+                # Create new user
+                user = User(
+                    invitation_code=invite_code,
+                    onboarding_status=OnboardingStatus.Invitation_Code_Verified.name,
+                    phone_number=phone_number,
+                    fund_manager_id=subadmin.id
+                )
+                session.add(user)
+                await session.commit()
+                await session.refresh(user)
+
+                return {
+                    "user_id": user.id,
+                    "subadmin_id": subadmin.id,
+                    "onboarding_status": user.onboarding_status,
+                    "message": "User created and OTP verified successfully",
+                    "success": True
+                }
+
         except HTTPException as he:
             raise he
         except Exception as e:
-            logger.error(f"Failed to update company details: {str(e)}")
+            logger.error(f"Failed to verify OTP: {str(e)}")
             await session.rollback()
             raise HTTPException(status_code=500, detail="Internal server error")
-         
+       
     async def verify_invitation_code(
         self, 
         invitation_code: str,
@@ -587,4 +619,32 @@ class DummyService:
             await session.rollback()
             raise HTTPException(status_code=500, detail=f"Failed to delete user record: {str(e)}")
             
-        
+    async def delete_all_users(
+        self, 
+        session: AsyncSession
+    ) -> Dict[str, Any]:
+        try:
+            # Step 1: Delete all rows from the KYC table to avoid foreign key constraints
+            kyc_stmt = delete(KYC)
+            kyc_result = await session.execute(kyc_stmt)
+            logger.info(f"Deleted {kyc_result.rowcount} rows from KYC table")
+
+            # Step 2: Delete all rows from the User table
+            user_stmt = delete(User)
+            user_result = await session.execute(user_stmt)
+            logger.info(f"Deleted {user_result.rowcount} rows from User table")
+
+            # Commit the transaction
+            await session.commit()
+
+            return {
+                "message": "All users and related KYC data deleted successfully",
+                "success": True,
+                "users_deleted": user_result.rowcount,
+                "kyc_deleted": kyc_result.rowcount
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to delete users: {str(e)}")
+            await session.rollback()
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")        

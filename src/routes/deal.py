@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from starlette import status
+from src.services.zoho import ZohoService
 from src.db.session import get_session
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Annotated, Any
+from typing import Annotated, Any, Dict
 from uuid import UUID
 from src.services.deal import DealService
 from src.schemas.deal import (
@@ -16,6 +17,7 @@ router = APIRouter(tags=["subadmin"])
 
 # service initialization
 deal_service = DealService()
+zoho_service = ZohoService()
 
 @router.post("/web/create/draft")
 async def create_deal_draft(
@@ -144,6 +146,22 @@ async def get_subadmin_deals(
         result = await deal_service.get_deals_by_user_id(
             session=session,
             user_id=user_id
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/send/drawdown-notice", tags=["investor"])
+async def send_drawdown_notice(
+    session: Annotated[AsyncSession, Depends(get_session)], 
+    user_id: UUID = Query(..., description="ID of the user"),
+    deal_id: UUID = Query(..., description="ID of the deal"),
+) -> Dict[str, Any]:
+    try:
+        result = await zoho_service.send_drawdown_notice(
+            session=session,
+            user_id=user_id,
+            deal_id=deal_id, 
         )
         return result
     except Exception as e:

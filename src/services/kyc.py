@@ -407,7 +407,7 @@ class KycService:
             logger.error(f"Invalid user_id format: {user_id}")
             raise HTTPException(status_code=400, detail="Invalid user_id format")
 
-        url = f"{self.validation_base_url}/misc/v1/pan-account-linkage"
+        url = "https://svc.digitap.ai/validation/misc/v1/pan-account-linkage" # "https://svcdemo.digitap.work/validation/misc/v1/pan-account-linkage" # change it to a variable later
         payload = {
             "client_ref_num": f"pan-bank-{user_id}",
             "pan": pan_number,

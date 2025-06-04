@@ -12,13 +12,15 @@ from src.schemas.kyc import (EmailVerifyOtpRequest, EmailVerifyOtpResponse, Agre
                             ProfessionalBackgroundRequest, ProfessionalBackgroundResponse, PhotoUploadRequest, PhotoUploadResponse
                             , UserOnboardingStartResponse, UserOnboardingStartRequest)
 from src.services.dummy import DummyService
-from src.services.email import EmailService
+from src.services.email import EmailService 
+from src.services.zoho import ZohoService
 
 router = APIRouter() 
 
 # service initialization 
 dummy_service = DummyService()
 email_service = EmailService()
+zoho_service = ZohoService()
 
 logger = get_logger(__name__)
 
@@ -215,15 +217,49 @@ async def professional_back(
 async def sign_agreement(
     data: AgreementRequest, 
     session: Annotated[AsyncSession, Depends(get_session)]
-) -> AgreementResponse: 
+) -> Dict[str, Any]: 
+    try:
+        if not data.agreement_signed:
+            raise HTTPException(status_code=400, detail="Agreement must be signed")
 
-    result = await dummy_service.contribution_agreement(
-        user_id=data.user_id,
-        agreement_signed=data.agreement_signed,
-        session=session
-    )
+        # Create document from template
+        document_metadata = await zoho_service.create_document_from_template(
+            user_id=data.user_id,
+            session=session
+        )
 
-    return AgreementResponse(**result)
+        # Apply e-stamp to the document
+        estamp_result = await zoho_service.apply_estamp(
+            user_id=data.user_id,
+            session=session
+        )
+
+        # Send document for signing
+        send_result = await zoho_service.send_document_for_signing(
+            user_id=str(data.user_id),
+            session=session
+        )
+
+        result = {
+            "success": True,
+            "message": "Document created, e-stamped, and sent for signing",
+            "user_id": str(data.user_id),
+            "request_id": document_metadata["request_id"],
+            "document_id": document_metadata["document_id"]
+        }
+
+        logger.info(f"Agreement signing process initiated for user_id: {data.user_id}")
+        return result
+
+    except HTTPException as he:
+        logger.error(f"HTTP error in sign_agreement: {he.detail}")
+        raise he
+    except Exception as e:
+        logger.error(f"Unexpected error in sign_agreement: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process agreement signing: {str(e)}"
+        )
 
 @router.post("/user/upload-photo")
 async def upload_photo( 
@@ -242,7 +278,7 @@ async def upload_photo(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to upload photo: {str(e)}")
 
-# Use with caution 
+# Use with caution for dev Access Only
 
 @router.delete("/user/delete")
 async def delete_user_record(
@@ -261,3 +297,17 @@ async def delete_user_record(
         raise he
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to delete user record: {str(e)}")
+    
+@router.delete("/user/delete-all")
+async def delete_all_users(
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> Dict[str, Any]:
+    try:
+        result = await dummy_service.delete_all_users(
+            session=session
+        )
+        return result
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to delete all users: {str(e)}")
