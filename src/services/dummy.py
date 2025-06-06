@@ -14,14 +14,15 @@ from uuid import UUID
 from src.services.s3 import S3Service
 from src.services.email import EmailService
 from typing import Dict, Any, Optional
+from src.configs.configs import aws_config
 
 logger = get_logger(__name__) 
 
 class DummyService:
     def __init__(self):
-        self.bucket_name = "fundos-dev-bucket"
-        self.folder_prefix = "users/profile_pictures/"
-        self.s3_service = S3Service(bucket_name=self.bucket_name, region_name="ap-south-1")
+        self.bucket_name = aws_config.aws_bucket
+        self.folder_prefix = aws_config.aws_profile_pictures_folder
+        self.s3_service = S3Service(bucket_name=self.bucket_name, region_name=aws_config.aws_region)
         self.email_service = EmailService()
         self.phone_service = PhoneService()
     

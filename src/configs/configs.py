@@ -37,8 +37,11 @@ class DbConfigs(BaseSettings):
 db_config = DbConfigs()
 
 class AwsConfigs(BaseSettings): 
-    aws_region: str
-    aws_bucket: str
+    aws_region: str = "ap-south-1"
+    aws_bucket: str = "fundos-dev-bucket"
+    aws_deals_folder: str = "deals"
+    aws_profile_pictures_folder: str = "users/profile_pictures"
+    aws_subadmin_profile_pictures_folder: str = "subadmin/profile_pictures"
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -66,9 +69,12 @@ class PaymentConfigs(BaseSettings):
 payment_configs = PaymentConfigs()
 
 class MailConfigs(BaseSettings):
-    zeptomail_api_key: str = "Zoho-enczapikey PHtE6r0IQe26iWB59BQG7KC7Q8akM417r7k2JFYVt9tKC/cGTE0A+o95m2TmoxwrUPATRvbOydhqs+uV4b3TIW7qND5IXWqyqK3sx/VYSPOZsbq6x00btVkSdUzbU47vctZp3CHRudffNA=="
     from_email: str = "noreply@fundos.solutions"
-    zeptomail_url: str = "https://api.zeptomail.com/v1.1/email"
+    smtp_server: str = "smtp.zeptomail.in"
+    smtp_port_tls: int = 587
+    smtp_port_ssl: int = 465
+    smtp_username: str = "emailapikey"
+    smtp_password: str = "PHtE6r0IQe26iWB59BQG7KC7Q8akM417r7k2JFYVt9tKC/cGTE0A+o95m2TmoxwrUPATRvbOydhqs+uV4b3TIW7qND5IXWqyqK3sx/VYSPOZsbq6x00btVkSdUzbU47vctZp3CHRudffNA=="
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -87,6 +93,9 @@ class ZohoConfigs(BaseSettings):
     zoho_redirect_uri: str = "https%3A%2F%2Fsign.zoho.com"
     zoho_grant_type: str = "refresh_token"
     drawdown_template_id: str = "80016000000209107"
+    contribution_template_id: str = "80016000000197395"
+    zoho_base_url: str = "https://sign.zoho.in/api/v1"
+    zoho_auth_url: str = "https://accounts.zoho.in/oauth/v2/token"
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -111,4 +120,48 @@ class MSG91Configs(BaseSettings):
         extra="ignore"
     )
 
-msg91_configs = MSG91Configs()
+msg91_configs = MSG91Configs() 
+
+class RedisConfigs(BaseSettings):
+    redis_host: str = "localhost"
+    redis_port: int = 6379
+    redis_db: int = 0
+    redis_cache_ttl: int = 300
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_prefix="",
+        case_sensitive=True,
+        extra="ignore"
+    )
+
+redis_configs = RedisConfigs()
+
+class DigitapConfigs(BaseSettings):
+    digitap_base_url: str = "https://svc.digitap.ai"
+    validation_base_url: str = "https://svc.digitap.ai/validation"
+    client_id: str = "17137231"
+    client_secret: str = "RhoLU35zsKc2OMao9SNec3kpcHJjIWAk"
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_prefix="",
+        case_sensitive=True,
+        extra="ignore"
+    )
+
+digitap_configs = DigitapConfigs()
+
+class LegalityConfigs(BaseSettings): 
+    auth_token: str = "69XqrirsJOG2wFKRARq6WOeqPOEl29ko"
+    salt: str = "fJSi3msagYOWIXJOPbrhGxuEgkoztG4G"
+    profile_id: str = "QJxuqWt"
+    
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_prefix="",
+        case_sensitive=True,
+        extra="ignore"
+    )
+
+legality_configs = LegalityConfigs()

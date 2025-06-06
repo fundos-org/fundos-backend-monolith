@@ -6,7 +6,6 @@ from src.configs.configs import app_config
 from src.routes.kyc import router as kycRouter
 from src.routes.deal import router as dealsRouter 
 from src.routes.dummy import router as dummyRouter
-from src.routes.bank import router as bankRouter
 from src.routes.admin import router as adminRouter
 from src.routes.subadmin import router as subadminRouter
 from src.utils.lifespan import lifespan
@@ -25,7 +24,7 @@ api_prefix_v0 = "/api/v0/test"
 app = FastAPI(lifespan=lifespan) 
 
 # add logging middleware
-app.add_middleware(LoggingMiddleware)
+# app.add_middleware(LoggingMiddleware)
 
 # adding exception handling 
 app.add_exception_handler(Exception, general_exception_handler)
@@ -49,7 +48,6 @@ app.include_router(router=kycRouter, prefix=f"{api_prefix}/kyc", tags=["investor
 app.include_router(router=dealsRouter, prefix=f"{api_prefix}/deals", tags=["deals"]) 
 app.include_router(router=adminRouter, prefix=f"{api_prefix}/admin", tags=["admin"])
 app.include_router(router=subadminRouter, prefix=f"{api_prefix}/subadmin", tags=["subadmin"])
-app.include_router(router=bankRouter, prefix=f"{api_prefix_v0}", tags=["test", "bank"])
 
 # Test api Routers
 app.include_router(router=dummyRouter, prefix=f"{api_prefix_v0}", tags=["test", "investor"])

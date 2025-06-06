@@ -50,16 +50,21 @@ class User(SQLModel, table=True):
     care_of: Optional[str] = Field(default=None)
     aadhaar_number: Optional[str] = Field(default=None)
     address: Optional[str] = Field(default=None)
+    country: Optional[str] = Field(default=None)
+    state: Optional[str] = Field(default=None)
     occupation: Optional[str] = Field(default=None, nullable=True)
     income_source: Optional[str] = Field(default=None, nullable=True)
     annual_income: Optional[float] = Field(default=None, nullable=True)
     capital_commitment: Optional[float] = Field(default=None, nullable=True)
+    drawdown_amount: Optional[float] = Field(default=None, nullable=True)
     agreement_signed: bool = Field(default=True, nullable=True)
+    mca_key: Optional[str] = Field(default=None, nullable=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now().replace(tzinfo=None))
     updated_at: Optional[datetime] = Field(default=None, nullable=True)
     fund_manager_id: Optional[UUID] = Field(foreign_key="subadmin.id")
     kyc_status: KycStatus = Field(default=KycStatus.PENDING)
     profile_image_url: Optional[str] = Field(default=None)
+    zoho_request_id: Optional[str] = Field(default=None)
     
     # Relationships
     investments: List["Investment"] = Relationship(back_populates="investor") # type: ignore # noqa: F821

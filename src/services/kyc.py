@@ -7,21 +7,23 @@ from fastapi import HTTPException
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.kyc import KYC, KycStatus
-from src.models.user import User
+from src.models.user import User, OnboardingStatus
 from src.logging.logging_setup import get_logger
 from datetime import datetime
+from src.configs.configs import redis_configs
+from src.configs.configs import digitap_configs
 
 # Configure logging
 logger = get_logger(__name__)
 
-DIGITAP_BASE_URL = "https://svc.digitap.ai"
-VALIDATION_BASE_URL = "https://svc.digitap.ai/validation"
-CLIENT_ID = "17137231"
-CLIENT_SECRET = "RhoLU35zsKc2OMao9SNec3kpcHJjIWAk"
-REDIS_HOST = os.getenv("REDIS_HOST", "redis")
-REDIS_PORT = 6379
-REDIS_DB = 0
-CACHE_TTL = 300  # 5 minutes in seconds, aligned with likely Digitap session timeout
+DIGITAP_BASE_URL = digitap_configs.digitap_base_url
+VALIDATION_BASE_URL = digitap_configs.validation_base_url
+CLIENT_ID = digitap_configs.client_id
+CLIENT_SECRET = digitap_configs.client_secret
+REDIS_HOST = redis_configs.redis_host
+REDIS_PORT = redis_configs.redis_port
+REDIS_DB = redis_configs.redis_db
+CACHE_TTL = redis_configs.redis_cache_ttl  # 5 minutes in seconds, aligned with likely Digitap session timeout
 
 class KycService:
     def __init__(self):
@@ -193,6 +195,8 @@ class KycService:
             address.get("state", ""),
             address.get("country", "")
         ]))
+        user.country = address.get("country")
+        user.state = address.get("state")
         user.gender = model.get("gender")
         user.date_of_birth = model.get("dob")
         user.care_of = model.get("careOf")
@@ -207,7 +211,7 @@ class KycService:
             kyc = KYC(
                 user_id=user_id,
                 aadhaar_number=model.get("adharNumber"),
-                status="pending",
+                status=OnboardingStatus.In_Progress.name,
                 created_at=datetime.now(),
                 updated_at=datetime.now()
             )
@@ -374,14 +378,11 @@ class KycService:
             kyc.updated_at = datetime.now()
             await session.merge(kyc)
         else:
-            kyc = KYC(
-                user_id=user_id,
-                pan_number=result.get("pan"),
-                status="pending",
-                created_at=datetime.now(),
-                updated_at=datetime.now()
-            )
-            session.add(kyc)
+            result = {
+                "user_id": user_id,
+                "success": True,
+                "message": "Verify Aadhaar first",
+            }
 
         user.first_name = f"{result.get('first_name')} {result.get('middle_name')}"
         user.last_name = result.get("last_name")

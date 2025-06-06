@@ -11,7 +11,7 @@ from datetime import datetime
 logger = get_logger(__name__)
 
 class S3Service:
-    def __init__(self, bucket_name: str, region_name: str = "us-east-1"):
+    def __init__(self, bucket_name: str, region_name: str = "ap-south-1"):
         self.bucket_name = bucket_name
         self.s3_client = boto3.client("s3", region_name=region_name)
 

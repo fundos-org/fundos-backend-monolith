@@ -15,16 +15,17 @@ from datetime import datetime
 from uuid import UUID
 from num2words import num2words
 from src.configs.configs import zoho_configs
+from src.configs.configs import redis_configs
 
 # Configure logging
 logger = get_logger(__name__)
 
-ZOHO_BASE_URL = "https://sign.zoho.in/api/v1"
-ZOHO_AUTH_URL = "https://accounts.zoho.in/oauth/v2/token"
-REDIS_HOST = "localhost" #os.getenv("REDIS_HOST", "redis") 
-REDIS_PORT = 6379
-REDIS_DB = 0
-CACHE_TTL = 604800  # 7 days for Zoho metadata
+ZOHO_BASE_URL = zoho_configs.zoho_base_url 
+ZOHO_AUTH_URL = zoho_configs.zoho_auth_url
+REDIS_HOST = redis_configs.redis_host 
+REDIS_PORT = redis_configs.redis_port
+REDIS_DB = redis_configs.redis_db
+CACHE_TTL = redis_configs.redis_cache_ttl  # 7 days for Zoho metadata
 
 class ZohoService:
     def __init__(self):
@@ -63,18 +64,19 @@ class ZohoService:
             logger.info("Using cached Zoho access token")
             return cached_token
 
+        params = {
+            "refresh_token": self.refresh_token,
+            "client_id": self.client_id,
+            "client_secret": self.client_secret,
+            "redirect_uri": self.redirect_uri,
+            "grant_type": "refresh_token"
+        }
+
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
-                    self.auth_url,
-                    data={
-                        "refresh_token": self.refresh_token,
-                        "client_id": self.client_id,
-                        "client_secret": self.client_secret,
-                        "redirect_uri": self.redirect_uri,
-                        "grant_type": "refresh_token"
-                    },
-                    headers={"Content-Type": "application/x-www-form-urlencoded"}
+                    url=self.auth_url,
+                    params=params,
                 )
                 if response.status_code != 200:
                     logger.error(f"Failed to get Zoho token: {response.status_code} {response.text}")
@@ -94,7 +96,7 @@ class ZohoService:
             logger.error(f"Error generating Zoho token: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Error generating Zoho token: {str(e)}")
 
-    async def get_payload(
+    async def get_mca_payload(
         self, 
         user: User, 
         kyc: KYC
@@ -114,35 +116,35 @@ class ZohoService:
                 lang="en_IN",
                 to="currency",
                 currency="INR"
-            ) if user.capital_commitment else ""
+            )
         )
 
-        return {
+        payload = {
             "templates": {
                 "field_data": {
                     "field_text_data": {
                         "day": day,
                         "month": month,
                         "year": year,
-                        "name": user.full_name or "",
-                        "address": user.address or "",
-                        "phone": user.phone_number or "",
-                        "email": user.email or "",
-                        "father_name": user.father_name or "",
-                        "entity_type": user.investor_type,  # Not available in User/KYC models, default to empty
-                        "law": "Not Applicable",  # Not available in User/KYC models, default to empty
-                        "pan_number": kyc.pan_number or "",
-                        "phone_number": user.phone_number or "",  # Duplicate of phone for consistency
+                        "name": user.full_name, 
+                        "address": user.address,
+                        "phone": user.phone_number, 
+                        "email": user.email,
+                        "father_name": user.father_name, 
+                        "entity_type": user.investor_type,
+                        "law": "Not Applicable",
+                        "pan_number": kyc.pan_number,
+                        "phone_number": user.phone_number,
                         "capital_commitment": str(user.capital_commitment),
                         "capital_commitment_words": capital_commitment_in_word,
-                        "resident": user.address or "",  # Using address as resident
-                        "tax_identity_number": "Not Applicable",  # Not available in User/KYC models, default to empty
-                        "place_of_birth": "Not Applicable",  # Not available in User/KYC models, default to empty
+                        "resident": user.country,
+                        "tax_identity_number": "Not Applicable",
+                        "place_of_birth": "Not Applicable",
                     },
                     "field_boolean_data": {},
                     "field_date_data": {
                         "date": date,
-                        "date_of_birth": user.date_of_birth or "01 January 1970"
+                        "date_of_birth": user.date_of_birth
                     },
                     "field_radio_data": {},
                     "field_checkboxgroup_data": {}
@@ -182,27 +184,29 @@ class ZohoService:
                 ]
             }
         }
+
+        return payload
     
     async def create_document_from_template(
         self, 
-        user_id: UUID, 
+        # user_id: UUID, 
         session: AsyncSession
     ) -> dict:
         """Create a document from a Zoho Sign template with user data."""
-        user = await session.get(User, user_id)
-        kyc = await session.get(KYC, user_id)
-        if not user or not kyc:
-            logger.error(f"User not found: {user_id} or kyc record not found: {user_id}")
-            raise HTTPException(status_code=404, detail="User not found")
+        # user = await session.get(User, user_id)
+        # kyc = await session.get(KYC, user_id)
+        # if not user or not kyc:
+        #     logger.error(f"User not found: {user_id} or kyc record not found: {user_id}")
+        #     raise HTTPException(status_code=404, detail="User not found")
 
         # Generate payload using get_payload
-        payload = await self.get_payload(user, kyc)
+        payload = await self.get_mca_payload()
 
         token = await self.get_access_token()
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
-                    f"{self.base_url}/templates/{os.getenv('MCA_TEMPLATE_ID')}/createdocument",
+                    f"{self.base_url}/templates/{zoho_configs.contribution_template_id}/createdocument",
                     headers={"Authorization": f"Zoho-oauthtoken {token}", "Content-Type": "application/json"},
                     json=payload
                 )
@@ -223,11 +227,11 @@ class ZohoService:
                     "is_signed": False
                 }
                 self.redis.setex(
-                    self._get_cache_key(user_id, "metadata"),
+                    self._get_cache_key("iswar", "metadata"), #self._get_cache_key(user_id, "metadata")
                     CACHE_TTL,
                     json.dumps(metadata)
                 )
-                logger.info(f"Cached Zoho metadata for user_id: {user_id}")
+                logger.info(f"Cached Zoho metadata for user_id: {"iswar"}")
 
                 return metadata
         except Exception as e:
@@ -246,10 +250,10 @@ class ZohoService:
             raise HTTPException(status_code=404, detail="User not found")
 
         # Retrieve MCA metadata from Redis
-        metadata_key = self._get_cache_key(user_id, "metadata")
+        metadata_key = self._get_cache_key("iswar", "metadata") #self._get_cache_key(user_id, "metadata")
         metadata = self.redis.get(metadata_key)
         if not metadata:
-            logger.error(f"Missing metadata for user_id: {user_id}")
+            logger.error(f"Missing metadata for user_id: iswar")
             raise HTTPException(status_code=400, detail="Missing document metadata")
 
         metadata = json.loads(metadata)
@@ -260,7 +264,7 @@ class ZohoService:
         form_data = {
             "data": json.dumps({
                 "requests": {
-                    "request_name": f"MCA Document for {user.first_name} {user.last_name}",
+                    "request_name": f"MCA Document for {user.full_name}", #{user.first_name} {user.last_name}
                     "document_ids": [
                         {
                             "document_id": document_id,
@@ -426,7 +430,7 @@ class ZohoService:
             )
 
         # Update user record
-        user.zoho_document_key = object_key
+        user.mca_key = object_key
         user.onboarding_status = OnboardingStatus.Completed.name
         user.agreement_signed = True
         session.add(user)
@@ -444,7 +448,7 @@ class ZohoService:
         self.redis.setex(metadata_key, CACHE_TTL, json.dumps(metadata))
 
         logger.info(f"Signed document uploaded to S3 for user_id: {user_id}, request_id: {request_id}")
-        return {"success": True, "user_id": user_id, "file_path": user.zoho_document_key}
+        return {"success": True, "user_id": user_id, "file_path": user.mca_key}
     
     async def handle_webhook(
         self, 
@@ -523,11 +527,11 @@ class ZohoService:
 
         try:
             # Sample extraction logic — adjust field names as per actual model
-            investor_name = "Investor"
-            investor_email = "email"
+            investor_name = user.full_name
+            investor_email = user.email
             investment_scheme = "Sample Scheme" # need to add a field for this in deal model
-            company_name = "Company name" 
-            capital_commitment = 100000000000.00
+            company_name = deal.company_name
+            capital_commitment = user.capital_commitment
             investment_amount_str = f"{investment_amount:,.2f}"
 
             # calculate management fee
@@ -543,7 +547,7 @@ class ZohoService:
 
             capital_commitment_str = f"{capital_commitment:,.2f}"
 
-            drawdown_so_far = 10000000000.00 + total_payable # need to add a field for this in user model : user.drawdown_amount
+            drawdown_so_far = user.drawdown_amount + total_payable # need to add a field for this in user model : user.drawdown_amount
             drawdown_so_far = f"{drawdown_so_far:,.2f}"
 
             undrawn_capital_commitment = capital_commitment - total_payable 
@@ -632,7 +636,10 @@ class ZohoService:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
                     f"{self.base_url}/templates/{self.drawdown_template_id}/createdocument",
-                    headers={"Authorization": f"Zoho-oauthtoken {token}", "Content-Type": "application/json"},
+                    headers={
+                        "Authorization": f"Zoho-oauthtoken {token}", 
+                        "Content-Type": "application/json"
+                    },
                     json=payload
                 )
                 if response.status_code != 200:
@@ -640,7 +647,6 @@ class ZohoService:
                     raise HTTPException(status_code=response.status_code, detail="Failed to create document")
                 
                 data = response.json()
-
                 return data
             
         except Exception as e:
@@ -648,3 +654,52 @@ class ZohoService:
             
         finally:
             await session.close()
+
+    async def get_document_status(
+        self, 
+        request_id: str, 
+    ) -> Dict: 
+        try:
+            token = await self.get_access_token()
+            if not token:
+                raise HTTPException(status_code=401, detail="Unauthorized")
+            
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{self.base_url}/requests/{request_id}",
+                    headers={
+                        "Authorization": f"Zoho-oauthtoken {token}"
+                    }
+                )
+                if response.status_code != 200:
+                    raise HTTPException(status_code=response.status_code, detail="Failed to get document status")
+                
+                data = response.json()
+                requests_data = data.get("requests", {})
+                
+                # Extract and sanitize fields from requests
+                response_data = {
+                    "request_id": str(data.get("request_id", "")),
+                    "sent_status": str(data.get("status", "")),
+                    "message": str(data.get("message", "")),
+                    "request_status": str(requests_data.get("request_status", "")),
+                    "is_deleted": bool(requests_data.get("is_deleted", False)),
+                    "request_name": str(requests_data.get("request_name", "")),
+                    "expiration_days": int(requests_data.get("expiration_days", 0)),
+                    "sign_percentage": float(requests_data.get("sign_percentage", 0.0)),
+                    "owner_email": str(requests_data.get("owner_email", "")),
+                    "actions": [
+                        {
+                            "recipient_email": str(action.get("recipient_email", "")),
+                            "recipient_phone_number": str(action.get("recipient_phonenumber", "")),
+                            "recipient_name": str(action.get("recipient_name", "")),
+                            "delivery_mode": str(action.get("delivery_mode", "")),
+                            "action_status": str(action.get("action_status", ""))
+                        } for action in requests_data.get("actions", [])
+                    ]
+                }
+                
+                return response_data
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to get document status: {str(e)}")

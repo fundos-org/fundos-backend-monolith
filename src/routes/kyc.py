@@ -10,12 +10,10 @@ from src.schemas.kyc import (
 )
 from src.services.kyc import KycService
 from src.services.phone import PhoneService
-from src.services.user import UserService
 from src.db.session import get_session
 
 kyc_service = KycService()
 phone_service = PhoneService()
-user_service = UserService()
 
 router = APIRouter()
 

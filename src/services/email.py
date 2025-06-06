@@ -1,25 +1,26 @@
 import random
+import ssl
 import string
 import smtplib
 from email.message import EmailMessage
 import redis
-import os
 from fastapi import HTTPException
 from typing import Dict, Any
 from src.logging.logging_setup import get_logger
 from src.configs.configs import mail_configs
+from src.configs.configs import redis_configs
 
 logger = get_logger(__name__)
 
 # Zoho ZeptoMail SMTP configuration
-SMTP_SERVER = "smtp.zeptomail.in"
-SMTP_PORT = 587
-SMTP_USERNAME = "emailapikey"
-SMTP_PASSWORD = "PHtE6r0IQe26iWB59BQG7KC7Q8akM417r7k2JFYVt9tKC/cGTE0A+o95m2TmoxwrUPATRvbOydhqs+uV4b3TIW7qND5IXWqyqK3sx/VYSPOZsbq6x00btVkSdUzbU47vctZp3CHRudffNA=="  # Strip whitespace
+SMTP_SERVER = mail_configs.smtp_server
+SMTP_PORT = mail_configs.smtp_port_ssl
+SMTP_USERNAME = mail_configs.smtp_username
+SMTP_PASSWORD = mail_configs.smtp_password  # Strip whitespace
 FROM_EMAIL = mail_configs.from_email
 
 # Redis configuration
-REDIS_HOST = os.getenv("REDIS_HOST", "redis")
+REDIS_HOST = redis_configs.redis_host
 REDIS_PORT = 6379
 REDIS_DB = 0
 CACHE_TTL = 300  # 5 minutes in seconds, aligned with KycService
@@ -53,7 +54,7 @@ class EmailService:
     async def send_email_otp(
         self, 
         email: str, 
-        subject: str = "Your Verification Code"
+        subject: str = "FundOS Verification Code"
     ) -> Any:
         """Send an OTP email using Zoho ZeptoMail SMTP."""
         try:
@@ -65,6 +66,7 @@ class EmailService:
 
             otp_code = self._generate_otp()
             cache_key = self._get_cache_key(email)
+            
             
             # Store OTP in Redis with TTL
             try:
@@ -85,8 +87,9 @@ class EmailService:
 
             # Send email via SMTP
             try:
-                with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=30.0) as server:
-                    server.starttls()
+                context = ssl.create_default_context()
+                with smtplib.SMTP_SSL(self.smtp_server, self.smtp_port, context=context, timeout=30.0) as server:
+                    # server.starttls()
                     server.login(self.smtp_username, self.smtp_password)
                     server.send_message(msg)
                 logger.info(f"OTP email sent successfully to {email}")

@@ -18,7 +18,7 @@ class PaymentService:
         self,
         api_key: str = payment_configs.api_key,
         salt: str = payment_configs.salt,
-        base_url: str = payment_configs.base_url or "https://mystore.payaidpayments.com"
+        base_url: str = payment_configs.base_url 
     ):
         self.api_key = api_key
         self.salt = salt

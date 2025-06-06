@@ -10,7 +10,7 @@ def general_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
-            "isSuccess": False,
+            "success": False,
             "message": "An unexpected error occurred. Please try again later.",
         }
     )
@@ -19,7 +19,7 @@ def validation_exception_handler(request: Request, exc: RequestValidationError):
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
-            "isSuccess": False,
+            "success": False,
             "message": "Validation error",
             "details": exc.errors(),
         }
@@ -29,7 +29,7 @@ def db_exception_handler(request: Request, exc: SQLAlchemyError):
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
-            "isSuccess": False,
+            "success": False,
             "message": "A database error occurred. Please try again later.",
         }
     )
@@ -38,7 +38,7 @@ def http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(
         status_code=exc.status_code,
         content={
-            "isSuccess": False,
+            "success": False,
             "message": exc.detail
         }
     )

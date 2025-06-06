@@ -4,7 +4,7 @@ from pydantic import EmailStr
 from src.logging.logging_setup import get_logger
 from src.db.session import get_session 
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Annotated, Dict, Any
+from typing import Annotated, Dict, Any, Optional
 from src.schemas.kyc import (EmailVerifyOtpRequest, EmailVerifyOtpResponse, AgreementRequest, AgreementResponse, 
                             DeclarationRequest, DeclarationResponse, ChooseInvestorRequest, ChooseInvestorResponse, 
                             PhoneNumSendOtpRequest, EmailSendOtpRequest, EmailSendOtpResponse, PhoneNumSendOtpResponse, 
@@ -24,49 +24,17 @@ zoho_service = ZohoService()
 
 logger = get_logger(__name__)
 
-@router.post("/investor/signin/email/send-otp")
-async def signin_investor_send_email_otp(
-    session: Annotated[AsyncSession, Depends(get_session)], 
-    email: EmailStr, 
-) -> Dict[str, Any]:
-
-    result = await dummy_service.investor_signin_email(
-        session=session,
-        email=email
-    )
-    
-    if not result["success"]:
-        raise HTTPException(status_code=400, detail=f"{result['message']}")
-
-    return result
-
-@router.post("/investor/signin/email/verify-otp")
-async def signup_investor_verify_email_otp(
-    session: Annotated[AsyncSession, Depends(get_session)], 
-    email: EmailStr, 
-    otp: str
-) -> Dict[str, Any]:
-
-    result = await dummy_service.investor_signin_email_verify(
-        session=session,
-        email=email,
-        otp_code=otp
-    )
-    
-    if not result["success"]:
-        raise HTTPException(status_code=400, detail="Invalid invitation code")
-
-    return result
-
 @router.get("/user/phone/otp/send")
 async def user_send_phone_otp(
     session: Annotated[AsyncSession, Depends(get_session)], 
     phone_number: str, 
+    invite_code: Optional[str] = None
 ) -> Dict[str, Any]:
 
     result = await dummy_service.send_phone_otp(
         session=session,
-        phone_number=phone_number
+        phone_number=phone_number, 
+        invite_code=invite_code
     )
     
     if not result["success"]:
@@ -79,14 +47,14 @@ async def user_verify_phone_otp(
     session: Annotated[AsyncSession, Depends(get_session)], 
     phone_number: str,
     otp: str, 
-    invitation_code: str
+    invite_code: Optional[str] = None
 ) -> Dict[str, Any]:
 
     result = await dummy_service.verify_phone_otp(
         session=session,
         otp_code=otp, 
         phone_number=phone_number, 
-        invitation_code=invitation_code
+        invite_code=invite_code
     )
     
     if not result["success"]:
@@ -224,28 +192,30 @@ async def sign_agreement(
 
         # Create document from template
         document_metadata = await zoho_service.create_document_from_template(
-            user_id=data.user_id,
+            # user_id=data.user_id,
             session=session
         )
 
         # Apply e-stamp to the document
         estamp_result = await zoho_service.apply_estamp(
-            user_id=data.user_id,
+            # user_id=data.user_id,
             session=session
         )
 
-        # Send document for signing
-        send_result = await zoho_service.send_document_for_signing(
-            user_id=str(data.user_id),
-            session=session
-        )
+        # # Send document for signing
+        # send_result = await zoho_service.send_document_for_signing(
+        #     user_id=str(data.user_id),
+        #     session=session
+        # )
 
         result = {
             "success": True,
             "message": "Document created, e-stamped, and sent for signing",
             "user_id": str(data.user_id),
             "request_id": document_metadata["request_id"],
-            "document_id": document_metadata["document_id"]
+            "document_id": document_metadata["document_id"],
+            "document_result": document_metadata,
+            "estamp_result": estamp_result,
         }
 
         logger.info(f"Agreement signing process initiated for user_id: {data.user_id}")

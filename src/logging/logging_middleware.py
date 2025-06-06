@@ -5,7 +5,6 @@ from starlette.requests import Request
 from starlette.responses import Response
 from starlette.types import ASGIApp
 from src.logging.logging_setup import get_logger  # or wherever your get_logger is defined
-import json
 
 class LoggingMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: ASGIApp):
@@ -14,14 +13,16 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         start_time = time.time()
-
-        # Get handler module (if available)
         endpoint = request.scope.get("endpoint")
         module_name = getattr(endpoint, "__module__", "unknown")
 
+        # Skip logging for documentation endpoints
+        if request.url.path in ["/docs", "/openapi.json"]:
+            return await call_next(request)
+
         try:
             request_body = await request.body()
-            request_data = request_body.decode("utf-8") if request_body else None
+            request_data = request_body.decode("utf-8")[:500] if request_body else None
         except Exception:
             request_data = "<failed to read body>"
 
@@ -32,14 +33,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 response_body += chunk
 
             duration = round((time.time() - start_time) * 1000, 2)
-
-            # Recreate response object since we consumed it
-            final_response = Response(
-                content=response_body,
-                status_code=response.status_code,
-                headers=dict(response.headers),
-                media_type=response.media_type,
-            )
+            response_text = response_body.decode("utf-8")[:1000] + "..." if len(response_body) > 1000 else response_body.decode("utf-8")
 
             self.logger.info({
                 "event": "http",
@@ -48,11 +42,16 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 "status_code": response.status_code,
                 "duration_ms": duration,
                 "request_body": request_data,
-                "response_body": response_body.decode("utf-8"),
+                "response_body": response_text,
                 "module": module_name
             })
 
-            return final_response
+            return Response(
+                content=response_body,
+                status_code=response.status_code,
+                headers=dict(response.headers),
+                media_type=response.media_type,
+            )
         except Exception as e:
             duration = round((time.time() - start_time) * 1000, 2)
             self.logger.exception({

@@ -154,14 +154,26 @@ async def get_subadmin_deals(
 @router.post("/send/drawdown-notice", tags=["investor"])
 async def send_drawdown_notice(
     session: Annotated[AsyncSession, Depends(get_session)], 
-    user_id: UUID = Query(..., description="ID of the user"),
-    deal_id: UUID = Query(..., description="ID of the deal"),
+    # user_id: UUID = Query(..., description="ID of the user"),
+    # deal_id: UUID = Query(..., description="ID of the deal"),
 ) -> Dict[str, Any]:
     try:
         result = await zoho_service.send_drawdown_notice(
             session=session,
-            user_id=user_id,
-            deal_id=deal_id, 
+            # user_id=user_id,
+            # deal_id=deal_id, 
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.get("/document/status")
+async def get_doc_status(
+    request_id: str = Query(..., description="ID of the request")
+) -> Any: 
+    try:
+        result = await zoho_service.get_document_status(
+            request_id=request_id
         )
         return result
     except Exception as e:

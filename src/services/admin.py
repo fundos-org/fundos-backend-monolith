@@ -10,14 +10,15 @@ from uuid import UUID
 from src.services.s3 import S3Service
 from typing import Any
 from datetime import datetime
+from src.configs.configs import aws_config
 
 
 logger = get_logger(__name__) 
 
 class AdminService:
     def __init__(self):
-        self.bucket_name = "fundos-dev-bucket"
-        self.folder_prefix = "subadmin/profile_pictures/"
+        self.bucket_name = aws_config.aws_bucket
+        self.folder_prefix = aws_config.aws_subadmin_profile_pictures_folder
         self.s3_service = S3Service(bucket_name=self.bucket_name, region_name="ap-south-1")
 
     async def admin_signin(

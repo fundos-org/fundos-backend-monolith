@@ -13,6 +13,7 @@ from src.services.email import EmailService
 from uuid import UUID
 from datetime import datetime, timedelta
 from sqlalchemy import and_ 
+from src.configs.configs import aws_config
 
 # sample data for frontend 
 from src.utils.dummy_data import (
@@ -23,8 +24,8 @@ logger = get_logger(__name__)
 
 class SubAdminService:
     def __init__(self):
-        self.bucket_name = "fundos-dev-bucket"
-        self.folder_prefix = "subadmin/profile_pictures/"
+        self.bucket_name = aws_config.aws_bucket
+        self.folder_prefix = aws_config.aws_subadmin_profile_pictures_folder
         self.s3_service = S3Service(bucket_name=self.bucket_name, region_name="ap-south-1")
         self.email_service = EmailService()
 
