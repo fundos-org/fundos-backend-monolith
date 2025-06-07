@@ -602,8 +602,8 @@ class ZohoService:
                     "notes": "",
                     "actions": [
                         {
-                            "recipient_name": "Iswar",
-                            "recipient_email": "ishwarkoki@gmail.com",
+                            "recipient_name": investor_name,
+                            "recipient_email": investor_email,
                             "action_id": "80016000000209128",
                             "action_type": "SIGN",
                             "signing_order": 1,

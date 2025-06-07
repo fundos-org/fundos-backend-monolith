@@ -154,14 +154,14 @@ async def get_subadmin_deals(
 @router.post("/send/drawdown-notice", tags=["investor"])
 async def send_drawdown_notice(
     session: Annotated[AsyncSession, Depends(get_session)], 
-    # user_id: UUID = Query(..., description="ID of the user"),
-    # deal_id: UUID = Query(..., description="ID of the deal"),
+    user_id: UUID = Query(..., description="ID of the user"),
+    deal_id: UUID = Query(..., description="ID of the deal"),
 ) -> Dict[str, Any]:
     try:
         result = await zoho_service.send_drawdown_notice(
             session=session,
-            # user_id=user_id,
-            # deal_id=deal_id, 
+            user_id=user_id,
+            deal_id=deal_id, 
         )
         return result
     except Exception as e:
@@ -181,11 +181,13 @@ async def get_doc_status(
     
 @router.get("/mca/status", tags=["investor"])
 async def check_mca_status(
-    user_id: str = Query(..., description="ID of the request")
+    session: Annotated[AsyncSession, Depends(get_session)],
+    user_id: str = Query(..., description="ID of the user"), 
 ) -> Any: 
     try:
         result = await zoho_service.check_document_status_by_user_id(
-            user_id=user_id
+            user_id=user_id, 
+            session=session
         )
         return result
     except Exception as e:
@@ -193,11 +195,13 @@ async def check_mca_status(
     
 @router.get("/mca/download", tags=["investor"])
 async def download_document(
-    user_id: str = Query(..., description="ID of the request")
+    session: Annotated[AsyncSession, Depends(get_session)],
+    user_id: str = Query(..., description="ID of the user")
 ) -> Any: 
     try:
         result = await zoho_service.download_mca_pdf(
-            user_id=user_id
+            user_id=user_id, 
+            session=session
         )
         return result
     except Exception as e:
