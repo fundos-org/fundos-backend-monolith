@@ -156,12 +156,14 @@ async def send_drawdown_notice(
     session: Annotated[AsyncSession, Depends(get_session)], 
     user_id: UUID = Query(..., description="ID of the user"),
     deal_id: UUID = Query(..., description="ID of the deal"),
+    investment_amount: float = Query(..., description="Amount of investment"),
 ) -> Dict[str, Any]:
     try:
         result = await zoho_service.send_drawdown_notice(
             session=session,
             user_id=user_id,
             deal_id=deal_id, 
+            investment_amount=investment_amount
         )
         return result
     except Exception as e:
