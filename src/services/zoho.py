@@ -274,6 +274,11 @@ class ZohoService:
         request_id = metadata["request_id"]
         document_id = metadata["document_id"]
 
+        # set zoho request id value in the db
+        user.zoho_request_id = request_id
+        await session.refresh(user)
+        await session.commit()
+
         token = await self.get_access_token()
         form_data = {
             "data": json.dumps({
@@ -333,11 +338,6 @@ class ZohoService:
 
                 data = response.json()
 
-                # set zoho request id value in the db
-                user.zoho_request_id = request_id
-                await session.refresh(user)
-                await session.commit()  
-
                 response_data = {
                     "data": data,
                     "request_id": request_id,
@@ -345,7 +345,7 @@ class ZohoService:
                     "success": True
                 }
 
-                return response_data
+            return response_data
             
         except Exception as e:
             session.close()
