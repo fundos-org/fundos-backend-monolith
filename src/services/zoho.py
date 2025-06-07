@@ -264,7 +264,7 @@ class ZohoService:
             raise HTTPException(status_code=404, detail="User not found")
 
         # Retrieve MCA metadata from Redis
-        metadata_key = self._get_cache_key("iswar", "metadata") #self._get_cache_key(user_id, "metadata")
+        metadata_key = self._get_cache_key(user_id, "metadata") #self._get_cache_key(user_id, "metadata")
         metadata = self.redis.get(metadata_key)
         if not metadata:
             logger.error(f"Missing metadata for user_id: iswar")
