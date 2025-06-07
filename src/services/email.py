@@ -1,5 +1,4 @@
 import random
-import ssl
 import string
 import smtplib
 from email.message import EmailMessage
@@ -14,7 +13,7 @@ logger = get_logger(__name__)
 
 # Zoho ZeptoMail SMTP configuration
 SMTP_SERVER = mail_configs.smtp_server
-SMTP_PORT = mail_configs.smtp_port_ssl
+SMTP_PORT = mail_configs.smtp_port_tls
 SMTP_USERNAME = mail_configs.smtp_username
 SMTP_PASSWORD = mail_configs.smtp_password  # Strip whitespace
 FROM_EMAIL = mail_configs.from_email
@@ -87,9 +86,8 @@ class EmailService:
 
             # Send email via SMTP
             try:
-                context = ssl.create_default_context()
-                with smtplib.SMTP_SSL(self.smtp_server, self.smtp_port, context=context, timeout=30.0) as server:
-                    # server.starttls()
+                with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=30.0) as server:
+                    server.starttls()
                     server.login(self.smtp_username, self.smtp_password)
                     server.send_message(msg)
                 logger.info(f"OTP email sent successfully to {email}")

@@ -408,7 +408,8 @@ class KycService:
             logger.error(f"Invalid user_id format: {user_id}")
             raise HTTPException(status_code=400, detail="Invalid user_id format")
 
-        url = "https://svc.digitap.ai/validation/misc/v1/pan-account-linkage" # "https://svcdemo.digitap.work/validation/misc/v1/pan-account-linkage" # change it to a variable later
+        url = "https://svc.digitap.ai/validation/misc/v1/pan-account-linkage" # 
+        demo_url = "https://svcdemo.digitap.work/validation/misc/v1/pan-account-linkage" # change it to a variable later
         payload = {
             "client_ref_num": f"pan-bank-{user_id}",
             "pan": pan_number,
@@ -417,8 +418,13 @@ class KycService:
         }
         headers = self.get_auth_header_basic()
 
+        demo_headers = {
+            "Content-Type": "application/json",
+            "Authorization": "Basic NDcxMzU3Njk6QVhsODZIcW9HSjYwMXNWWWVIMGNEVEtUQUNuaklwdTE="
+        }
+
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(url, json=payload, headers=headers)
+            response = await client.post(demo_url, json=payload, headers=demo_headers)
 
         if response.status_code != 200:
             logger.error(f"PAN to Bank Account link verification failed: {response.status_code} {response.text}")
@@ -431,6 +437,10 @@ class KycService:
             raise HTTPException(status_code=400, detail=data.get("message", "PAN to Bank Account link verification unsuccessful"))
 
         result = data.get("result", {})
+        linked_status = result.get("linked_status", False) 
+
+        if not linked_status: 
+            raise HTTPException(status_code=400, detail="PAN to Bank Account link verification unsuccessful")
 
         # Fetch user from database
         uuid_obj = UUID(user_id)
@@ -438,14 +448,16 @@ class KycService:
         if not user:
             logger.error(f"User not found: {user_id}")
             raise HTTPException(status_code=404, detail="User not found")
+        
+        
 
         # Update or create KYC record
         kyc = await session.get(KYC, user_id)
         if kyc:
             kyc.bank_account_number = bank_account_number
             kyc.bank_ifsc = ifsc_code
-            kyc.pan_bank_linked = result.get("linked_status", False)
-            kyc.status = KycStatus.VERIFIED if result.get("linked_status", False) else KycStatus.PENDING
+            kyc.pan_bank_linked = linked_status
+            kyc.status = KycStatus.VERIFIED if linked_status else KycStatus.PENDING
             kyc.updated_at = datetime.now()
             await session.merge(kyc)
         else: 
