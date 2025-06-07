@@ -5,6 +5,7 @@ import json
 import os
 from fastapi import HTTPException
 from uuid import UUID
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.kyc import KYC, KycStatus
 from src.models.user import User, OnboardingStatus
@@ -363,7 +364,10 @@ class KycService:
             raise HTTPException(status_code=404, detail="User not found")
 
         # Update or create KYC record
-        kyc = await session.get(KYC, user_id)
+        stmt = select(KYC).where(KYC.user_id == user_id)
+        result = await session.execute(stmt)
+        kyc = result.scalars().first()
+        
         if kyc:
             # pull aadhaar num: 
             kyc_aadhaar_num = kyc.aadhaar_number
