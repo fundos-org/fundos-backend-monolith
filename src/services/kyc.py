@@ -211,7 +211,6 @@ class KycService:
             kyc = KYC(
                 user_id=user_id,
                 aadhaar_number=model.get("adharNumber"),
-                status=OnboardingStatus.In_Progress.name,
                 created_at=datetime.now(),
                 updated_at=datetime.now()
             )
@@ -374,13 +373,12 @@ class KycService:
                 kyc.pan_aadhaar_linked = True
 
             kyc.pan_number = result.get("pan")
-            kyc.status = KycStatus.VERIFIED
             kyc.updated_at = datetime.now()
             await session.merge(kyc)
         else:
             result = {
                 "user_id": user_id,
-                "success": True,
+                "success": False,
                 "message": "Verify Aadhaar first",
             }
 
@@ -457,7 +455,7 @@ class KycService:
             kyc.bank_account_number = bank_account_number
             kyc.bank_ifsc = ifsc_code
             kyc.pan_bank_linked = linked_status
-            kyc.status = KycStatus.VERIFIED if linked_status else KycStatus.PENDING
+            kyc.status = KycStatus.VERIFIED.name if linked_status else KycStatus.PENDING.name
             kyc.updated_at = datetime.now()
             await session.merge(kyc)
         else: 
