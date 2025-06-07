@@ -365,9 +365,9 @@ class KycService:
 
         # Update or create KYC record
         stmt = select(KYC).where(KYC.user_id == user_id)
-        result = await session.execute(stmt)
-        kyc = result.scalars().first()
-        
+        db_result = await session.execute(stmt)
+        kyc = db_result.scalars().first()
+
         if kyc:
             # pull aadhaar num: 
             kyc_aadhaar_num = kyc.aadhaar_number
