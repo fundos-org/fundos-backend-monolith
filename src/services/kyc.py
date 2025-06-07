@@ -226,7 +226,12 @@ class KycService:
         self.redis.delete(cache_key)
         logger.info(f"Cleared cache for user_id: {user_id}")
 
-        return model
+        response_data = {
+            "user_id": user_id, 
+            "aadhaar_data": model, 
+            "success": True
+        }
+        return response_data
 
     async def resend_aadhaar_otp(
         self, 
@@ -394,7 +399,13 @@ class KycService:
         await session.refresh(user)
         await session.refresh(kyc)
 
-        return result
+        response_data = {
+            "user_id": user_id,
+            "pan_data" : result, 
+            "success": True
+        }
+
+        return response_data
 
     async def verify_pan_bank_link(
         self, 
@@ -416,7 +427,7 @@ class KycService:
             "client_ref_num": f"pan-bank-{user_id}",
             "pan": pan_number,
             "account_number": bank_account_number,
-            "ifsc": ifsc_code
+            "ifsc_code": ifsc_code
         }
         headers = self.get_auth_header_basic()
 
@@ -451,10 +462,11 @@ class KycService:
             logger.error(f"User not found: {user_id}")
             raise HTTPException(status_code=404, detail="User not found")
         
-        
-
         # Update or create KYC record
-        kyc = await session.get(KYC, user_id)
+        stmt = select(KYC).where(KYC.user_id == user_id)
+        db_result = await session.execute(stmt)
+        kyc = db_result.scalars().first()
+
         if kyc:
             kyc.bank_account_number = bank_account_number
             kyc.bank_ifsc = ifsc_code
@@ -471,4 +483,10 @@ class KycService:
         await session.commit()
         await session.refresh(kyc)
 
-        return result
+        response_data = {
+            "user_id": user_id,
+            "pan_bank_link_data" : result,
+            "success": True
+        }
+
+        return response_data

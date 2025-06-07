@@ -5,6 +5,7 @@ import os
 import json
 import redis
 from fastapi import HTTPException, UploadFile
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.deal import Deal
 from src.services.s3 import S3Service
@@ -194,7 +195,10 @@ class ZohoService:
     ) -> dict:
         """Create a document from a Zoho Sign template with user data."""
         user = await session.get(User, user_id)
-        kyc = await session.get(KYC, user_id)
+        stmt = select(KYC).where(KYC.user_id == user_id)
+        db_result = await session.execute(stmt)
+        kyc = db_result.scalars().first()
+
         if not user or not kyc:
             logger.error(f"User not found: {user_id} or kyc record not found: {user_id}")
             raise HTTPException(status_code=404, detail="User not found")
@@ -622,6 +626,7 @@ class ZohoService:
         self, 
         user_id: UUID, 
         deal_id: UUID,
+        investment_amount: float,
         session: AsyncSession
     ) -> Any: 
         try:
@@ -636,9 +641,9 @@ class ZohoService:
                 raise HTTPException(status_code=401, detail="Unauthorized")
             
             payload = await self.get_drawdown_payload(
-                user, 
-                deal,
-                10000.00
+                user=user, 
+                deal=deal,
+                investment_amount=investment_amount
             )
             
             if not payload:
