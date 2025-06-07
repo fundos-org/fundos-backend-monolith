@@ -276,8 +276,8 @@ class ZohoService:
 
         # set zoho request id value in the db
         user.zoho_request_id = request_id
-        await session.refresh(user)
         await session.commit()
+        await session.refresh(user)
 
         token = await self.get_access_token()
         form_data = {

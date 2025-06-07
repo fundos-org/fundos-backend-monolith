@@ -1,3 +1,4 @@
+import re
 import httpx
 import base64
 import redis
@@ -200,7 +201,12 @@ class KycService:
         user.state = address.get("state")
         user.gender = model.get("gender")
         user.date_of_birth = model.get("dob")
-        user.care_of = model.get("careOf")
+        care_of = model.get("careOf")
+        user.care_of = care_of
+
+        match = re.match(r"(S/O|D/O|C/O)\s+(.*)", care_of, re.IGNORECASE)
+        father_name = match.group(2) if match else None
+        user.father_name = father_name
 
         # Update or create KYC record
         kyc = await session.get(KYC, user_id)
