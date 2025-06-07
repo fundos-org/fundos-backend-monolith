@@ -1,3 +1,4 @@
+import re
 from tempfile import SpooledTemporaryFile
 from typing import Any, Dict
 import httpx
@@ -109,6 +110,12 @@ class ZohoService:
         month = current_date.strftime("%B")
         year = str(current_date.year)
         date = f"{month} {day} {year}"
+        match = re.match(r"(S/O|D/O|C/O)\s+(.*)", user.care_of, re.IGNORECASE)
+        father_name = match.group(2) if match else None
+        date_of_birth = user.date_of_birth
+        dob_obj = datetime.strptime(date_of_birth, "%d-%m-%Y")
+        formatted_dob = dob_obj.strftime("%b %d %Y")
+
 
         # Calculate capital commitment in words
         capital_commitment_in_word = (
@@ -131,7 +138,7 @@ class ZohoService:
                         "address": user.address,
                         "phone": user.phone_number, 
                         "email": user.email,
-                        "father_name": user.father_name, 
+                        "father_name": father_name, 
                         "entity_type": user.investor_type,
                         "law": "Not Applicable",
                         "pan_number": kyc.pan_number,
@@ -145,7 +152,7 @@ class ZohoService:
                     "field_boolean_data": {},
                     "field_date_data": {
                         "date": date,
-                        "date_of_birth": user.date_of_birth
+                        "date_of_birth": formatted_dob
                     },
                     "field_radio_data": {},
                     "field_checkboxgroup_data": {}

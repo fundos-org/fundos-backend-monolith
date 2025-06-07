@@ -393,6 +393,7 @@ class KycService:
 
         user.first_name = f"{result.get('first_name')} {result.get('middle_name')}"
         user.last_name = result.get("last_name")
+        user.full_name = f"{user.first_name} {user.last_name}"
         
         await session.merge(user)
         await session.commit()
