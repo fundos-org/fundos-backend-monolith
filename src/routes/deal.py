@@ -167,13 +167,37 @@ async def send_drawdown_notice(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-@router.get("/document/status")
+@router.get("/document/status", tags=["investor"])
 async def get_doc_status(
     request_id: str = Query(..., description="ID of the request")
 ) -> Any: 
     try:
         result = await zoho_service.get_document_status(
             request_id=request_id
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.get("/mca/status", tags=["investor"])
+async def check_mca_status(
+    user_id: str = Query(..., description="ID of the request")
+) -> Any: 
+    try:
+        result = await zoho_service.check_document_status_by_user_id(
+            user_id=user_id
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.get("/mca/download", tags=["investor"])
+async def download_document(
+    user_id: str = Query(..., description="ID of the request")
+) -> Any: 
+    try:
+        result = await zoho_service.download_mca_pdf(
+            user_id=user_id
         )
         return result
     except Exception as e:

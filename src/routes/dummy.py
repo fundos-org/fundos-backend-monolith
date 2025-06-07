@@ -62,30 +62,6 @@ async def user_verify_phone_otp(
 
     return result
 
-@router.post("/user/invitation/validate")
-async def validate_invitation(
-    data: UserOnboardingStartRequest, 
-    session: Annotated[AsyncSession, Depends(get_session)]
-) -> Dict[str, Any]:
-    
-    result: dict = await dummy_service.verify_invitation_code(
-        invitation_code = data.invitation_code,
-        phone_number=data.phone_number, 
-        session=session
-    ) 
-    if not result["success"]:
-        logger.error(f"Error in validate_invitation: {result['message']}")
-        raise HTTPException(status_code=400, detail="Invalid invitation code")
-    
-    response: Dict = {
-        "user_id": result["user_id"],
-        "message": "new user added",
-        "success": True
-    }
-    logger.info(f"validate_invitation response: {response}")
-
-    return response
-
 @router.post('/user/email/otp/send')
 async def send_email_otp(
     data: EmailSendOtpRequest
@@ -155,6 +131,9 @@ async def declaration(
     data: DeclarationRequest, 
     session: Annotated[AsyncSession, Depends(get_session)]
 ) -> DeclarationResponse: 
+    
+    if not data.declaration_accepted:
+        raise HTTPException(status_code=400, detail="Declaration must be accepted")
 
     result = await dummy_service.declaration_accepted(
         user_id=data.user_id, 
@@ -192,13 +171,13 @@ async def sign_agreement(
 
         # Create document from template
         document_metadata = await zoho_service.create_document_from_template(
-            # user_id=data.user_id,
+            user_id=data.user_id,
             session=session
         )
 
         # Apply e-stamp to the document
         estamp_result = await zoho_service.apply_estamp(
-            # user_id=data.user_id,
+            user_id=data.user_id,
             session=session
         )
 

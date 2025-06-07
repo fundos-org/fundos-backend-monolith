@@ -20,9 +20,9 @@ FROM_EMAIL = mail_configs.from_email
 
 # Redis configuration
 REDIS_HOST = redis_configs.redis_host
-REDIS_PORT = 6379
-REDIS_DB = 0
-CACHE_TTL = 300  # 5 minutes in seconds, aligned with KycService
+REDIS_PORT = redis_configs.redis_port
+REDIS_DB = redis_configs.redis_db
+CACHE_TTL = redis_configs.redis_cache_ttl  # 5 minutes in seconds, aligned with KycService
 
 class EmailService:
     def __init__(self):

@@ -189,18 +189,21 @@ class ZohoService:
     
     async def create_document_from_template(
         self, 
-        # user_id: UUID, 
+        user_id: UUID, 
         session: AsyncSession
     ) -> dict:
         """Create a document from a Zoho Sign template with user data."""
-        # user = await session.get(User, user_id)
-        # kyc = await session.get(KYC, user_id)
-        # if not user or not kyc:
-        #     logger.error(f"User not found: {user_id} or kyc record not found: {user_id}")
-        #     raise HTTPException(status_code=404, detail="User not found")
+        user = await session.get(User, user_id)
+        kyc = await session.get(KYC, user_id)
+        if not user or not kyc:
+            logger.error(f"User not found: {user_id} or kyc record not found: {user_id}")
+            raise HTTPException(status_code=404, detail="User not found")
 
         # Generate payload using get_payload
-        payload = await self.get_mca_payload()
+        payload = await self.get_mca_payload(
+            user=user, 
+            kyc=kyc
+        )
 
         token = await self.get_access_token()
         try:
@@ -227,11 +230,11 @@ class ZohoService:
                     "is_signed": False
                 }
                 self.redis.setex(
-                    self._get_cache_key("iswar", "metadata"), #self._get_cache_key(user_id, "metadata")
+                    self._get_cache_key(user_id, "metadata"),
                     CACHE_TTL,
                     json.dumps(metadata)
                 )
-                logger.info(f"Cached Zoho metadata for user_id: {"iswar"}")
+                logger.info(f"Cached Zoho metadata for user_id: {user_id}")
 
                 return metadata
         except Exception as e:
@@ -318,13 +321,23 @@ class ZohoService:
                     raise HTTPException(status_code=response.status_code, detail="Failed to apply e-stamp")
 
                 data = response.json()
-                return {
+
+                # set zoho request id value in the db
+                user.zoho_request_id = request_id
+                await session.refresh(user)
+                await session.commit()  
+
+                response_data = {
                     "data": data,
                     "request_id": request_id,
                     "document_id": document_id,
                     "success": True
                 }
+
+                return response_data
+            
         except Exception as e:
+            session.close()
             logger.error(f"Error applying e-stamp: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Error applying e-stamp: {str(e)}")
 
@@ -703,3 +716,107 @@ class ZohoService:
             
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to get document status: {str(e)}")
+        
+    async def download_mca_pdf(
+        self,
+        user_id: str,
+        session: AsyncSession
+    ) -> Dict[str, Any]: 
+        
+        try: 
+            token = await self.get_access_token()
+            if not token:
+                raise HTTPException(status_code=401, detail="Unauthorized: token not found")
+            
+            user_uuid = UUID(user_id)
+            if not user_uuid:
+                raise HTTPException(status_code=400, detail=f"Invalid user UUID: {user_id}")
+            
+            user = await session.get(User, user_uuid)
+            if not user:
+                raise HTTPException(status_code=404, detail=f"User not found: {user_id}")
+            
+            if not user.zoho_request_id:
+                raise HTTPException(status_code=404, detail=f"request id for document not found: {user_id}")
+
+            request_id = user.zoho_request_id
+            logger.info(f"request_id for user_id: {user_id} is {request_id}")
+            
+            async with httpx.AsyncClient(timeout=30.0) as client: 
+                response = await client.get(
+                    f"{self.base_url}/requests/{request_id}/pdf",
+                    headers={
+                        "Authorization": f"Zoho-oauthtoken {token}"
+                    }
+                )
+                if response.status_code != 200:
+                    raise HTTPException(status_code=response.status_code, detail="Failed to download signed pdf")
+                
+                data = response.json()
+                return data
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to download signed pdf: {str(e)}")
+        
+    async def check_document_status_by_user_id(
+        self, 
+        user_id: str,
+        session: AsyncSession
+    ) -> Dict[str, Any]:
+        try:
+            token = await self.get_access_token()
+            if not token:
+                raise HTTPException(status_code=401, detail="Unauthorized: token not found")
+            
+            user_uuid = UUID(user_id)
+            if not user_uuid:
+                raise HTTPException(status_code=400, detail=f"Invalid user UUID: {user_id}")
+            
+            user = await session.get(User, user_uuid)
+            if not user:
+                raise HTTPException(status_code=404, detail=f"User not found: {user_id}")
+            
+            if not user.zoho_request_id:
+                raise HTTPException(status_code=404, detail=f"request id for document not found: {user_id}")
+            
+            request_id = user.zoho_request_id
+            
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{self.base_url}/requests/{request_id}",
+                    headers={
+                        "Authorization": f"Zoho-oauthtoken {token}"
+                    }
+                )
+                if response.status_code != 200:
+                    raise HTTPException(status_code=response.status_code, detail="Failed to get document status")
+                
+                data = response.json()
+                requests_data = data.get("requests", {})
+                
+                # Extract and sanitize fields from requests
+                response_data = {
+                    "request_id": str(data.get("request_id", "")),
+                    "sent_status": str(data.get("status", "")),
+                    "message": str(data.get("message", "")),
+                    "request_status": str(requests_data.get("request_status", "")),
+                    "is_deleted": bool(requests_data.get("is_deleted", False)),
+                    "request_name": str(requests_data.get("request_name", "")),
+                    "expiration_days": int(requests_data.get("expiration_days", 0)),
+                    "sign_percentage": float(requests_data.get("sign_percentage", 0.0)),
+                    "owner_email": str(requests_data.get("owner_email", "")),
+                    "actions": [
+                        {
+                            "recipient_email": str(action.get("recipient_email", "")),
+                            "recipient_phone_number": str(action.get("recipient_phonenumber", "")),
+                            "recipient_name": str(action.get("recipient_name", "")),
+                            "delivery_mode": str(action.get("delivery_mode", "")),
+                            "action_status": str(action.get("action_status", ""))
+                        } for action in requests_data.get("actions", [])
+                    ]
+                }
+                
+                return response_data
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to check document status: {str(e)}")
