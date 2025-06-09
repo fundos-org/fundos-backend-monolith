@@ -27,7 +27,7 @@ class DealService:
         self.bucket_name = aws_config.aws_bucket
         self.folder_prefix = aws_config.aws_deals_folder
         self.s3_service = S3Service(bucket_name=self.bucket_name, region_name=aws_config.aws_region)
-        self.redis = redis.Redis(
+        self.redis_client = redis.Redis(
             host=REDIS_HOST,
             port=REDIS_PORT,
             db=REDIS_DB,
