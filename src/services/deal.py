@@ -71,42 +71,15 @@ class DealService:
 
             # Schedule background upload
             background_tasks.add_task(
-                self._complete_upload,
-                object_id=object_id,
+                self.s3_service.background_upload_file,
                 file_content=file_content,
-                filename=file.filename,
-                bucket_name=self.bucket_name,
-                folder_prefix=folder_prefix,
-                object_name=object_name
+                object_name=object_name,
+                content_type=file.content_type
             )
             return object_name
         except Exception as e:
             logger.error(f"Failed to schedule file upload: {str(e)}")
             raise HTTPException(status_code=500, detail="Failed to schedule file upload")
-
-    async def _complete_upload(
-        self, 
-        object_id: UUID, 
-        file_content: bytes, 
-        filename: str, 
-        bucket_name: str, 
-        folder_prefix: str, 
-        object_name: str
-    ):
-        """Complete the S3 upload and update Redis status."""
-        try:
-            await self.s3_service.upload_file_background(
-                file_content=file_content,
-                filename=filename,
-                bucket_name=bucket_name,
-                folder_prefix=folder_prefix,
-                object_id=object_id
-            )
-            await self.redis_client.setex(f"upload:{object_name}", 86400, "completed")
-        except Exception as e:
-            logger.error(f"Background upload failed for {object_name}: {str(e)}")
-            await self.redis_client.setex(f"upload:{object_name}", 86400, "failed")
-            raise
 
     async def _check_upload_status(self, object_key: str) -> bool:
         """Check if an S3 upload is complete."""
@@ -372,26 +345,6 @@ class DealService:
                 "agreed_to_terms": is_startup,
             })
 
-            # Verify upload completion and generate presigned URLs
-            logo_url = None
-            pitch_deck_url = None
-            pitch_video_url = None
-            if deal_data.get("logo_key") and await self._check_upload_status(deal_data["logo_key"]):
-                logo_url = await self.s3_service.generate_presigned_url(deal_data["logo_key"])
-            if deal_data.get("pitch_deck_key") and await self._check_upload_status(deal_data["pitch_deck_key"]):
-                pitch_deck_url = await self.s3_service.generate_presigned_url(deal_data["pitch_deck_key"])
-            if deal_data.get("pitch_video_key") and await self._check_upload_status(deal_data["pitch_video_key"]):
-                pitch_video_url = await self.s3_service.generate_presigned_url(deal_data["pitch_video_key"])
-
-            # Log warning if uploads are incomplete
-            if deal_data.get("logo_key") and not await self._check_upload_status(deal_data["logo_key"]):
-                logger.warning(f"Logo upload incomplete for deal {deal_id}")
-            if deal_data.get("pitch_deck_key") and not await self._check_upload_status(deal_data["pitch_deck_key"]):
-                logger.warning(f"Pitch deck upload incomplete for deal {deal_id}")
-            if deal_data.get("pitch_video_key") and not await self._check_upload_status(deal_data["pitch_video_key"]):
-                logger.warning(f"Pitch video upload incomplete for deal {deal_id}")
-
-            # Type-safe conversion for Deal model
             try:
                 deal = Deal(
                     id=uuid.UUID(deal_data["id"]),
@@ -402,7 +355,7 @@ class DealService:
                     company_name=deal_data.get("company_name"),
                     about_company=deal_data.get("about_company"),
                     company_website=deal_data.get("company_website"),
-                    logo_url=logo_url,
+                    logo_url=deal_data.get("logo_key"),
                     industry=deal_data.get("industry"),
                     problem_statement=deal_data.get("problem_statement"),
                     business_model=BusinessModel(deal_data["business_model"]) if deal_data.get("business_model") else None,
@@ -411,8 +364,8 @@ class DealService:
                     current_valuation=float(deal_data["current_valuation"]) if deal_data.get("current_valuation") else None,
                     round_size=float(deal_data["round_size"]) if deal_data.get("round_size") else None,
                     syndicate_commitment=float(deal_data["syndicate_commitment"]) if deal_data.get("syndicate_commitment") else None,
-                    pitch_deck_url=pitch_deck_url,
-                    pitch_video_url=pitch_video_url,
+                    pitch_deck_url=deal_data.get("pitch_deck_key"),
+                    pitch_video_url=deal_data.get("pitch_video_key"),
                     instrument_type=InstrumentType(deal_data["instrument_type"]) if deal_data.get("instrument_type") else None,
                     conversion_terms=deal_data.get("conversion_terms"),
                     agreed_to_terms=bool(deal_data["agreed_to_terms"]) if deal_data.get("agreed_to_terms") is not None else False,
@@ -434,7 +387,6 @@ class DealService:
                     await self.redis_client.delete(f"upload:{key}")
 
             return deal
-
         except ValueError as ve:
             logger.error(f"Invalid UUID: {str(ve)}")
             raise HTTPException(status_code=400, detail="Invalid UUID format for deal_id")

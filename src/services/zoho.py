@@ -458,8 +458,6 @@ class ZohoService:
 
         # Update user record
         user.mca_key = object_key
-        user.onboarding_status = OnboardingStatus.Completed.name
-        user.agreement_signed = True
         session.add(user)
         try:
             await session.commit()

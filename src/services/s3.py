@@ -1,6 +1,6 @@
 import boto3
 from botocore.exceptions import ClientError
-from fastapi import UploadFile, HTTPException
+from fastapi import UploadFile, HTTPException, BackgroundTasks
 from typing import Optional
 from urllib.parse import urlparse
 from uuid import UUID
@@ -37,6 +37,25 @@ class S3Service:
             logger.error(f"S3 upload failed: {str(e)}")
             raise HTTPException(status_code=500, detail="Failed to upload to S3")
         return object_name
+
+    async def background_upload_file(
+        self, 
+        file_content: bytes, 
+        object_name: str, 
+        content_type: str
+    ) -> None:
+        """Upload file content to S3 in the background."""
+        try:
+            self.s3_client.put_object(
+                Body=file_content,
+                Bucket=self.bucket_name,
+                Key=object_name,
+                ContentType=content_type
+            )
+            logger.info(f"Successfully uploaded {object_name} to S3")
+        except ClientError as e:
+            logger.error(f"Background S3 upload failed for {object_name}: {str(e)}")
+            raise
 
     async def generate_presigned_url(self, object_name: str, expiration: int = 3600) -> str:
         """

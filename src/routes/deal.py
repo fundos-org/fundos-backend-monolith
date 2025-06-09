@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, BackgroundTasks
 from starlette import status
 from src.services.zoho import ZohoService
 from src.db.session import get_session
@@ -23,32 +23,42 @@ zoho_service = ZohoService()
 async def create_deal_draft(
     data: DealCreateRequest, 
     session: Annotated[AsyncSession, Depends(get_session)]
-) -> DealCreateResponse:
+) -> Any:
     try:
         deal = await deal_service.create_draft(
             fund_manager_id=data.fund_manager_id, 
             session=session
         )
-        return DealCreateResponse(deal_id=deal.id, message="Deal draft created")
+        return {
+            "deal_data": deal, 
+            "message": "Deal draft created", 
+            "success": True
+        }
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to create deal draft: {str(e)}")
 
 @router.post("/web/company-details")
 async def update_company_details(
     session: Annotated[AsyncSession, Depends(get_session)],
+    background_tasks: BackgroundTasks,
     data: CompanyDetailsRequest = Depends(), 
     logo: UploadFile = File(...)
-) -> DealCreateResponse:
+) -> Any:
     try:
         deal = await deal_service.update_company_details(
             deal_id=data.deal_id,
-            logo= logo,
+            logo=logo,
             company_name=data.company_name,
             about_company=data.about_company,
             company_website=data.company_website,
-            session=session
+            session=session,
+            background_tasks=background_tasks
         )
-        return DealCreateResponse(deal_id=deal.id, message="Company details updated")
+        return {
+            "deal_data": deal, 
+            "message": "Company details updated", 
+            "success": True
+        }
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update company details: {str(e)}")
 
@@ -56,7 +66,7 @@ async def update_company_details(
 async def update_industry_problem(
     data: IndustryProblemRequest, 
     session: Annotated[AsyncSession, Depends(get_session)]
-) -> DealCreateResponse:
+) -> Any:
     try:
         deal = await deal_service.update_industry_problem(
             deal_id=data.deal_id,
@@ -65,7 +75,11 @@ async def update_industry_problem(
             business_model=data.business_model,
             session=session
         )
-        return DealCreateResponse(deal_id=deal.id, message="Industry and problem details updated")
+        return {
+            "deal_data": deal, 
+            "message": "Industry and problem details updated", 
+            "success": True
+        }
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update industry and problem details: {str(e)}")
 
@@ -73,7 +87,7 @@ async def update_industry_problem(
 async def update_customer_segment( 
     data: CustomerSegmentRequest, 
     session: Annotated[AsyncSession, Depends(get_session)]
-) -> DealCreateResponse:
+) -> Any:
     try:
         deal = await deal_service.update_customer_segment(
             deal_id=data.deal_id,
@@ -81,17 +95,22 @@ async def update_customer_segment(
             target_customer_segment=data.target_customer_segment,
             session=session
         )
-        return DealCreateResponse(deal_id=deal.id, message="Customer segment updated")
+        return {
+            "deal_data": deal, 
+            "message": "Customer segment updated", 
+            "success": True
+        }
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update customer segment: {str(e)}")
 
 @router.post("/web/valuation")
 async def update_valuation(
     session: Annotated[AsyncSession, Depends(get_session)], 
+    background_tasks: BackgroundTasks,
     data: ValuationRequest = Depends(), 
     pitch_deck: UploadFile = File(...), 
     pitch_video: UploadFile = File(...)
-) -> DealCreateResponse:
+) -> Any:
     try:
         deal = await deal_service.update_valuation(
             deal_id=data.deal_id,
@@ -100,9 +119,14 @@ async def update_valuation(
             syndicate_commitment=data.syndicate_commitment,
             pitch_deck=pitch_deck, 
             pitch_video=pitch_video,
-            session=session
+            session=session,
+            background_tasks=background_tasks
         )
-        return DealCreateResponse(deal_id=deal.id, message="Valuation details updated")
+        return {
+            "deal_data": deal, 
+            "message": "Valuation details updated", 
+            "success": True
+        }
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update valuation details: {str(e)}")
 
@@ -110,7 +134,7 @@ async def update_valuation(
 async def update_securities( 
     data: SecuritiesRequest, 
     session: Annotated[AsyncSession, Depends(get_session)]
-) -> DealCreateResponse:
+) -> Any:
     try:
         deal = await deal_service.update_securities(
             deal_id=data.deal_id,
@@ -119,7 +143,11 @@ async def update_securities(
             is_startup=data.is_startup,
             session=session
         )
-        return DealCreateResponse(deal_id=deal.id, message="Securities details updated")
+        return {
+            "deal_data": deal, 
+            "message": "Securities details updated", 
+            "success": True
+        }
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update securities details: {str(e)}")
 
@@ -168,7 +196,7 @@ async def send_drawdown_notice(
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 @router.get("/document/status", tags=["investor"])
 async def get_doc_status(
     request_id: str = Query(..., description="ID of the request")
@@ -180,7 +208,7 @@ async def get_doc_status(
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 @router.get("/mca/status", tags=["investor"])
 async def check_mca_status(
     session: Annotated[AsyncSession, Depends(get_session)],
@@ -194,7 +222,7 @@ async def check_mca_status(
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 @router.get("/mca/download", tags=["investor"])
 async def download_document(
     session: Annotated[AsyncSession, Depends(get_session)],

@@ -42,7 +42,7 @@ class AwsConfigs(BaseSettings):
     aws_deals_folder: str = "subadmin/deals"
     aws_profile_pictures_folder: str = "users/profile_pictures"
     aws_subadmin_profile_pictures_folder: str = "subadmin/profile_pictures"
-    aws_mca_folder: str = "user/mca_documents"
+    aws_mca_folder: str = "users/mca_documents"
 
     model_config = SettingsConfigDict(
         env_file=".env",
