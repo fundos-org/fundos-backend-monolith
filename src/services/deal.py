@@ -425,29 +425,8 @@ class DealService:
             HTTPException: If deal not found or retrieval fails
         """
         try:
-            # Try cache first
-            try:
-                cached_data = await self._get_cached_deal_data(deal_id)
-                logo_url = None
-                if cached_data.get("logo_key") and await self._check_upload_status(cached_data["logo_key"]):
-                    logo_url = await self.s3_service.generate_presigned_url(cached_data["logo_key"])
-                return {
-                    "deal_id": cached_data["id"],
-                    "description": cached_data.get("about_company"),
-                    "title": cached_data.get("company_name"),
-                    "current_valuation": float(cached_data["current_valuation"]) if cached_data.get("current_valuation") else None,
-                    "round_size": float(cached_data["round_size"]) if cached_data.get("round_size") else None,
-                    "minimum_investment": "5L",
-                    "commitment": float(cached_data["syndicate_commitment"]) if cached_data.get("syndicate_commitment") else None,
-                    "instruments": cached_data.get("instrument_type"),
-                    "valuation_type": "Priced",
-                    "fund_raised_till_now": 0,
-                    "logo_url": logo_url,
-                }
-            except HTTPException:
-                pass  # Not in cache, check database
 
-            deal = await get_deal(deal_id=deal_id, session=session)
+            deal = await session.get(Deal, deal_id)
             if not deal:
                 raise HTTPException(status_code=404, detail="Deal not found")
             
