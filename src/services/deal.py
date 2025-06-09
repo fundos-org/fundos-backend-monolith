@@ -10,20 +10,29 @@ from sqlmodel import UUID
 from src.models.deal import Deal, DealStatus, BusinessModel, CompanyStage, TargetCustomerSegment, InstrumentType
 from src.services.s3 import S3Service
 from src.utils.dependencies import get_deal
-from src.configs.configs import aws_config
+from src.configs.configs import aws_config, redis_configs
 import redis.asyncio as redis
 import json
 import uuid
 import mimetypes
 
 logger = get_logger(__name__)
+REDIS_HOST = redis_configs.redis_host 
+REDIS_PORT = redis_configs.redis_port
+REDIS_DB = redis_configs.redis_db
+CACHE_TTL = redis_configs.redis_cache_ttl  # 7 days for Zoho metadata
 
 class DealService:
     def __init__(self):
         self.bucket_name = aws_config.aws_bucket
         self.folder_prefix = aws_config.aws_deals_folder
         self.s3_service = S3Service(bucket_name=self.bucket_name, region_name=aws_config.aws_region)
-        self.redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        self.redis = redis.Redis(
+            host=REDIS_HOST,
+            port=REDIS_PORT,
+            db=REDIS_DB,
+            decode_responses=True
+        )
 
     async def _cache_deal_data(self, deal_id: UUID, data: Dict):
         """Cache deal data in Redis with a TTL of 24 hours."""
