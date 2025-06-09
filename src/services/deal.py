@@ -1,5 +1,5 @@
 from datetime import datetime
-from fastapi import HTTPException, UploadFile
+from fastapi import HTTPException, UploadFile, BackgroundTasks
 from typing import Any, Dict
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -7,10 +7,15 @@ from src.models.subadmin import Subadmin
 from src.models.user import User
 from src.logging.logging_setup import get_logger
 from sqlmodel import UUID
-from src.models.deal import Deal, DealStatus
+from src.models.deal import Deal, DealStatus, BusinessModel, CompanyStage, TargetCustomerSegment, InstrumentType
 from src.services.s3 import S3Service
 from src.utils.dependencies import get_deal
 from src.configs.configs import aws_config
+import redis.asyncio as redis
+import json
+import uuid
+import mimetypes
+
 logger = get_logger(__name__)
 
 class DealService:
@@ -18,39 +23,128 @@ class DealService:
         self.bucket_name = aws_config.aws_bucket
         self.folder_prefix = aws_config.aws_deals_folder
         self.s3_service = S3Service(bucket_name=self.bucket_name, region_name=aws_config.aws_region)
+        self.redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+
+    async def _cache_deal_data(self, deal_id: UUID, data: Dict):
+        """Cache deal data in Redis with a TTL of 24 hours."""
+        try:
+            await self.redis_client.setex(
+                f"deal:{deal_id}", 
+                86400,  # 24 hours TTL
+                json.dumps(data, default=str)
+            )
+        except Exception as e:
+            logger.error(f"Failed to cache deal data: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to cache deal data")
+
+    async def _get_cached_deal_data(self, deal_id: UUID) -> Dict:
+        """Retrieve deal data from Redis."""
+        try:
+            cached_data = await self.redis_client.get(f"deal:{deal_id}")
+            if not cached_data:
+                raise HTTPException(status_code=404, detail="Deal not found in cache")
+            return json.loads(cached_data)
+        except Exception as e:
+            logger.error(f"Failed to retrieve cached deal data: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to retrieve cached deal data")
+
+    async def _upload_file_background(
+        self, 
+        background_tasks: BackgroundTasks, 
+        object_id: UUID, 
+        file: UploadFile, 
+        folder_prefix: str
+    ) -> str:
+        """Schedule S3 file upload as a background task and return object key."""
+        try:
+            file_content = await file.read()
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            file_extension = mimetypes.guess_extension(file.content_type) or '.jpg'
+            object_name = f"{folder_prefix}{object_id}_{timestamp}{file_extension}"
+
+            # Track upload status in Redis
+            await self.redis_client.setex(
+                f"upload:{object_name}", 
+                86400,  # Same TTL as deal data
+                "pending"
+            )
+
+            # Schedule background upload
+            background_tasks.add_task(
+                self._complete_upload,
+                object_id=object_id,
+                file_content=file_content,
+                filename=file.filename,
+                bucket_name=self.bucket_name,
+                folder_prefix=folder_prefix,
+                object_name=object_name
+            )
+            return object_name
+        except Exception as e:
+            logger.error(f"Failed to schedule file upload: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to schedule file upload")
+
+    async def _complete_upload(
+        self, 
+        object_id: UUID, 
+        file_content: bytes, 
+        filename: str, 
+        bucket_name: str, 
+        folder_prefix: str, 
+        object_name: str
+    ):
+        """Complete the S3 upload and update Redis status."""
+        try:
+            await self.s3_service.upload_file_background(
+                file_content=file_content,
+                filename=filename,
+                bucket_name=bucket_name,
+                folder_prefix=folder_prefix,
+                object_id=object_id
+            )
+            await self.redis_client.setex(f"upload:{object_name}", 86400, "completed")
+        except Exception as e:
+            logger.error(f"Background upload failed for {object_name}: {str(e)}")
+            await self.redis_client.setex(f"upload:{object_name}", 86400, "failed")
+            raise
+
+    async def _check_upload_status(self, object_key: str) -> bool:
+        """Check if an S3 upload is complete."""
+        status = await self.redis_client.get(f"upload:{object_key}")
+        if status != "completed":
+            logger.warning(f"Upload not completed for {object_key}, status: {status}")
+            return False
+        return True
 
     async def create_draft(
         self, 
         fund_manager_id: UUID, 
         session: AsyncSession
-    ) -> Deal:
+    ) -> Dict:
         """
-        Creates a new deal draft for a fund manager.
+        Creates a new deal draft and stores it in Redis.
 
         Args:
             fund_manager_id: ID of the fund manager creating the deal
-            db: SQLAlchemy AsyncSession for database operations
+            session: SQLAlchemy AsyncSession for database operations
 
         Returns:
-            Deal: The created deal object
+            Dict: The created deal data
 
         Raises:
             HTTPException: If there's an error during creation
         """
         try:
-            deal_row = Deal(
-                fund_manager_id=fund_manager_id,
-                status= DealStatus.OPEN, 
-                created_at=datetime.now()
-            )
-            session.add(deal_row)
-            await session.commit()
-            await session.refresh(deal_row)
-            return deal_row
-
+            deal_id = uuid.uuid4()
+            deal_data = {
+                "id": str(deal_id),
+                "fund_manager_id": str(fund_manager_id),
+                "status": DealStatus.ON_HOLD.value,
+            }
+            await self._cache_deal_data(deal_id, deal_data)
+            return deal_data
         except Exception as e:
             logger.error(f"Failed to create deal draft: {str(e)}")
-            await session.rollback()
             raise HTTPException(status_code=500, detail="Internal server error")
 
     async def update_company_details(
@@ -60,49 +154,47 @@ class DealService:
         company_name: str, 
         about_company: str, 
         company_website: str,
-        session: AsyncSession
-    ) -> Deal:
+        session: AsyncSession,
+        background_tasks: BackgroundTasks
+    ) -> Dict:
         """
-        Updates the company details for a deal.
+        Updates the company details for a deal in Redis.
 
         Args:
             deal_id: UUID of the deal to update
+            logo: Company logo
             company_name: Name of the company
             about_company: Description of the company
             company_website: Website URL of the company
             session: SQLAlchemy AsyncSession for database operations
+            background_tasks: FastAPI BackgroundTasks for async operations
 
         Returns:
-            Deal: Updated deal object
+            Dict: Updated deal data
 
         Raises:
             HTTPException: If deal not found or update fails
         """
         try:
-            deal = await get_deal(deal_id = deal_id, session = session)
-            if not deal:
-                raise HTTPException(status_code=404, detail="Deal not found")
-
-            deal.company_name = company_name
-            deal.about_company = about_company
-            deal.company_website = company_website
-            deal.logo_url = await self.s3_service.upload_and_get_url(
+            deal_data = await self._get_cached_deal_data(deal_id)
+            logo_key = await self._upload_file_background(
+                background_tasks=background_tasks,
                 object_id=deal_id,
                 file=logo,
-                bucket_name=f"{self.bucket_name}",
-                folder_prefix=f"{self.folder_prefix}/logos/",
+                folder_prefix=f"{self.folder_prefix}/logos/"
             )
-            deal.updated_at = datetime.now()
-
-            await session.commit()
-            await session.refresh(deal)
-            return deal
-
+            deal_data.update({
+                "company_name": company_name,
+                "about_company": about_company,
+                "company_website": company_website,
+                "logo_key": logo_key
+            })
+            await self._cache_deal_data(deal_id, deal_data)
+            return deal_data
         except HTTPException as he:
             raise he
         except Exception as e:
             logger.error(f"Failed to update company details: {str(e)}")
-            await session.rollback()
             raise HTTPException(status_code=500, detail="Internal server error")
 
     async def update_industry_problem(
@@ -112,9 +204,9 @@ class DealService:
         problem_statement: str, 
         business_model: str, 
         session: AsyncSession
-    ) -> Deal:
+    ) -> Dict:
         """
-        Updates industry, problem statement, and business model for a deal.
+        Updates industry, problem statement, and business model for a deal in Redis.
 
         Args:
             deal_id: UUID of the deal to update
@@ -124,72 +216,66 @@ class DealService:
             session: SQLAlchemy AsyncSession for database operations
 
         Returns:
-            Deal: Updated deal object
+            Dict: Updated deal data
 
         Raises:
             HTTPException: If deal not found or update fails
         """
         try:
-            deal = await get_deal(deal_id = deal_id, session = session)
-            if not deal:
-                raise HTTPException(status_code=404, detail="Deal not found")
-
-            deal.industry = industry
-            deal.problem_statement = problem_statement
-            deal.business_model = business_model
-            deal.updated_at = datetime.now()
-
-            await session.commit()
-            await session.refresh(deal)
-            return deal
-
+            deal_data = await self._get_cached_deal_data(deal_id)
+            if business_model not in [e.value for e in BusinessModel]:
+                raise HTTPException(status_code=400, detail=f"Invalid business_model: {business_model}")
+            deal_data.update({
+                "industry": industry,
+                "problem_statement": problem_statement,
+                "business_model": business_model,
+            })
+            await self._cache_deal_data(deal_id, deal_data)
+            return deal_data
         except HTTPException as he:
             raise he
         except Exception as e:
             logger.error(f"Failed to update industry and problem details: {str(e)}")
-            await session.rollback()
             raise HTTPException(status_code=500, detail="Internal server error")
 
     async def update_customer_segment(
         self, 
         deal_id: UUID, 
         target_customer_segment: str, 
-        company_stage: str, 
+        company_stage: str,
         session: AsyncSession
-    ) -> Deal:
+    ) -> Dict:
         """
-        Updates customer segment details for a deal.
+        Updates customer segment details for a deal in Redis.
 
         Args:
             deal_id: UUID of the deal to update
             target_customer_segment: Target customer segment
-            customer_segment_type: Type of customer segment
+            company_stage: Stage of the company
             session: SQLAlchemy AsyncSession for database operations
 
         Returns:
-            Deal: Updated deal object
+            Dict: Updated deal data
 
         Raises:
             HTTPException: If deal not found or update fails
         """
         try:
-            deal = await get_deal(deal_id = deal_id, session = session)
-            if not deal:
-                raise HTTPException(status_code=404, detail="Deal not found")
-
-            deal.target_customer_segment = target_customer_segment
-            deal.company_stage = company_stage
-            deal.updated_at = datetime.now()
-
-            await session.commit()
-            await session.refresh(deal)
-            return deal
-
+            deal_data = await self._get_cached_deal_data(deal_id)
+            if target_customer_segment not in [e.value for e in TargetCustomerSegment]:
+                raise HTTPException(status_code=400, detail=f"Invalid target_customer_segment: {target_customer_segment}")
+            if company_stage not in [e.value for e in CompanyStage]:
+                raise HTTPException(status_code=400, detail=f"Invalid company_stage: {company_stage}")
+            deal_data.update({
+                "target_customer_segment": target_customer_segment,
+                "company_stage": company_stage,
+            })
+            await self._cache_deal_data(deal_id, deal_data)
+            return deal_data
         except HTTPException as he:
             raise he
         except Exception as e:
             logger.error(f"Failed to update customer segment: {str(e)}")
-            await session.rollback()
             raise HTTPException(status_code=500, detail="Internal server error")
 
     async def update_valuation(
@@ -200,55 +286,55 @@ class DealService:
         syndicate_commitment: float,
         pitch_deck: UploadFile,
         pitch_video: UploadFile, 
-        session: AsyncSession
-    ) -> Deal:
+        session: AsyncSession,
+        background_tasks: BackgroundTasks
+    ) -> Dict:
         """
-        Updates valuation details for a deal.
+        Updates valuation details for a deal in Redis.
 
         Args:
             deal_id: UUID of the deal to update
             current_valuation: Current valuation of the company
             round_size: Size of the funding round
             syndicate_commitment: Syndicate's commitment amount
+            pitch_deck: Pitch deck file
+            pitch_video: Pitch video file
             session: SQLAlchemy AsyncSession for database operations
+            background_tasks: FastAPI BackgroundTasks for async operations
 
         Returns:
-            Deal: Updated deal object
+            Dict: Updated deal data
 
         Raises:
             HTTPException: If deal not found or update fails
         """
         try:
-            deal = await get_deal(deal_id = deal_id, session = session)
-            if not deal:
-                raise HTTPException(status_code=404, detail="Deal not found")
-
-            deal.current_valuation = current_valuation
-            deal.round_size = round_size
-            deal.syndicate_commitment = syndicate_commitment
-            deal.pitch_deck_url = await self.s3_service.upload_and_get_url(
+            deal_data = await self._get_cached_deal_data(deal_id)
+            pitch_deck_key = await self._upload_file_background(
+                background_tasks=background_tasks,
                 object_id=deal_id,
                 file=pitch_deck,
-                bucket_name=self.bucket_name,
                 folder_prefix=f"{self.folder_prefix}/pitch_decks/"
             )
-            deal.pitch_video_url = await self.s3_service.upload_and_get_url(
+            pitch_video_key = await self._upload_file_background(
+                background_tasks=background_tasks,
                 object_id=deal_id,
-                file=pitch_video, 
-                bucket_name=self.bucket_name,
+                file=pitch_video,
                 folder_prefix=f"{self.folder_prefix}/pitch_videos/"
             )
-            deal.updated_at = datetime.now()
-
-            await session.commit()
-            await session.refresh(deal)
-            return deal
-
+            deal_data.update({
+                "current_valuation": current_valuation,
+                "round_size": round_size,
+                "syndicate_commitment": syndicate_commitment,
+                "pitch_deck_key": pitch_deck_key,
+                "pitch_video_key": pitch_video_key,
+            })
+            await self._cache_deal_data(deal_id, deal_data)
+            return deal_data
         except HTTPException as he:
             raise he
         except Exception as e:
             logger.error(f"Failed to update valuation details: {str(e)}")
-            await session.rollback()
             raise HTTPException(status_code=500, detail="Internal server error")
 
     async def update_securities(
@@ -260,7 +346,7 @@ class DealService:
         session: AsyncSession
     ) -> Deal:
         """
-        Updates securities details for a deal.
+        Updates securities details for a deal and persists to database.
 
         Args:
             deal_id: UUID of the deal to update
@@ -270,62 +356,142 @@ class DealService:
             session: SQLAlchemy AsyncSession for database operations
 
         Returns:
-            Deal: Updated deal object
+            Deal: Updated database deal object
 
         Raises:
             HTTPException: If deal not found or update fails
         """
         try:
-            deal = await get_deal(deal_id=deal_id, session=session)
-            if not deal:
-                raise HTTPException(status_code=404, detail="Deal not found")
+            deal_data = await self._get_cached_deal_data(deal_id)
+            if instrument_type not in [e.value for e in InstrumentType]:
+                raise HTTPException(status_code=400, detail=f"Invalid instrument_type: {instrument_type}")
 
-            deal.instrument_type = instrument_type
-            deal.conversion_terms = conversion_terms
-            deal.agreed_to_terms = is_startup
-            deal.updated_at = datetime.now()
+            deal_data.update({
+                "instrument_type": instrument_type,
+                "conversion_terms": conversion_terms,
+                "agreed_to_terms": is_startup,
+            })
 
+            # Verify upload completion and generate presigned URLs
+            logo_url = None
+            pitch_deck_url = None
+            pitch_video_url = None
+            if deal_data.get("logo_key") and await self._check_upload_status(deal_data["logo_key"]):
+                logo_url = await self.s3_service.generate_presigned_url(deal_data["logo_key"])
+            if deal_data.get("pitch_deck_key") and await self._check_upload_status(deal_data["pitch_deck_key"]):
+                pitch_deck_url = await self.s3_service.generate_presigned_url(deal_data["pitch_deck_key"])
+            if deal_data.get("pitch_video_key") and await self._check_upload_status(deal_data["pitch_video_key"]):
+                pitch_video_url = await self.s3_service.generate_presigned_url(deal_data["pitch_video_key"])
+
+            # Log warning if uploads are incomplete
+            if deal_data.get("logo_key") and not await self._check_upload_status(deal_data["logo_key"]):
+                logger.warning(f"Logo upload incomplete for deal {deal_id}")
+            if deal_data.get("pitch_deck_key") and not await self._check_upload_status(deal_data["pitch_deck_key"]):
+                logger.warning(f"Pitch deck upload incomplete for deal {deal_id}")
+            if deal_data.get("pitch_video_key") and not await self._check_upload_status(deal_data["pitch_video_key"]):
+                logger.warning(f"Pitch video upload incomplete for deal {deal_id}")
+
+            # Type-safe conversion for Deal model
+            try:
+                deal = Deal(
+                    id=uuid.UUID(deal_data["id"]),
+                    fund_manager_id=uuid.UUID(deal_data["fund_manager_id"]),
+                    status=DealStatus(deal_data.get("status", DealStatus.ON_HOLD.value)),
+                    created_at=datetime.now(),
+                    updated_at=datetime.now(),
+                    company_name=deal_data.get("company_name"),
+                    about_company=deal_data.get("about_company"),
+                    company_website=deal_data.get("company_website"),
+                    logo_url=logo_url,
+                    industry=deal_data.get("industry"),
+                    problem_statement=deal_data.get("problem_statement"),
+                    business_model=BusinessModel(deal_data["business_model"]) if deal_data.get("business_model") else None,
+                    company_stage=CompanyStage(deal_data["company_stage"]) if deal_data.get("company_stage") else None,
+                    target_customer_segment=TargetCustomerSegment(deal_data["target_customer_segment"]) if deal_data.get("target_customer_segment") else None,
+                    current_valuation=float(deal_data["current_valuation"]) if deal_data.get("current_valuation") else None,
+                    round_size=float(deal_data["round_size"]) if deal_data.get("round_size") else None,
+                    syndicate_commitment=float(deal_data["syndicate_commitment"]) if deal_data.get("syndicate_commitment") else None,
+                    pitch_deck_url=pitch_deck_url,
+                    pitch_video_url=pitch_video_url,
+                    instrument_type=InstrumentType(deal_data["instrument_type"]) if deal_data.get("instrument_type") else None,
+                    conversion_terms=deal_data.get("conversion_terms"),
+                    agreed_to_terms=bool(deal_data["agreed_to_terms"]) if deal_data.get("agreed_to_terms") is not None else False,
+                    investment_appendix_uploaded=False,
+                    investment_appendix_key=None
+                )
+            except ValueError as ve:
+                logger.error(f"Type conversion error: {str(ve)}")
+                raise HTTPException(status_code=400, detail=f"Invalid data type: {str(ve)}")
+
+            session.add(deal)
             await session.commit()
             await session.refresh(deal)
+
+            # Clean up Redis cache
+            await self.redis_client.delete(f"deal:{deal_id}")
+            for key in [deal_data.get("logo_key"), deal_data.get("pitch_deck_key"), deal_data.get("pitch_video_key")]:
+                if key:
+                    await self.redis_client.delete(f"upload:{key}")
+
             return deal
 
         except ValueError as ve:
             logger.error(f"Invalid UUID: {str(ve)}")
             raise HTTPException(status_code=400, detail="Invalid UUID format for deal_id")
-        
         except HTTPException as he:
             raise he
-        
         except Exception as e:
             logger.error(f"Failed to update securities details: {str(e)}")
             await session.rollback()
             raise HTTPException(status_code=500, detail="Internal server error")
-           
+
     async def get_deal_by_id(
         self, 
         deal_id: UUID, 
         session: AsyncSession
-    ) -> Deal:
+    ) -> Dict:
         """
-        Retrieves a deal by its ID.
+        Retrieves a deal by its ID from cache or database.
 
         Args:
             deal_id: UUID of the deal to retrieve
             session: SQLAlchemy AsyncSession for database operations
 
         Returns:
-            Deal: The requested deal object
+            Dict: Deal data
 
         Raises:
-            HTTPException: If deal is not found or retrieval fails
+            HTTPException: If deal not found or retrieval fails
         """
         try:
+            # Try cache first
+            try:
+                cached_data = await self._get_cached_deal_data(deal_id)
+                logo_url = None
+                if cached_data.get("logo_key") and await self._check_upload_status(cached_data["logo_key"]):
+                    logo_url = await self.s3_service.generate_presigned_url(cached_data["logo_key"])
+                return {
+                    "deal_id": cached_data["id"],
+                    "description": cached_data.get("about_company"),
+                    "title": cached_data.get("company_name"),
+                    "current_valuation": float(cached_data["current_valuation"]) if cached_data.get("current_valuation") else None,
+                    "round_size": float(cached_data["round_size"]) if cached_data.get("round_size") else None,
+                    "minimum_investment": "5L",
+                    "commitment": float(cached_data["syndicate_commitment"]) if cached_data.get("syndicate_commitment") else None,
+                    "instruments": cached_data.get("instrument_type"),
+                    "valuation_type": "Priced",
+                    "fund_raised_till_now": 0,
+                    "logo_url": logo_url,
+                }
+            except HTTPException:
+                pass  # Not in cache, check database
+
             deal = await get_deal(deal_id=deal_id, session=session)
             if not deal:
                 raise HTTPException(status_code=404, detail="Deal not found")
             
             deal_data = {
-                "deal_id": deal.id,
+                "deal_id": str(deal.id),
                 "description": deal.about_company,  
                 "title": deal.company_name, 
                 "current_valuation": deal.current_valuation,
@@ -349,41 +515,53 @@ class DealService:
         self, 
         user_id: UUID,  
         session: AsyncSession
-    ) -> Any: 
+    ) -> Dict:
+        """
+        Retrieves deals by user ID from the database.
+
+        Args:
+            user_id: UUID of the user
+            session: SQLAlchemy AsyncSession for database operations
+
+        Returns:
+            Dict: Containing subadmin and deal details
+
+        Raises:
+            HTTPException: If retrieval fails
+        """
         try:
-            # fetch user details 
+            # Fetch user details
             statement = select(User).where(User.id == user_id)
-            results = await session.execute(statement)
-            user = results.scalars().one()
+            result = await session.execute(statement)
+            user = result.scalars().one()
 
-            # subadmin details 
-
+            # Subadmin details
             subadmin_id = user.fund_manager_id
 
-            # fetch subadmin id
+            # Fetch deals
             statement = select(Deal).where(Deal.fund_manager_id == subadmin_id)
-            results = await session.execute(statement)
-            deals = results.scalars().all()
+            result = await session.execute(statement)
+            deals = result.scalars().all()
 
-            # fetch subadmin details
+            # Fetch subadmin details
             statement = select(Subadmin).where(Subadmin.id == subadmin_id)
-            results = await session.execute(statement)
-            subadmin = results.scalars().one()
+            result = await session.execute(statement)
+            subadmin = result.scalars().one()
 
             # Prepare response
-            response: Dict = {
+            response = {
                 "subadmin_name": subadmin.name,
                 "user_name": f"{user.first_name} {user.last_name}",
-                "subadmin_id": subadmin_id
+                "subadmin_id": str(subadmin_id)
             }
 
-            # Prepare response
+            # Prepare deals data
             deals_data = []
             for deal in deals:
                 deal_data = {
-                    "deal_id": deal.id,
-                    "description": deal.about_company,  
-                    "title": deal.company_name, 
+                    "deal_id": str(deal.id),
+                    "description": deal.about_company,
+                    "title": deal.company_name,
                     "current_valuation": deal.current_valuation,
                     "round_size": deal.round_size,
                     "commitment": deal.syndicate_commitment,
@@ -398,5 +576,3 @@ class DealService:
             logger.error(f"Failed to retrieve deals by User ID: {str(e)}")
             await session.rollback()
             raise HTTPException(status_code=500, detail="Internal server error")
-        except HTTPException as he:
-            raise he

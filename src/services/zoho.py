@@ -16,8 +16,7 @@ from src.logging.logging_setup import get_logger
 from datetime import datetime
 from uuid import UUID
 from num2words import num2words
-from src.configs.configs import zoho_configs
-from src.configs.configs import redis_configs
+from src.configs.configs import zoho_configs, redis_configs, aws_config
 
 # Configure logging
 logger = get_logger(__name__)
@@ -115,6 +114,10 @@ class ZohoService:
         date_of_birth = user.date_of_birth
         dob_obj = datetime.strptime(date_of_birth, "%d-%m-%Y")
         formatted_dob = dob_obj.strftime("%b %d %Y")
+        capital_commitment = float(user.capital_commitment) 
+
+        if not capital_commitment:
+            raise HTTPException(status_code=400, detail="Capital commitment is required")
 
 
         # Calculate capital commitment in words
@@ -143,7 +146,7 @@ class ZohoService:
                         "law": "Not Applicable",
                         "pan_number": kyc.pan_number,
                         "phone_number": user.phone_number,
-                        "capital_commitment": str(user.capital_commitment),
+                        "capital_commitment": str(capital_commitment),
                         "capital_commitment_words": capital_commitment_in_word,
                         "resident": user.country,
                         "tax_identity_number": "Not Applicable",
@@ -764,9 +767,33 @@ class ZohoService:
                 if response.status_code != 200:
                     raise HTTPException(status_code=response.status_code, detail="Failed to download signed pdf")
                 
-                data = response.json()
-                return data
+                pdf_data = response.content
             
+            with SpooledTemporaryFile(max_size=10_000_000, mode='wb') as temp_file:
+                temp_file.write(pdf_data)
+                temp_file.seek(0)
+                upload_file = UploadFile(
+                    filename=f"{user_id}-{request_id}-{int(datetime.now().timestamp())}.pdf",
+                    file=temp_file,
+                    content_type="application/pdf"
+                )
+                # Upload to S3
+                object_key = await self.s3_service.upload_and_get_key(
+                    object_id=UUID(user_id),
+                    file=upload_file,
+                    bucket_name=aws_config.aws_bucket,
+                    folder_prefix=aws_config.aws_deals_folder
+                )
+            # Update user record
+            user.mca_key = object_key
+            await session.commit()
+            await session.refresh(user)
+            
+            return {
+                "mca_key": object_key,
+                "success": True
+            }
+                
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to download signed pdf: {str(e)}")
         

@@ -39,9 +39,10 @@ db_config = DbConfigs()
 class AwsConfigs(BaseSettings): 
     aws_region: str = "ap-south-1"
     aws_bucket: str = "fundos-dev-bucket"
-    aws_deals_folder: str = "deals"
+    aws_deals_folder: str = "subadmin/deals"
     aws_profile_pictures_folder: str = "users/profile_pictures"
     aws_subadmin_profile_pictures_folder: str = "subadmin/profile_pictures"
+    aws_mca_folder: str = "user/mca_documents"
 
     model_config = SettingsConfigDict(
         env_file=".env",
