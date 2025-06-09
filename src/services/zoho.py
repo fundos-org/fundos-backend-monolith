@@ -558,6 +558,7 @@ class ZohoService:
             company_name = deal.company_name
             capital_commitment = user.capital_commitment
             investment_amount_str = f"{investment_amount:,.2f}"
+            drawdown_amount = user.drawdown_amount or 0
 
             # calculate management fee
             investment_commission = investment_amount * (self.management_fee_percentage / 100)
@@ -572,7 +573,7 @@ class ZohoService:
 
             capital_commitment_str = f"{capital_commitment:,.2f}"
 
-            drawdown_so_far = user.drawdown_amount + total_payable # need to add a field for this in user model : user.drawdown_amount
+            drawdown_so_far = drawdown_amount + total_payable # need to add a field for this in user model : user.drawdown_amount
             drawdown_so_far = f"{drawdown_so_far:,.2f}"
 
             undrawn_capital_commitment = capital_commitment - total_payable 
