@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, UploadFile, HTTPException
+from fastapi import APIRouter, Depends, File, Query, UploadFile, HTTPException
 from typing import Any, Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
@@ -89,6 +89,20 @@ async def get_all_subadmins(
     )
     if not result["success"]:
         raise HTTPException(status_code=400, detail="failed to get subadmin details")
+
+    return result
+
+@router.get("/subadmins/send/invitation/")
+async def send_invitation(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    subadmin_id: UUID = Query(..., description="ID of the subadmin")
+) -> Any:
+    result = await admin_services.send_invitation(
+        session=session,
+        subadmin_id=subadmin_id
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="failed to send Invitation email")
 
     return result
 

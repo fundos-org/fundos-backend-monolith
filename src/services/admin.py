@@ -8,6 +8,7 @@ from src.models.subadmin import Subadmin
 from src.schemas.admin import SubadminDetails
 from uuid import UUID
 from src.services.s3 import S3Service
+from src.services.email import EmailService
 from typing import Any
 from datetime import datetime
 from src.configs.configs import aws_config
@@ -20,6 +21,7 @@ class AdminService:
         self.bucket_name = aws_config.aws_bucket
         self.folder_prefix = aws_config.aws_subadmin_profile_pictures_folder
         self.s3_service = S3Service(bucket_name=self.bucket_name, region_name="ap-south-1")
+        self.email_service = EmailService()
 
     async def admin_signin(
         self, 
@@ -222,3 +224,46 @@ class AdminService:
             logger.error(f"Failed to fetch subadmin details: {str(e)}")
             await session.rollback()
             raise HTTPException(status_code=500, detail=f"Failed to fetch subadmin details: {str(e)}")
+
+    async def send_invitation(
+        self,
+        subadmin_id: UUID, 
+        session: AsyncSession
+    ) -> dict:
+        try:
+            subadmin = await session.get(Subadmin, subadmin_id)
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="subadmin not found")
+
+            if subadmin:
+                # Do Sanity check & Send invitation email
+                email_response = await self.email_service.send_invitation_to_subadmin(
+                    email=subadmin.email,
+                    invite_code=subadmin.invite_code,
+                    user_name=subadmin.name or "",
+                    password=subadmin.password or "",
+                    apk_link="https://example.com/invite"
+                )
+
+                is_email_sent = email_response.get("success", False)
+                if not is_email_sent:
+                    raise HTTPException(status_code=400, detail="Failed to send invitation email")
+
+                # Return placeholder response for non-existing user
+                return {
+                    "message": f"Invitation email sent to {subadmin.email}",
+                    "success": True
+                }
+            else:
+                raise HTTPException(status_code=404, detail="subadmin not found")
+            
+        except HTTPException as he:
+            logger.error(f"Failed to add member: {str(he)}")
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to add member: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to add member: {str(e)}"
+            )

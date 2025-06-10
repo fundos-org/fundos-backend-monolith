@@ -2,6 +2,7 @@ import random
 import string
 import smtplib
 from email.message import EmailMessage
+from pydantic import EmailStr
 import redis
 from fastapi import HTTPException
 from typing import Dict, Any
@@ -174,6 +175,56 @@ class EmailService:
             msg['From'] = f"fundos <{FROM_EMAIL}>"
             msg['To'] = email
             msg.set_content(f"You have been invited by {subadmin_name or 'the team'} to join their subadmin team. Please click on the link to accept: {invite_link}")
+            msg.add_alternative(body_html, subtype='html')
+
+            # Send email via SMTP
+            try:
+                with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=30.0) as server:
+                    server.starttls()
+                    server.login(self.smtp_username, self.smtp_password)
+                    server.send_message(msg)
+                logger.info(f"Invitation email sent successfully to {email}")
+            except smtplib.SMTPException as e:
+                logger.error(f"SMTP error while sending invitation email: {str(e)}")
+                raise HTTPException(status_code=500, detail=f"Failed to send invitation email: {str(e)}")
+
+            return {
+                "message": "Invitation sent successfully",
+                "success": True
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to send invitation email: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to send invitation email: {str(e)}")
+        
+    async def send_invitation_to_subadmin(
+        self, 
+        email: EmailStr, 
+        invite_code: str,
+        user_name: str = "",
+        password: str = "",
+        apk_link: str = "https://example.com/invite"
+    ) -> Any: 
+        """Send an invitation email using Zoho ZeptoMail SMTP."""
+        try:
+            invite_link = f"{apk_link}?invite_code={invite_code}&email={email}"
+            subject = "You have been invited to join a subadmin team"
+            body_html = f"""
+                <div>
+                    <p>Hi {user_name or 'User'},</p>
+                    <p>You have been invited by Team FundOS to join as a fund manager.</p>
+                    <p>Please click on the following link to accept the invitation: <a href="{invite_link}">{invite_link}</a></p>
+                    <p>Thank you,</p>
+                    <p>Best regards,<br>{'FundOS'}</p>
+                </div>
+            """
+
+            # Prepare email
+            msg = EmailMessage()
+            msg['Subject'] = subject
+            msg['From'] = f"fundos <{FROM_EMAIL}>"
+            msg['To'] = email
+            msg.set_content(f"You have been invited by {'Team FundOS'} to join as a fund manager.\n Here are your credentials:\n Username: {user_name}\n Password: {password}\n Share this Invite code to Onboard investors")
             msg.add_alternative(body_html, subtype='html')
 
             # Send email via SMTP
