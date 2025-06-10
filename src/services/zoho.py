@@ -604,8 +604,8 @@ class ZohoService:
                     "notes": "",
                     "actions": [
                         {
-                            "recipient_name": investor_name,
-                            "recipient_email": investor_email,
+                            "recipient_name": "Amit Tyagi",
+                            "recipient_email": "amit@fundos.solutions",
                             "action_id": "80016000000209128",
                             "action_type": "SIGN",
                             "signing_order": 1,
