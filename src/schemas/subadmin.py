@@ -68,9 +68,15 @@ class SubAdminDealsStatisticsRes(BaseModel):
 
 class DealDetail(BaseModel):
     deal_id: str
-    company_name: str
-    status: str
+    description: str
+    title: str
+    deal_status: str
+    current_valuation: float
     round_size: float
+    commitment: float
+    business_model: str
+    company_stage: str 
+    logo_url: str
     created_at: str
 
 class SubAdminDealsOverviewRes(BaseModel):

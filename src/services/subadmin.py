@@ -465,20 +465,32 @@ class SubAdminService:
             active_deals_list = [
                 {
                     "deal_id": str(deal.id),
-                    "company_name": deal.company_name or "Unknown",
-                    "status": deal.status.value,
-                    "round_size": float(deal.round_size or 0),
-                    "created_at": deal.created_at.isoformat()
+                    "description": deal.about_company,
+                    "title": deal.company_name,
+                    "deal_status": deal.status,
+                    "current_valuation": deal.current_valuation,
+                    "round_size": deal.round_size,
+                    "commitment": deal.syndicate_commitment,
+                    "business_model": deal.business_model,
+                    "company_stage": deal.company_stage,
+                    "logo_url": deal.logo_url,
+                    "created_at": deal.created_at
                 }
                 for deal in active_deals
             ]
             closed_deals_list = [
                 {
                     "deal_id": str(deal.id),
-                    "company_name": deal.company_name or "Unknown",
-                    "status": deal.status.value,
-                    "round_size": float(deal.round_size or 0),
-                    "created_at": deal.created_at.isoformat()
+                    "description": deal.about_company,
+                    "title": deal.company_name,
+                    "deal_status": deal.status,
+                    "current_valuation": deal.current_valuation,
+                    "round_size": deal.round_size,
+                    "commitment": deal.syndicate_commitment,
+                    "business_model": deal.business_model,
+                    "company_stage": deal.company_stage,
+                    "logo_url": deal.logo_url,
+                    "created_at": deal.created_at
                 }
                 for deal in closed_deals
             ]

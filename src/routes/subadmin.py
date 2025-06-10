@@ -16,7 +16,7 @@ subadmin_services = SubAdminService()
 async def signin_subadmin(
     session: Annotated[AsyncSession, Depends(get_session)], 
     data: SubAdminSignInReq = Depends(), 
-    ) -> Any:
+) -> Any:
 
     result = await subadmin_services.subadmin_signin(
         session=session,
@@ -32,7 +32,7 @@ async def signin_subadmin(
 async def statistics(
     session:Annotated[AsyncSession, Depends(get_session)], 
     subadmin_id: UUID,
-    ) -> SubAdminDashboardStatisticsRes: 
+) -> SubAdminDashboardStatisticsRes: 
     result = await subadmin_services.get_dashboard_statistics(
         session=session,
         subadmin_id=subadmin_id
@@ -46,7 +46,7 @@ async def statistics(
 async def overview(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID
-) -> SubAdminDashboardOverviewGraphRes: 
+) -> Any: 
 
     result = await subadmin_services.get_overview_graph(
         session=session,
@@ -61,7 +61,7 @@ async def overview(
 async def activities(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID
-) -> SubAdminDashboardActivitiesRes: 
+) -> Any: 
 
     result = await subadmin_services.get_activities(
         session=session,
@@ -91,7 +91,7 @@ async def transactions(
 async def deals_statistics(
     session:Annotated[AsyncSession, Depends(get_session)], 
     subadmin_id: UUID,
-    ) -> SubAdminDealsStatisticsRes: 
+) -> Any: 
     result = await subadmin_services.get_deals_statistics(
         session=session,
         subadmin_id=subadmin_id
@@ -105,7 +105,7 @@ async def deals_statistics(
 async def deals_overview(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID
-) -> SubAdminDealsOverviewRes : 
+) -> Any: 
 
     result = await subadmin_services.get_deals_overview(
         session=session,
@@ -120,7 +120,7 @@ async def deals_overview(
 async def members_statistics(
     session:Annotated[AsyncSession, Depends(get_session)], 
     subadmin_id: UUID,
-    ) -> SubAdminMembersStatisticsRes: 
+) -> Any: 
     result = await subadmin_services.get_members_statistics(
         session=session,
         subadmin_id=subadmin_id

@@ -438,6 +438,8 @@ class DealService:
                 "round_size": deal.round_size,
                 "minimum_investment": "5L",
                 "commitment": deal.syndicate_commitment,
+                "business_model": deal.business_model,
+                "company_stage": deal.company_stage,
                 "instruments": deal.instrument_type,
                 "valuation_type": "Priced",
                 "fund_raised_till_now": 0,
@@ -502,10 +504,14 @@ class DealService:
                     "deal_id": str(deal.id),
                     "description": deal.about_company,
                     "title": deal.company_name,
+                    "deal_status": deal.status,
                     "current_valuation": deal.current_valuation,
                     "round_size": deal.round_size,
                     "commitment": deal.syndicate_commitment,
+                    "business_model": deal.business_model,
+                    "company_stage": deal.company_stage,
                     "logo_url": deal.logo_url,
+                    "created_at": deal.created_at
                 }
                 deals_data.append(deal_data)
 
