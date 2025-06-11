@@ -36,9 +36,6 @@ async def user_send_phone_otp(
         phone_number=phone_number, 
         invite_code=invite_code
     )
-    
-    if not result["success"]:
-        raise HTTPException(status_code=400, detail=f"{result['message']}")
 
     return result
 
@@ -56,9 +53,6 @@ async def user_verify_phone_otp(
         phone_number=phone_number, 
         invite_code=invite_code
     )
-    
-    if not result["success"]:
-        raise HTTPException(status_code=400, detail=f"{result['message']}")
 
     return result
 
