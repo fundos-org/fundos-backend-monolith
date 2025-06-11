@@ -612,6 +612,16 @@ class ZohoService:
                             "role": "Investor",
                             "verify_recipient": False,
                             "private_notes": ""
+                        }, 
+                        {
+                            "recipient_name": investor_name,
+                            "recipient_email": investor_email, 
+                            "action_id": "80016000000225454",
+                            "action_type": "VIEW",
+                            "signing_order": 2,
+                            "role": "Investor",
+                            "verify_recipient": False,
+                            "private_notes": ""
                         }
                     ]
                 }
