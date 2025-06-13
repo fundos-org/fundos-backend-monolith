@@ -109,7 +109,8 @@ async def update_valuation(
     background_tasks: BackgroundTasks,
     data: ValuationRequest = Depends(), 
     pitch_deck: UploadFile = File(...), 
-    pitch_video: UploadFile = File(...)
+    pitch_video: UploadFile = File(...), 
+    investment_scheme_appendix: UploadFile = File(...)
 ) -> Any:
     try:
         deal = await deal_service.update_valuation(
@@ -119,6 +120,7 @@ async def update_valuation(
             syndicate_commitment=data.syndicate_commitment,
             pitch_deck=pitch_deck, 
             pitch_video=pitch_video,
+            investment_scheme_appendix=investment_scheme_appendix,
             session=session,
             background_tasks=background_tasks
         )
@@ -141,6 +143,8 @@ async def update_securities(
             instrument_type=data.instrument_type,
             conversion_terms=data.conversion_terms,
             is_startup=data.is_startup,
+            management_fee=data.management_fee, 
+            carry=data.carry, 
             session=session
         )
         return {

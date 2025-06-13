@@ -10,15 +10,55 @@ class DealStatus(str, Enum):
     CLOSED = "closed"
     ON_HOLD = "on_hold"
 
+class IndustryType(str, Enum):
+    AEROSPACE = "aerospace"
+    AGRITECH_AGRICULTURE = "agritech_and_agriculture"
+    ARTIFICIAL_INTELLIGENCE = "artificial_intelligence"
+    AUTOMOTIVE = "automotive"
+    CONSUMER_ELECTRONICS = "consumer_electronics"
+    DEEP_TECH = "deep_tech"
+    EDTECH_EDUCATION = "edtech_and_education" 
+    FINTECH_FINANCIAL_SERVICES = "fintech_and_financial_services"
+    FOOD_INDUSTRY_SERVICES = "food_industury_services"
+    GAMING = "gaming"
+    GOVERNMENT = "government"
+    HEALTHTECH_MEDTECH = "heathcare_and_medtech"
+    HOSPITALITY = "hospitality"
+    LIFE_SCIENCES = "life_sciences"
+    MANUFACTURING = "manufacturing"
+    MARKETING = "marketing"
+    MEDIA = "media"
+    MINING = "mining"
+    NON_PROFIT = "non_profit"
+    OIL_AND_GAS = "oil_and_gas"
+    POWER_AND_UTILITIES = "power_and_utilities"
+    PROFESSIONAL_SERVICES = "professional_services"
+    REAL_ESTATE_AND_CONSTRUCTION = "real_estate_and_construction"
+    RETAIL = "retail"
+    ROBOTICS = "robotics"
+    SOFTWARE_AND_INTERNET = "software_and_internet"
+    TELECOM = "telecom"
+    TRANSPORTATION = "transportation"
+    TRAVEL = "travel"
+    WHOLESALE_AND_DISTRIBUTION = "wholesale_and_distribution"
+    OTHER = "others"
+
 class BusinessModel(str, Enum):
-    SAAS = "saas"
-    TRANSACTIONAL = "transactional"
-    MARKETPLACE = "marketplace"
-    ENTERPRISE = "enterprise"
+    PRODUCT_BASED = "product_based"
+    SERVICE_BASED = "service_based"
     SUBSCRIPTION = "subscription"
-    USAGE_BASED = "usage-based"
-    E_COMMERCE = "ecommerce"
-    ADVERTISING = "advertising"
+    MARKETPLACE = "marketplace"
+    FREEMIUM = "freemium"
+    AD_BASED = "ad_based"
+    LICENSING = "licensing"
+    FRANCHISE = "franchise"
+    AGGREGATOR = "aggregator"
+    SHARING_ECONOMY = "sharing_economy"
+    DATA_MONETIZATION = "data_monetization"
+    SAAS = "saas"
+    ON_DEMAND = "on_demand"
+    DIRECT_TO_CONSUMER = "direct_to_consumer"
+    PEER_TO_PEER = "peer_to_peer" 
 
 class CompanyStage(str, Enum):
     IDEAL = "ideal"
@@ -54,7 +94,7 @@ class Deal(SQLModel, table=True):
     company_name: Optional[str] = Field(default=None, nullable=True)
     about_company: Optional[str] = Field(default=None, nullable=True)
     company_website: Optional[str] = Field(default=None, nullable=True)
-    industry: Optional[str] = Field(default=None, nullable=True)
+    industry: Optional[IndustryType] = Field(default=None, nullable=True)
     problem_statement: Optional[str] = Field(default=None, nullable=True)
     business_model: Optional[BusinessModel] = Field(default=None, nullable=True)
     company_stage: Optional[CompanyStage] = Field(default=None, nullable=True)
@@ -64,6 +104,9 @@ class Deal(SQLModel, table=True):
     syndicate_commitment: Optional[float] = Field(default=None, nullable=True)
     conversion_terms: Optional[str] = Field(default=None, nullable=True)
     instrument_type: Optional[InstrumentType] = Field(default=None, nullable=True)
+    minimum_investment: Optional[float] = Field(default=25000, nullable=True) 
+    management_fee: Optional[float] = Field(default=0, nullable=True)
+    carry: Optional[float] = Field(default=0, nullable=True)
     agreed_to_terms: bool = Field(default=False, nullable=True)
     logo_url: Optional[str] = Field(default=None, nullable=True)
     pitch_deck_url: Optional[str] = Field(default=None, nullable=True)
@@ -88,3 +131,4 @@ class Deal(SQLModel, table=True):
             "overlaps": "deal,investments,investor",
         }
     )
+    user_preferences: List["UserDealPreference"] = Relationship(back_populates="deal") # type: ignore

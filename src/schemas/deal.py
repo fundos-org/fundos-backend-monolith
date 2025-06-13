@@ -28,6 +28,8 @@ class SecuritiesRequest(BaseModel):
     instrument_type: InstrumentType
     conversion_terms: str
     is_startup: bool
+    management_fee: float
+    carry: float
 
 class CustomerSegmentRequest(BaseModel):
     deal_id: str

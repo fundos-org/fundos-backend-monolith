@@ -268,6 +268,7 @@ class DealService:
         syndicate_commitment: float,
         pitch_deck: UploadFile,
         pitch_video: UploadFile, 
+        investment_scheme_appendix: UploadFile,
         session: AsyncSession,
         background_tasks: BackgroundTasks
     ) -> Dict:
@@ -304,12 +305,20 @@ class DealService:
                 file=pitch_video,
                 folder_prefix=f"{self.folder_prefix}/pitch_videos/"
             )
+            investment_scheme_appendix_key = await self._upload_file_background(
+                background_tasks=background_tasks, 
+                object_id=deal_id, 
+                file=investment_scheme_appendix, 
+                folder_prefix=f"{self.folder_prefix}/investment_scheme_appendix/"
+            )
+
             deal_data.update({
                 "current_valuation": current_valuation,
                 "round_size": round_size,
                 "syndicate_commitment": syndicate_commitment,
                 "pitch_deck_key": pitch_deck_key,
                 "pitch_video_key": pitch_video_key,
+                "investment_scheme_appendix_key" : investment_scheme_appendix_key
             })
             await self._cache_deal_data(deal_id, deal_data)
             return deal_data
@@ -325,6 +334,8 @@ class DealService:
         instrument_type: str,
         conversion_terms: str,
         is_startup: bool,
+        management_fee: float, 
+        carry: float,
         session: AsyncSession
     ) -> Deal:
         """
@@ -352,13 +363,15 @@ class DealService:
                 "instrument_type": instrument_type,
                 "conversion_terms": conversion_terms,
                 "agreed_to_terms": is_startup,
+                "management_fee": management_fee, 
+                "carry": carry
             })
 
             try:
                 deal = Deal(
                     id=uuid.UUID(deal_data["id"]),
                     fund_manager_id=uuid.UUID(deal_data["fund_manager_id"]),
-                    status=DealStatus(deal_data.get("status", DealStatus.ON_HOLD.value)),
+                    status=DealStatus(deal_data.get("status", DealStatus.OPEN.value)),
                     created_at=datetime.now(),
                     updated_at=datetime.now(),
                     company_name=deal_data.get("company_name"),
@@ -375,11 +388,13 @@ class DealService:
                     syndicate_commitment=float(deal_data["syndicate_commitment"]) if deal_data.get("syndicate_commitment") else None,
                     pitch_deck_url=deal_data.get("pitch_deck_key"),
                     pitch_video_url=deal_data.get("pitch_video_key"),
+                    investment_appendix_key=deal_data.get("investment_scheme_appendix_key"),
                     instrument_type=InstrumentType(deal_data["instrument_type"]) if deal_data.get("instrument_type") else None,
                     conversion_terms=deal_data.get("conversion_terms"),
                     agreed_to_terms=bool(deal_data["agreed_to_terms"]) if deal_data.get("agreed_to_terms") is not None else False,
-                    investment_appendix_uploaded=False,
-                    investment_appendix_key=None
+                    investment_appendix_uploaded=True,
+                    management_fee=float(deal_data.get("management_fee")),
+                    carry=float(deal_data.get("carry"))
                 )
             except ValueError as ve:
                 logger.error(f"Type conversion error: {str(ve)}")

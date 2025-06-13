@@ -4,6 +4,7 @@ from src.models.deal import Deal  # noqa: F401
 from src.models.investment import Investment  # noqa: F401
 from src.models.kyc import KYC  # noqa: F401
 from src.models.subadmin import Subadmin
+from src.models.user_deal_preference import UserDealPreference
 
 # Optional: if using a custom metadata object, but not strictly required for basic setup
 # from sqlalchemy import MetaData
@@ -11,7 +12,7 @@ from src.models.subadmin import Subadmin
 # SQLModel.metadata = metadata_obj
 
 # No need to manually assign tables, SQLModel handles this
-models = [Deal, Investment, KYC, User, Subadmin]
+models = [Deal, Investment, KYC, User, Subadmin, UserDealPreference]
 metadata = SQLModel.metadata
 
 

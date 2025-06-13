@@ -479,8 +479,10 @@ class KycService:
             kyc.bank_ifsc = ifsc_code
             kyc.pan_bank_linked = linked_status
             kyc.status = KycStatus.VERIFIED.name if linked_status else KycStatus.PENDING.name
+            user.kyc_status = KycStatus.VERIFIED.name if linked_status else KycStatus.PENDING.name
             kyc.updated_at = datetime.now()
             await session.merge(kyc)
+            await session.merge(user)
         else: 
             return {
                 "message": "KYC record not found",
@@ -489,6 +491,7 @@ class KycService:
 
         await session.commit()
         await session.refresh(kyc)
+        await session.refresh(user)
 
         response_data = {
             "user_id": user_id,

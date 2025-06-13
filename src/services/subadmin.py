@@ -473,6 +473,8 @@ class SubAdminService:
                     "commitment": deal.syndicate_commitment,
                     "business_model": deal.business_model,
                     "company_stage": deal.company_stage,
+                    "minimum_investment": deal.minimum_investment, 
+                    "instruments": deal.instrument_type, 
                     "fund_raised_till_now": 0 ,
                     "logo_url": deal.logo_url,
                     "created_at": deal.created_at, 
@@ -490,6 +492,8 @@ class SubAdminService:
                     "commitment": deal.syndicate_commitment,
                     "business_model": deal.business_model,
                     "company_stage": deal.company_stage,
+                    "minimum_investment": deal.minimum_investment, 
+                    "instruments": deal.instrument_type,                     
                     "fund_raised_till_now": 0 ,
                     "logo_url": deal.logo_url,
                     "created_at": deal.created_at
