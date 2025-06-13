@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import Any, Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
+from src.models.deal import DealStatus
 from src.utils.dependencies import get_session
 from src.schemas.subadmin import (SubAdminSignInReq, SubAdminDashboardStatisticsRes, SubAdminDashboardTransactionsRes, 
                                   SubAdminDashboardActivitiesRes, SubAdminDashboardOverviewGraphRes, SubAdminDealsOverviewRes,
@@ -115,6 +116,22 @@ async def deals_overview(
         raise HTTPException(status_code=400, detail="failed to get subadmin details")
 
     return result
+
+@router.post("/deals/change/status")
+async def members_overview(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    deal_id: UUID, 
+    status: DealStatus
+) -> Any:
+    try:
+        result = await subadmin_services.change_deal_status(
+            session=session,
+            deal_id=deal_id, 
+            deal_status=status
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/members/statistics/{subadmin_id}")
 async def members_statistics(
