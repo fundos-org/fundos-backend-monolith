@@ -54,6 +54,5 @@ class DealDataResponse(BaseModel):
     round_size: float 
     minimum_investment: float 
     valuation_type: str  # change to enum later
-    instruments: str # change to enum late 
-    pass 
+    instruments: str # change to enum late  
 

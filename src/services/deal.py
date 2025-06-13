@@ -316,9 +316,11 @@ class DealService:
                 "current_valuation": current_valuation,
                 "round_size": round_size,
                 "syndicate_commitment": syndicate_commitment,
+                "minimum_investment": minimum_investment,
                 "pitch_deck_key": pitch_deck_key,
                 "pitch_video_key": pitch_video_key,
-                "investment_scheme_appendix_key" : investment_scheme_appendix_key
+                "investment_scheme_appendix_key" : investment_scheme_appendix_key,
+                "status": DealStatus.OPEN.value
             })
             await self._cache_deal_data(deal_id, deal_data)
             return deal_data
@@ -386,6 +388,7 @@ class DealService:
                     current_valuation=float(deal_data["current_valuation"]) if deal_data.get("current_valuation") else None,
                     round_size=float(deal_data["round_size"]) if deal_data.get("round_size") else None,
                     syndicate_commitment=float(deal_data["syndicate_commitment"]) if deal_data.get("syndicate_commitment") else None,
+                    minimum_investment=float(deal_data["minimum_investment"]) if deal_data.get("minimum_investment") else None,
                     pitch_deck_url=deal_data.get("pitch_deck_key"),
                     pitch_video_url=deal_data.get("pitch_video_key"),
                     investment_appendix_key=deal_data.get("investment_scheme_appendix_key"),
@@ -451,12 +454,11 @@ class DealService:
                 "title": deal.company_name, 
                 "current_valuation": deal.current_valuation,
                 "round_size": deal.round_size,
-                "minimum_investment": "5L",
+                "minimum_investment": deal.minimum_investment,
                 "commitment": deal.syndicate_commitment,
                 "business_model": deal.business_model,
                 "company_stage": deal.company_stage,
                 "instruments": deal.instrument_type,
-                "valuation_type": "Priced",
                 "fund_raised_till_now": 0,
                 "logo_url": deal.logo_url,
             }
@@ -523,6 +525,7 @@ class DealService:
                     "current_valuation": deal.current_valuation,
                     "round_size": deal.round_size,
                     "commitment": deal.syndicate_commitment,
+                    "minimum_investment": deal.minimum_investment,
                     "business_model": deal.business_model,
                     "company_stage": deal.company_stage,
                     "logo_url": deal.logo_url,
