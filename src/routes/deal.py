@@ -184,6 +184,28 @@ async def get_subadmin_deals(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/interaction")
+async def register_interaction(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    deal_id: UUID = Query(..., description="ID of the deal"),
+    user_id: UUID = Query(..., description="ID of the user id"),
+    not_interested: bool = False, 
+    bookmarked: bool = False,
+) -> Any: 
+    try: 
+        result = await deal_service.register_interaction(
+            session=session,
+            deal_id=deal_id,
+            user_id=user_id,
+            not_interested=not_interested,
+            bookmarked=bookmarked
+        )  
+        return result
+    except HTTPException as he : 
+        raise he
+    except Exception as e : 
+        raise HTTPException(status_code=500, detail= str(e))
+
 @router.post("/send/drawdown-notice", tags=["investor"])
 async def send_drawdown_notice(
     session: Annotated[AsyncSession, Depends(get_session)], 

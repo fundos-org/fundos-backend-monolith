@@ -1,8 +1,9 @@
 from datetime import datetime
 from fastapi import HTTPException, UploadFile, BackgroundTasks
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from src.models.user_deal_preference import UserDealPreference
 from src.models.subadmin import Subadmin
 from src.models.user import User
 from src.logging.logging_setup import get_logger
@@ -469,7 +470,55 @@ class DealService:
             logger.error(f"Failed to retrieve deal by ID: {str(e)}")
             await session.rollback()
             raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        finally:
+            await session.close()
 
+    async def register_interaction(
+       self, 
+       session: AsyncSession, 
+       deal_id: UUID,
+       user_id: UUID,
+       not_interested: bool = False, 
+       bookmarked: bool = False    
+    ) -> Dict: 
+        try: 
+            deal = await session.get(Deal, deal_id)
+            if not deal:
+                raise HTTPException(status_code=404, detail="Deal not found")
+
+            # Check if preference exists
+            preference: Optional[UserDealPreference] = await session.execute(
+                select(UserDealPreference).where(
+                    UserDealPreference.user_id == user_id,
+                    UserDealPreference.deal_id == deal_id
+                )
+            ).first()
+
+            if not preference:
+                preference = UserDealPreference(
+                    user_id=user_id,
+                    deal_id=deal_id,
+                    not_interested=not_interested, 
+                    bookmarked=bookmarked
+                )
+                session.add(preference)
+            else:
+                preference.not_interested = True
+                preference.updated_at = datetime.now()
+
+            session.commit()
+            return {
+                "success": True,
+                "message": f"Deal marked as not interested: {deal_id}"
+            } 
+
+        except Exception as e : 
+            logger.error(f"Failed to register interaction: {str(e)}")
+            await session.rollback()
+            raise HTTPException(status_code=500, detail= str(e))
+        finally:
+            await session.close()
+        
     async def get_deals_by_user_id(
         self, 
         user_id: UUID,  
@@ -497,10 +546,17 @@ class DealService:
             # Subadmin details
             subadmin_id = user.fund_manager_id
 
-            # Fetch deals
-            statement = select(Deal).where(Deal.fund_manager_id == subadmin_id)
-            result = await session.execute(statement)
-            deals = result.scalars().all()
+            # Query deals, excluding those marked as not interested: True
+            statement = (
+                select(Deal)
+                .where(Deal.fund_manager_id == subadmin_id)
+                .outerjoin(
+                    UserDealPreference,
+                    (UserDealPreference.deal_id == Deal.id) & (UserDealPreference.user_id == user_id)
+                )
+                .where((UserDealPreference.not_interested == False))
+            )
+            deals: List[Deal] = session.execute(statement).all()
 
             # Fetch subadmin details
             statement = select(Subadmin).where(Subadmin.id == subadmin_id)
