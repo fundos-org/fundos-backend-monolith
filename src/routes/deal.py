@@ -118,6 +118,7 @@ async def update_valuation(
             current_valuation=data.current_valuation,
             round_size=data.round_size,
             syndicate_commitment=data.syndicate_commitment,
+            minimum_investment=data.minimum_investment,
             pitch_deck=pitch_deck, 
             pitch_video=pitch_video,
             investment_scheme_appendix=investment_scheme_appendix,

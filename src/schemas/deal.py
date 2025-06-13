@@ -1,4 +1,4 @@
-from src.models.deal import BusinessModel, InstrumentType,TargetCustomerSegment, CompanyStage, RoundType
+from src.models.deal import BusinessModel, Industry, InstrumentType,TargetCustomerSegment, CompanyStage, RoundType
 from uuid import UUID
 from pydantic import BaseModel
 
@@ -19,7 +19,7 @@ class CompanyDetailsRequest(BaseModel):
 
 class IndustryProblemRequest(BaseModel):
     deal_id: str
-    industry: str
+    industry: Industry
     problem_statement: str
     business_model: BusinessModel
 
@@ -41,6 +41,7 @@ class ValuationRequest(BaseModel):
     current_valuation: float
     round_size: float
     syndicate_commitment: float
+    minimum_investment: float
 
 class PitchUploadRequest(BaseModel):
     deal_id: str

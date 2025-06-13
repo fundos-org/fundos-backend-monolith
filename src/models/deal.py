@@ -10,7 +10,7 @@ class DealStatus(str, Enum):
     CLOSED = "closed"
     ON_HOLD = "on_hold"
 
-class IndustryType(str, Enum):
+class Industry(str, Enum):
     AEROSPACE = "aerospace"
     AGRITECH_AGRICULTURE = "agritech_and_agriculture"
     ARTIFICIAL_INTELLIGENCE = "artificial_intelligence"
@@ -94,7 +94,7 @@ class Deal(SQLModel, table=True):
     company_name: Optional[str] = Field(default=None, nullable=True)
     about_company: Optional[str] = Field(default=None, nullable=True)
     company_website: Optional[str] = Field(default=None, nullable=True)
-    industry: Optional[IndustryType] = Field(default=None, nullable=True)
+    industry: Optional[Industry] = Field(default=None, nullable=True)
     problem_statement: Optional[str] = Field(default=None, nullable=True)
     business_model: Optional[BusinessModel] = Field(default=None, nullable=True)
     company_stage: Optional[CompanyStage] = Field(default=None, nullable=True)

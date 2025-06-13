@@ -445,7 +445,7 @@ class SubAdminService:
             active_deals_stmt = select(Deal).where(
                 and_(
                     Deal.fund_manager_id == subadmin_id,
-                    Deal.status.in_([DealStatus.OPEN, DealStatus.ON_HOLD])
+                    Deal.status == DealStatus.OPEN
                 )
             )
             active_result = await session.execute(active_deals_stmt)
@@ -460,6 +460,15 @@ class SubAdminService:
             )
             closed_result = await session.execute(closed_deals_stmt)
             closed_deals = closed_result.scalars().all()
+
+            onhold_deals_stmt = select(Deal).where(
+                and_(
+                    Deal.fund_manager_id == subadmin_id,
+                    Deal.status == DealStatus.ON_HOLD
+                )
+            )
+            onhold_result = await session.execute(onhold_deals_stmt)
+            onhold_deals = onhold_result.scalars().all()
 
             # Format deal data
             active_deals_list = [
@@ -501,11 +510,31 @@ class SubAdminService:
                 for deal in closed_deals
             ]
 
+            onhold_deals_list = [
+                {
+                    "deal_id": str(deal.id),
+                    "description": deal.about_company,
+                    "title": deal.company_name,
+                    "deal_status": deal.status,
+                    "current_valuation": deal.current_valuation,
+                    "round_size": deal.round_size,
+                    "commitment": deal.syndicate_commitment,
+                    "business_model": deal.business_model,
+                    "company_stage": deal.company_stage,
+                    "minimum_investment": deal.minimum_investment, 
+                    "instruments": deal.instrument_type,                     
+                    "fund_raised_till_now": 0 ,
+                    "logo_url": deal.logo_url,
+                    "created_at": deal.created_at
+                }
+                for deal in onhold_deals
+            ]
             return {
                 "subadmin_id": str(subadmin.id),
                 "subadmin_name": subadmin.name or "",
                 "active_deals": active_deals_list,
                 "closed_deals": closed_deals_list,
+                "onhold_deals": onhold_deals_list,
                 "success": True
             }
         except HTTPException as he:

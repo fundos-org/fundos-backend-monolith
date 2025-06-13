@@ -7,9 +7,8 @@ from src.models.subadmin import Subadmin
 from src.models.user import User
 from src.logging.logging_setup import get_logger
 from sqlmodel import UUID
-from src.models.deal import Deal, DealStatus, BusinessModel, CompanyStage, TargetCustomerSegment, InstrumentType
+from src.models.deal import Deal, DealStatus, BusinessModel, CompanyStage, Industry, TargetCustomerSegment, InstrumentType
 from src.services.s3 import S3Service
-from src.utils.dependencies import get_deal
 from src.configs.configs import aws_config, redis_configs
 import redis.asyncio as redis
 import json
@@ -127,7 +126,7 @@ class DealService:
             return deal_data
         except Exception as e:
             logger.error(f"Failed to create deal draft: {str(e)}")
-            raise HTTPException(status_code=500, detail="Internal server error")
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
     async def update_company_details(
         self, 
@@ -177,14 +176,14 @@ class DealService:
             raise he
         except Exception as e:
             logger.error(f"Failed to update company details: {str(e)}")
-            raise HTTPException(status_code=500, detail="Internal server error")
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
     async def update_industry_problem(
         self, 
         deal_id: UUID, 
-        industry: str, 
+        industry: Industry, 
         problem_statement: str, 
-        business_model: str, 
+        business_model: BusinessModel, 
         session: AsyncSession
     ) -> Dict:
         """
@@ -218,7 +217,7 @@ class DealService:
             raise he
         except Exception as e:
             logger.error(f"Failed to update industry and problem details: {str(e)}")
-            raise HTTPException(status_code=500, detail="Internal server error")
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
     async def update_customer_segment(
         self, 
@@ -258,7 +257,7 @@ class DealService:
             raise he
         except Exception as e:
             logger.error(f"Failed to update customer segment: {str(e)}")
-            raise HTTPException(status_code=500, detail="Internal server error")
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
     async def update_valuation(
         self,
@@ -266,6 +265,7 @@ class DealService:
         current_valuation: float,
         round_size: float,
         syndicate_commitment: float,
+        minimum_investment: float, 
         pitch_deck: UploadFile,
         pitch_video: UploadFile, 
         investment_scheme_appendix: UploadFile,
@@ -326,7 +326,7 @@ class DealService:
             raise he
         except Exception as e:
             logger.error(f"Failed to update valuation details: {str(e)}")
-            raise HTTPException(status_code=500, detail="Internal server error")
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
     async def update_securities(
         self,
@@ -378,7 +378,7 @@ class DealService:
                     about_company=deal_data.get("about_company"),
                     company_website=deal_data.get("company_website"),
                     logo_url=deal_data.get("logo_key"),
-                    industry=deal_data.get("industry"),
+                    industry=Industry(deal_data["industry"]) if deal_data.get("industry") else None,
                     problem_statement=deal_data.get("problem_statement"),
                     business_model=BusinessModel(deal_data["business_model"]) if deal_data.get("business_model") else None,
                     company_stage=CompanyStage(deal_data["company_stage"]) if deal_data.get("company_stage") else None,
@@ -419,7 +419,7 @@ class DealService:
         except Exception as e:
             logger.error(f"Failed to update securities details: {str(e)}")
             await session.rollback()
-            raise HTTPException(status_code=500, detail="Internal server error")
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
     async def get_deal_by_id(
         self, 
@@ -466,7 +466,7 @@ class DealService:
         except Exception as e:
             logger.error(f"Failed to retrieve deal by ID: {str(e)}")
             await session.rollback()
-            raise HTTPException(status_code=500, detail="Internal server error")
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
     async def get_deals_by_user_id(
         self, 
@@ -536,4 +536,4 @@ class DealService:
         except Exception as e:
             logger.error(f"Failed to retrieve deals by User ID: {str(e)}")
             await session.rollback()
-            raise HTTPException(status_code=500, detail="Internal server error")
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
