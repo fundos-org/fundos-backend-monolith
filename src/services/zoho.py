@@ -351,7 +351,7 @@ class ZohoService:
             return response_data
             
         except Exception as e:
-            session.close()
+            await session.rollback()
             logger.error(f"Error applying e-stamp: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Error applying e-stamp: {str(e)}")
 
@@ -689,8 +689,6 @@ class ZohoService:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to create drawdown: {str(e)}")
             
-        finally:
-            await session.close()
 
     async def get_document_status(
         self, 

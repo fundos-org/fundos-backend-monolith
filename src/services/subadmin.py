@@ -63,8 +63,6 @@ class SubAdminService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to sign in subadmin: {str(e)}"
             )
-        finally:
-            await session.close()
 
     async def get_dashboard_statistics(
         self,
@@ -135,8 +133,6 @@ class SubAdminService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to fetch dashboard statistics: {str(e)}"
             )
-        finally:
-            await session.close()
 
     async def get_overview_graph(
         self,
@@ -206,8 +202,6 @@ class SubAdminService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to fetch overview graph: {str(e)}"
             )
-        finally:
-            await session.close()
 
     async def get_activities(
         self,
@@ -264,8 +258,6 @@ class SubAdminService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to fetch activities: {str(e)}"
             )
-        finally:
-            await session.close()
 
     async def get_transactions_details(
         self,
@@ -363,8 +355,6 @@ class SubAdminService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to fetch transactions details: {str(e)}"
             )
-        finally:
-            await session.close()
 
     async def get_deals_statistics(
         self,
@@ -439,8 +429,6 @@ class SubAdminService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to fetch deals statistics: {str(e)}"
             )
-        finally:
-            await session.close()
 
     async def get_deals_overview(
         self,
@@ -558,8 +546,6 @@ class SubAdminService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to fetch deals overview: {str(e)}"
             )
-        finally:
-            await session.close()
 
     async def get_members_statistics(
         self,
@@ -655,8 +641,6 @@ class SubAdminService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to fetch members statistics: {str(e)}"
             )
-        finally:
-            await session.close()
 
     async def add_members(
         self,
@@ -733,8 +717,6 @@ class SubAdminService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to add member: {str(e)}"
             )
-        finally:
-            await session.close()
 
     async def change_deal_status(
         self, 
@@ -767,5 +749,3 @@ class SubAdminService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to change deal status: {str(e)}"
             )
-        finally:
-            await session.close()

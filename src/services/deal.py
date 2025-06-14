@@ -470,29 +470,25 @@ class DealService:
             logger.error(f"Failed to retrieve deal by ID: {str(e)}")
             await session.rollback()
             raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-        finally:
-            await session.close()
 
     async def register_interaction(
-       self, 
-       session: AsyncSession, 
-       deal_id: UUID,
-       user_id: UUID,
-       not_interested: bool = False, 
-       bookmarked: bool = False    
+        self, 
+        session: AsyncSession, 
+        deal_id: UUID,
+        user_id: UUID,
+        not_interested: bool = False, 
+        bookmarked: bool = False    
     ) -> Dict: 
         try: 
             deal = await session.get(Deal, deal_id)
             if not deal:
                 raise HTTPException(status_code=404, detail="Deal not found")
 
-            # Check if preference exists
-            preference: Optional[UserDealPreference] = await session.execute(
-                select(UserDealPreference).where(
+            result = await session.execute(select(UserDealPreference).where(
                     UserDealPreference.user_id == user_id,
                     UserDealPreference.deal_id == deal_id
-                )
-            ).first()
+                ))
+            preference: Optional[UserDealPreference] = result.scalars().first()
 
             if not preference:
                 preference = UserDealPreference(
@@ -503,10 +499,11 @@ class DealService:
                 )
                 session.add(preference)
             else:
-                preference.not_interested = True
+                preference.not_interested = not_interested
+                preference.bookmarked = bookmarked
                 preference.updated_at = datetime.now()
 
-            session.commit()
+            await session.commit()
             return {
                 "success": True,
                 "message": f"Deal marked as not interested: {deal_id}"
@@ -515,9 +512,7 @@ class DealService:
         except Exception as e : 
             logger.error(f"Failed to register interaction: {str(e)}")
             await session.rollback()
-            raise HTTPException(status_code=500, detail= str(e))
-        finally:
-            await session.close()
+            raise HTTPException(status_code=500, detail=str(e))
         
     async def get_deals_by_user_id(
         self, 
@@ -539,12 +534,22 @@ class DealService:
         """
         try:
             # Fetch user details
-            statement = select(User).where(User.id == user_id)
-            result = await session.execute(statement)
-            user = result.scalars().one()
+            user = await session.get(User, user_id)
+
+            if not user: 
+                raise HTTPException(status_code=404, detail="User not found")
 
             # Subadmin details
             subadmin_id = user.fund_manager_id
+
+            if not subadmin_id:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
+            
+            # fetch subadmin details
+            subadmin = await session.get(Subadmin, subadmin_id)
+
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
 
             # Query deals, excluding those marked as not interested: True
             statement = (
@@ -556,12 +561,22 @@ class DealService:
                 )
                 .where((UserDealPreference.not_interested == False))
             )
-            deals: List[Deal] = session.execute(statement).all()
 
-            # Fetch subadmin details
-            statement = select(Subadmin).where(Subadmin.id == subadmin_id)
-            result = await session.execute(statement)
-            subadmin = result.scalars().one()
+            # Execute the query
+            interested_deals_result = await session.execute(statement)
+            interested_deals = interested_deals_result.scalars().all()
+
+            statement = (
+                select(Deal)
+                .where(Deal.fund_manager_id == subadmin_id)
+                .outerjoin(
+                    UserDealPreference,
+                    (UserDealPreference.deal_id == Deal.id) & (UserDealPreference.user_id == user_id)
+                )
+                .where((UserDealPreference.not_interested == True))
+            )
+            interested_deals_result = await session.execute(statement)
+            non_interested_deals = interested_deals_result.scalars().all()
 
             # Prepare response
             response = {
@@ -571,8 +586,8 @@ class DealService:
             }
 
             # Prepare deals data
-            deals_data = []
-            for deal in deals:
+            interested_deals_data = []
+            for deal in interested_deals:
                 deal_data = {
                     "deal_id": str(deal.id),
                     "description": deal.about_company,
@@ -587,10 +602,31 @@ class DealService:
                     "logo_url": deal.logo_url,
                     "created_at": deal.created_at
                 }
-                deals_data.append(deal_data)
+                interested_deals_data.append(deal_data)
 
-            response["deals_data"] = deals_data
-            return response
+            response["interested_deals_data"] = interested_deals_data
+
+
+            not_interested_deals_data = []
+            for deal in non_interested_deals:
+                deal_data = {
+                    "deal_id": str(deal.id),
+                    "description": deal.about_company,
+                    "title": deal.company_name,
+                    "deal_status": deal.status,
+                    "current_valuation": deal.current_valuation,
+                    "round_size": deal.round_size,
+                    "commitment": deal.syndicate_commitment,
+                    "minimum_investment": deal.minimum_investment,
+                    "business_model": deal.business_model,
+                    "company_stage": deal.company_stage,
+                    "logo_url": deal.logo_url,
+                    "created_at": deal.created_at
+                }
+                not_interested_deals_data.append(deal_data)
+
+            response["not_interested_deals_data"] = not_interested_deals_data
+            return response 
         
         except Exception as e:
             logger.error(f"Failed to retrieve deals by User ID: {str(e)}")
