@@ -1,6 +1,7 @@
 from datetime import datetime
 from fastapi import HTTPException, UploadFile, BackgroundTasks
 from typing import Any, Dict, List, Optional
+from sqlalchemy import or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from src.models.user_deal_preference import UserDealPreference
@@ -551,7 +552,7 @@ class DealService:
             if not subadmin:
                 raise HTTPException(status_code=404, detail="Subadmin not found")
 
-            # Query deals, excluding those marked as not interested: True
+            # Query deals, interested => record not in user_deal_preferences or not_interested == False
             statement = (
                 select(Deal)
                 .where(Deal.fund_manager_id == subadmin_id)
@@ -559,24 +560,28 @@ class DealService:
                     UserDealPreference,
                     (UserDealPreference.deal_id == Deal.id) & (UserDealPreference.user_id == user_id)
                 )
-                .where((UserDealPreference.not_interested == False))
+                .where(
+                    or_(
+                        UserDealPreference.id == None,  # No record => interested
+                        UserDealPreference.not_interested == False
+                    )
+                )
             )
-
-            # Execute the query
             interested_deals_result = await session.execute(statement)
             interested_deals = interested_deals_result.scalars().all()
 
+            # Query deals, not interested => record in user_deal_preferences and not_interested == True
+
             statement = (
                 select(Deal)
-                .where(Deal.fund_manager_id == subadmin_id)
-                .outerjoin(
+                .join(
                     UserDealPreference,
                     (UserDealPreference.deal_id == Deal.id) & (UserDealPreference.user_id == user_id)
                 )
-                .where((UserDealPreference.not_interested == True))
+                .where(UserDealPreference.not_interested == True)
             )
-            interested_deals_result = await session.execute(statement)
-            non_interested_deals = interested_deals_result.scalars().all()
+            non_interested_deals_result = await session.execute(statement)
+            non_interested_deals = non_interested_deals_result.scalars().all()
 
             # Prepare response
             response = {

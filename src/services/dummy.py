@@ -3,6 +3,7 @@ from fastapi import UploadFile
 from sqlalchemy import and_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
+from src.models.user_deal_preference import UserDealPreference
 from src.models.kyc import KYC
 from src.services.phone import PhoneService
 from src.logging.logging_setup import get_logger # assuming you have a logger setup
@@ -599,6 +600,14 @@ class DummyService:
                 if kyc:
                     await session.delete(kyc)
                     await session.commit()
+                
+                stmt = select(UserDealPreference).where(UserDealPreference.user_id == user.id)
+                result = await session.execute(stmt)
+                user_deal_preference = result.scalars().first()
+
+                if user_deal_preference:
+                    await session.delete(user_deal_preference)
+                    await session.commit()
 
                 await session.delete(user)
                 await session.commit()
@@ -629,8 +638,13 @@ class DummyService:
             kyc_stmt = delete(KYC)
             kyc_result = await session.execute(kyc_stmt)
             logger.info(f"Deleted {kyc_result.rowcount} rows from KYC table")
+        
+            # Step 2: Delete all rows from the UserDealPreference table
+            user_deal_preference_stmt = delete(UserDealPreference)
+            user_deal_preference_result = await session.execute(user_deal_preference_stmt)
+            logger.info(f"Deleted {user_deal_preference_result.rowcount} rows from UserDealPreference table")  
 
-            # Step 2: Delete all rows from the User table
+            # Step 3: Delete all rows from the User table
             user_stmt = delete(User)
             user_result = await session.execute(user_stmt)
             logger.info(f"Deleted {user_result.rowcount} rows from User table")
