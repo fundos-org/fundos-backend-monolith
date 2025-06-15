@@ -8,6 +8,7 @@ from src.routes.deal import router as dealsRouter
 from src.routes.dummy import router as dummyRouter
 from src.routes.admin import router as adminRouter
 from src.routes.subadmin import router as subadminRouter
+from src.routes.release import router as releaseRouter
 from src.utils.lifespan import lifespan
 from src.middlewares.exception_handlers import (
     general_exception_handler,
@@ -48,6 +49,7 @@ app.include_router(router=kycRouter, prefix=f"{api_prefix}/kyc", tags=["investor
 app.include_router(router=dealsRouter, prefix=f"{api_prefix}/deals", tags=["deals"]) 
 app.include_router(router=adminRouter, prefix=f"{api_prefix}/admin", tags=["admin"])
 app.include_router(router=subadminRouter, prefix=f"{api_prefix}/subadmin", tags=["subadmin"])
+app.include_router(router=releaseRouter, prefix=f"{api_prefix}/release", tags=["release"])
 
 # Test api Routers
 app.include_router(router=dummyRouter, prefix=f"{api_prefix_v0}", tags=["test", "investor"])

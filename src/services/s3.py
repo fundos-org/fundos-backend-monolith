@@ -1,9 +1,12 @@
 import boto3
 from botocore.exceptions import ClientError
+from botocore.response import StreamingBody
 from fastapi import UploadFile, HTTPException, BackgroundTasks
 from typing import Optional
 from urllib.parse import urlparse
 from uuid import UUID
+
+from fastapi.responses import StreamingResponse
 from src.logging.logging_setup import get_logger
 import mimetypes
 from datetime import datetime
@@ -159,3 +162,32 @@ class S3Service:
         except ClientError as e:
             logger.error(f"Failed to delete S3 object {object_key}: {str(e)}")
             raise HTTPException(status_code=500, detail="Failed to delete from S3")
+        
+    async def stream_file(
+        self,
+        object_key: str,
+        download_filename: Optional[str] = None,
+        content_type: Optional[str] = "application/vnd.android.package-archive"
+    ) -> StreamingResponse:
+        """
+        Streams an S3 file for download via FastAPI.
+        :param object_key: S3 object key (e.g., 'assets/app-release.apk')
+        :param download_filename: Filename to be used in Content-Disposition
+        :param content_type: MIME type of the file
+        :return: StreamingResponse with file contents
+        """
+        try:
+            s3_object = self.s3_client.get_object(Bucket=self.bucket_name, Key=object_key)
+            body: StreamingBody = s3_object['Body']
+            headers = {
+                "Content-Disposition": f'attachment; filename="{download_filename or object_key.split("/")[-1]}"'
+            }
+
+            return StreamingResponse(
+                body,
+                media_type=content_type,
+                headers=headers
+            )
+        except ClientError as e:
+            logger.error(f"Failed to stream S3 object {object_key}: {str(e)}")
+            raise HTTPException(status_code=404, detail="File not found")
