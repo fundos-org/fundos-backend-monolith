@@ -108,13 +108,20 @@ class ZohoService:
         day = f"{current_date.day:02d}"
         month = current_date.strftime("%B")
         year = str(current_date.year)
-        date = f"{month} {day} {year}"
+        current_date = f"{month} {day} {year}"
         match = re.match(r"(S/O|D/O|C/O)\s+(.*)", user.care_of, re.IGNORECASE)
         father_name = match.group(2) if match else None
         date_of_birth = user.date_of_birth
         dob_obj = datetime.strptime(date_of_birth, "%d-%m-%Y")
         formatted_dob = dob_obj.strftime("%b %d %Y")
         capital_commitment = float(user.capital_commitment) 
+        resident = user.country
+
+        if resident.lower() == "india":
+            formatted_dob = "N/A"
+            place_of_birth = "N/A"
+            resident = "N/A"
+            tax_identity_number = "N/A"
 
         if not capital_commitment:
             raise HTTPException(status_code=400, detail="Capital commitment is required")
@@ -134,13 +141,14 @@ class ZohoService:
             "templates": {
                 "field_data": {
                     "field_text_data": {
+                        "current_date": current_date,
                         "day": day,
                         "month": month,
                         "year": year,
                         "name": user.full_name, 
                         "address": user.address,
                         "phone": user.phone_number, 
-                        "email": user.email,
+                        "investor_email": user.email,
                         "father_name": father_name, 
                         "entity_type": user.investor_type,
                         "law": "Not Applicable",
@@ -148,15 +156,13 @@ class ZohoService:
                         "phone_number": user.phone_number,
                         "capital_commitment": str(capital_commitment),
                         "capital_commitment_words": capital_commitment_in_word,
-                        "resident": user.country,
-                        "tax_identity_number": "Not Applicable",
-                        "place_of_birth": "Not Applicable",
+                        "resident": resident,
+                        "tax_identity_number": tax_identity_number,
+                        "date_of_birth": formatted_dob,
+                        "place_of_birth": place_of_birth,
                     },
                     "field_boolean_data": {},
-                    "field_date_data": {
-                        "date": date,
-                        "date_of_birth": formatted_dob
-                    },
+                    "field_date_data": {},
                     "field_radio_data": {},
                     "field_checkboxgroup_data": {}
                 },
@@ -183,8 +189,8 @@ class ZohoService:
                         "private_notes": ""
                     },
                     {
-                        "recipient_name": "Iswar",
-                        "recipient_email": "ishwarkoki@gmail.com",
+                        "recipient_name": "Vaishali Goverdhan Urkude",
+                        "recipient_email": "Signatory@mitconcredentia.in",
                         "action_id": "80016000000207922",
                         "action_type": "SIGN",
                         "signing_order": 3,
