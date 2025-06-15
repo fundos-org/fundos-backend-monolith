@@ -7,8 +7,7 @@ import redis
 from fastapi import HTTPException
 from typing import Dict, Any
 from src.logging.logging_setup import get_logger
-from src.configs.configs import mail_configs
-from src.configs.configs import redis_configs
+from src.configs.configs import mail_configs, redis_configs, app_config
 
 logger = get_logger(__name__)
 
@@ -153,7 +152,7 @@ class EmailService:
         invite_code: str,
         subadmin_name: str = "",
         user_name: str = "",
-        apk_link: str = "https://example.com/invite"
+        apk_link: str = "http://43.205.36.168/api/v1/live/release/app"
     ) -> Dict[str, str]:
         """Send an invitation email using Zoho ZeptoMail SMTP."""
         try:
@@ -203,17 +202,17 @@ class EmailService:
         invite_code: str,
         user_name: str = "",
         password: str = "",
-        apk_link: str = "https://example.com/invite"
+        apk_link: str = app_config.apk_link
     ) -> Any: 
         """Send an invitation email using Zoho ZeptoMail SMTP."""
         try:
-            invite_link = f"{apk_link}?invite_code={invite_code}&email={email}"
+            invite_link = apk_link
             subject = "You have been invited to join a subadmin team"
             body_html = f"""
                 <div>
                     <p>Hi {user_name or 'User'},</p>
                     <p>You have been invited by Team FundOS to join as a fund manager.</p>
-                    <p>Please click on the following link to accept the invitation: <a href="{invite_link}">{invite_link}</a></p>
+                    <p>Please click on the following link to download the app: <a href="{invite_link}">{invite_link}</a></p>
                     <p>Thank you,</p>
                     <p>Best regards,<br>{'FundOS'}</p>
                 </div>

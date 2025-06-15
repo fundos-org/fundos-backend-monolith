@@ -11,6 +11,9 @@ from src.schemas.kyc import (
 from src.services.kyc import KycService
 from src.services.phone import PhoneService
 from src.db.session import get_session
+from src.logging.logging_setup import get_logger    
+
+logger = get_logger(__name__)
 
 kyc_service = KycService()
 phone_service = PhoneService()
@@ -36,10 +39,10 @@ async def verify_aadhaar(
         )
         return content
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to send OTP: {str(e)}"
-        )
+        if isinstance(e, HTTPException):
+            raise  # Re-raise HTTPException to be handled by FastAPI
+        logger.error(f"Unexpected error in PAN verification: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post('/aadhaar/otp/verify')
 async def submit_aadhaar_otp(
@@ -52,15 +55,12 @@ async def submit_aadhaar_otp(
             otp=otp_details.otp,
             session=session
         )
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content=dict(**user_data)
-        )
+        return user_data
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to verify OTP: {str(e)}"
-        )
+        if isinstance(e, HTTPException):
+            raise  # Re-raise HTTPException to be handled by FastAPI
+        logger.error(f"Unexpected error in PAN verification: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post('/aadhaar/otp/resend')
 async def resend_aadhaar_otp(
@@ -73,15 +73,13 @@ async def resend_aadhaar_otp(
             aadhaar_number=otp_details.aadhaar_number,
             session=session
         )
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content=dict(**response_data)
-        )
+        return response_data
+    
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to resend OTP: {str(e)}"
-        )
+        if isinstance(e, HTTPException):
+            raise  # Re-raise HTTPException to be handled by FastAPI
+        logger.error(f"Unexpected error in PAN verification: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post('/pan/verify')
 async def verify_pan(
@@ -89,20 +87,17 @@ async def verify_pan(
     session: Annotated[AsyncSession, Depends(get_session)]
 ) -> dict:
     try:
-        pan_data = await kyc_service.verify_pan(
+        response = await kyc_service.verify_pan(
             user_id=pan_details.user_id,
             pan_number=pan_details.pan_number,
             session=session
         )
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content=dict(**pan_data)
-        )
+        return response
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to verify PAN: {str(e)}"
-        )
+        if isinstance(e, HTTPException):
+            raise  # Re-raise HTTPException to be handled by FastAPI
+        logger.error(f"Unexpected error in PAN verification: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post('/pan/bank/link/verify')
 async def verify_pan_bank_link(
@@ -118,8 +113,9 @@ async def verify_pan_bank_link(
             session=session
         )
         return response
+    
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to verify PAN to Bank Account link: {str(e)}"
-        )
+        if isinstance(e, HTTPException):
+            raise  # Re-raise HTTPException to be handled by FastAPI
+        logger.error(f"Unexpected error in PAN verification: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

@@ -13,7 +13,7 @@ from src.services.email import EmailService
 from uuid import UUID
 from datetime import datetime, timedelta
 from sqlalchemy import and_ 
-from src.configs.configs import aws_config
+from src.configs.configs import aws_config, app_config
 
 # sample data for frontend 
 from src.utils.dummy_data import (
@@ -666,7 +666,7 @@ class SubAdminService:
                     invite_code=subadmin.invite_code,
                     subadmin_name=subadmin.name or "",
                     user_name="",
-                    apk_link="https://example.com/invite"
+                    apk_link=app_config.apk_link
                 )
 
                 is_email_sent = email_response.get("success", False)
@@ -696,7 +696,7 @@ class SubAdminService:
                         invite_code=subadmin.invite_code,
                         subadmin_name=subadmin.name or "",
                         user_name=f"{user.first_name or ''} {user.last_name or ''}".strip(),
-                        apk_link="https://example.com/invite"
+                        apk_link=app_config.apk_link
                     )
 
                     is_email_sent = email_response.get("success", False)

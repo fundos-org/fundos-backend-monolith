@@ -94,7 +94,7 @@ class KycService:
 
         if response.status_code != 200:
             logger.error(f"Failed to initiate Aadhaar KYC: {response.status_code} {response.text}")
-            raise HTTPException(status_code=response.status_code, detail="Failed to initiate Aadhaar KYC")
+            raise HTTPException(status_code=response.status_code, detail=response.text)
 
         data = response.json()
         response_data = {
@@ -111,7 +111,12 @@ class KycService:
         self.redis.setex(rate_limit_key, 60, "1")
         logger.info(f"Cached OTP data for user_id: {user_id}, cache_key: {cache_key}")
 
-        return response_data
+        response = {
+            "user_id": user_id,
+            "success": True, 
+            "message": "Aadhaar OTP sent successfully"
+        }
+        return response
 
     async def submit_aadhaar_otp(
         self, 
@@ -148,7 +153,7 @@ class KycService:
 
         if response.status_code != 200:
             logger.error(f"Failed to submit OTP: {response.status_code} {response.text}")
-            raise HTTPException(status_code=response.status_code, detail="Failed to submit OTP")
+            raise HTTPException(status_code=response.status_code, detail=response.text)
 
         data = response.json()
         logger.info(f"Digitap API response: {data}")
@@ -234,8 +239,8 @@ class KycService:
 
         response_data = {
             "user_id": user_id, 
-            "aadhaar_data": model, 
-            "success": True
+            "success": True, 
+            "message": "Aadhaar details submitted successfully"
         }
         return response_data
 
@@ -283,7 +288,7 @@ class KycService:
 
         if response.status_code != 200:
             logger.error(f"Failed to resend OTP: {response.status_code} {response.text}")
-            raise HTTPException(status_code=response.status_code, detail="Failed to resend Aadhaar OTP")
+            raise HTTPException(status_code=response.status_code, detail=response.text)
 
         data = response.json()
 
@@ -343,13 +348,13 @@ class KycService:
 
         if response.status_code != 200:
             logger.error(f"PAN verification failed: {response.status_code} {response.text}")
-            raise HTTPException(status_code=response.status_code, detail="PAN verification failed")
+            raise HTTPException(status_code=response.status_code, detail=response.text)
 
         data = response.json()
         logger.info(f"PAN verification response: {data}")
 
         if data.get("result_code") != 101:
-            raise HTTPException(status_code=400, detail="PAN verification unsuccessful")
+            raise HTTPException(status_code=400, detail=data.get("message", "PAN verification failed, Check your Pan number"))
 
         result = data.get("result", {})
 
@@ -408,8 +413,8 @@ class KycService:
 
         response_data = {
             "user_id": user_id,
-            "pan_data" : result, 
-            "success": True
+            "success": True, 
+            "message": "Verify PAN successful"
         }
 
         return response_data
@@ -448,7 +453,7 @@ class KycService:
 
         if response.status_code != 200:
             logger.error(f"PAN to Bank Account link verification failed: {response.status_code} {response.text}")
-            raise HTTPException(status_code=response.status_code, detail="Failed to verify PAN to Bank Account link")
+            raise HTTPException(status_code=response.status_code, detail=response.text)
 
         data = response.json()
         logger.info(f"PAN to Bank Account link verification response: {data}")
@@ -495,8 +500,8 @@ class KycService:
 
         response_data = {
             "user_id": user_id,
-            "pan_bank_link_data" : result,
-            "success": True
+            "success": True,
+            "message": "PAN to Bank Account link verification successful" 
         }
 
         return response_data

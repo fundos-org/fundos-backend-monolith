@@ -11,7 +11,7 @@ from src.services.s3 import S3Service
 from src.services.email import EmailService
 from typing import Any
 from datetime import datetime
-from src.configs.configs import aws_config
+from src.configs.configs import aws_config, app_config
 
 
 logger = get_logger(__name__) 
@@ -242,7 +242,7 @@ class AdminService:
                     invite_code=subadmin.invite_code,
                     user_name=subadmin.name or "",
                     password=subadmin.password or "",
-                    apk_link="https://example.com/invite"
+                    apk_link=app_config.apk_link
                 )
 
                 is_email_sent = email_response.get("success", False)
