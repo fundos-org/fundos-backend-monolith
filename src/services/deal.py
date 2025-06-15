@@ -458,6 +458,8 @@ class DealService:
                 "round_size": deal.round_size,
                 "minimum_investment": deal.minimum_investment,
                 "commitment": deal.syndicate_commitment,
+                "management_fee": deal.management_fee,
+                "carry": deal.carry,
                 "business_model": deal.business_model,
                 "company_stage": deal.company_stage,
                 "instruments": deal.instrument_type,
