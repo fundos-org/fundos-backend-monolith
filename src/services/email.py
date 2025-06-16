@@ -134,17 +134,17 @@ class EmailService:
                 logger.info(f"Cleared OTP cache for email: {email}")
             except redis.RedisError as e:
                 logger.error(f"Redis error while deleting OTP: {str(e)}")
-                raise HTTPException(status_code=500, detail="Failed to clear OTP cache")
+                raise HTTPException(status_code=400, detail="Failed to clear OTP cache")
 
             return {"message": "Email verified successfully", "success": True}
         except redis.RedisError as e:
             logger.error(f"Redis error: {str(e)}")
-            raise HTTPException(status_code=500, detail="Internal error with cache service")
+            raise HTTPException(status_code=400, detail="Internal error with cache service")
         except HTTPException as he:
             raise he
         except Exception as e:
             logger.error(f"Failed to verify OTP: {str(e)}")
-            raise HTTPException(status_code=500, detail="Internal error while verifying OTP")
+            raise HTTPException(status_code=400, detail="Internal error while verifying OTP")
 
     async def send_invitation_email(
         self,

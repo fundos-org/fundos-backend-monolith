@@ -395,10 +395,12 @@ class DummyService:
                     "success": False
                 }
             
-        except Exception as e : 
+        except Exception as e:
             await session.rollback()
-            logger.error(f"Request failed: {e}")
-            raise HTTPException(status_code=500, detail="Internal request error") 
+            if isinstance(e, HTTPException):
+                raise  # Re-raise HTTPException to be handled by FastAPI
+            logger.error(f"Unexpected error in PAN verification: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
         
     async def choose_investor_type(
         self, 

@@ -100,11 +100,10 @@ async def verify_email_otp(
         logger.error(f"HTTP error in verify_email_otp: {he.detail}")
         raise he
     except Exception as e:
-        logger.error(f"Unexpected error in verify_email_otp: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error while verifying OTP"
-        )
+        if isinstance(e, HTTPException):
+            raise  # Re-raise HTTPException to be handled by FastAPI
+        logger.error(f"Unexpected error in PAN verification: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/user/choose-investor-type")
 async def choose_investor_type(
