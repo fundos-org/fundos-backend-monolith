@@ -24,24 +24,18 @@ router = APIRouter()
 async def verify_aadhaar(
     aadhaar_details: AadhaarRequest,
     session: Annotated[AsyncSession, Depends(get_session)]
-) -> AadhaarResponse:
+) -> Any:
     try:
         response_data = await kyc_service.send_aadhaar_otp(
             user_id=aadhaar_details.user_id,
             aadhaar_number=aadhaar_details.aadhaar_number,
             session=session
         )
-        content = AadhaarResponse(
-            transaction_id=response_data["transaction_id"],
-            fwdp=response_data["fwdp"],
-            code_verifier=response_data["code_verifier"],
-            message="OTP sent to Aadhaar registered mobile number"
-        )
-        return content
+        return response_data
     except Exception as e:
         if isinstance(e, HTTPException):
             raise  # Re-raise HTTPException to be handled by FastAPI
-        logger.error(f"Unexpected error in PAN verification: {e}")
+        logger.error(f"Unexpected error in Aadhaar verification: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post('/aadhaar/otp/verify')
@@ -59,7 +53,7 @@ async def submit_aadhaar_otp(
     except Exception as e:
         if isinstance(e, HTTPException):
             raise  # Re-raise HTTPException to be handled by FastAPI
-        logger.error(f"Unexpected error in PAN verification: {e}")
+        logger.error(f"Unexpected error in Aadhaar verification: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post('/aadhaar/otp/resend')
