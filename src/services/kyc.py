@@ -214,7 +214,9 @@ class KycService:
         user.father_name = father_name
 
         # Update or create KYC record
-        kyc = await session.get(KYC, user_id)
+        statement = select(KYC).where(KYC.user_id == user_id)
+        result = await session.execute(statement)
+        kyc = result.scalar_one_or_none()
         if kyc:
             kyc.aadhaar_number = model.get("adharNumber")
             kyc.updated_at = datetime.now()
