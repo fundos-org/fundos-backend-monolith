@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from src.services.s3 import S3Service
-from src.configs.configs import aws_config
+from src.configs.configs import aws_config, app_config
 
 
 router = APIRouter()
@@ -10,7 +10,7 @@ s3_service = S3Service(bucket_name=bucket_name)
 @router.get("/app", summary="Download the Android App APK")
 async def download_apk():
     return await s3_service.stream_file(
-        object_key="assets/app-release.apk",
+        object_key=app_config.apk_key,
         download_filename="fundos-app.apk"
     )
 

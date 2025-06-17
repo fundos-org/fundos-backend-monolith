@@ -152,11 +152,11 @@ class EmailService:
         invite_code: str,
         subadmin_name: str = "",
         user_name: str = "",
-        apk_link: str = "http://43.205.36.168/api/v1/live/release/app"
+        apk_link: str = app_config.apk_key
     ) -> Dict[str, str]:
         """Send an invitation email using Zoho ZeptoMail SMTP."""
         try:
-            invite_link = f"{apk_link}?invite_code={invite_code}&email={email}"
+            invite_link = f"{apk_link}"
             subject = "You have been invited to join a subadmin team"
             body_html = f"""
                 <div>
