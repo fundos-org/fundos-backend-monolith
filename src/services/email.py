@@ -209,21 +209,40 @@ class EmailService:
             invite_link = apk_link
             subject = "You have been invited to join a subadmin team"
             body_html = f"""
-                <div>
-                    <p>Hi {user_name or 'User'},</p>
-                    <p>You have been invited by Team FundOS to join as a fund manager.</p>
-                    <p>Please click on the following link to download the app: <a href="{invite_link}">{invite_link}</a></p>
-                    <p>Thank you,</p>
-                    <p>Best regards,<br>{'FundOS'}</p>
-                </div>
-            """
+                        <html>
+                        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                            <p>You have been invited by <strong>Team FundOS</strong> to join as a <strong>Fund Manager</strong>.</p>
+
+                            <p>Here are your credentials:</p>
+                            <ul>
+                            <li><strong>Username:</strong> {user_name}</li>
+                            <li><strong>Password:</strong> {password}</li>
+                            </ul>
+
+                            <p>Share this invite code: <strong>{invite_code}</strong> to onboard investors.</p>
+
+                            <p>Ask your investors to download the app using this link:</p>
+                            <p><a href="{apk_link}" style="color: #1a73e8;">{apk_link}</a></p>
+
+                            <br>
+                            <p>Best regards,<br>Team FundOS</p>
+                        </body>
+                        </html>
+                        """
 
             # Prepare email
             msg = EmailMessage()
             msg['Subject'] = subject
             msg['From'] = f"fundos <{FROM_EMAIL}>"
             msg['To'] = email
-            msg.set_content(f"You have been invited by {'Team FundOS'} to join as a fund manager.\n Here are your credentials:\n Username: {user_name}\n Password: {password}\n Share this Invite code to Onboard investors")
+            msg.set_content(
+                    f"You have been invited by Team FundOS to join as a fund manager.\n\n"
+                    f"Here are your credentials:\n"
+                    f"Username: {user_name}\n"
+                    f"Password: {password}\n\n"
+                    f"Share this invite code: {invite_code} to onboard investors.\n"
+                    f"Ask your investors to download the app using this link: {apk_link}"
+            )
             msg.add_alternative(body_html, subtype='html')
 
             # Send email via SMTP
