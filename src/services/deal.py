@@ -295,24 +295,32 @@ class DealService:
         """
         try:
             deal_data = await self._get_cached_deal_data(deal_id)
-            pitch_deck_key = await self._upload_file_background(
-                background_tasks=background_tasks,
-                object_id=deal_id,
-                file=pitch_deck,
-                folder_prefix=f"{self.folder_prefix}/pitch_decks/"
-            )
-            pitch_video_key = await self._upload_file_background(
-                background_tasks=background_tasks,
-                object_id=deal_id,
-                file=pitch_video,
-                folder_prefix=f"{self.folder_prefix}/pitch_videos/"
-            )
-            investment_scheme_appendix_key = await self._upload_file_background(
-                background_tasks=background_tasks, 
-                object_id=deal_id, 
-                file=investment_scheme_appendix, 
-                folder_prefix=f"{self.folder_prefix}/investment_scheme_appendix/"
-            )
+
+            pitch_deck_key, pitch_video_key, investment_scheme_appendix_key = None, None, None
+            
+            if pitch_deck:
+                pitch_deck_key = await self._upload_file_background(
+                    background_tasks=background_tasks,
+                    object_id=deal_id,
+                    file=pitch_deck,
+                    folder_prefix=f"{self.folder_prefix}/pitch_decks/"
+                )
+            
+            if pitch_video: 
+                pitch_video_key = await self._upload_file_background(
+                    background_tasks=background_tasks,
+                    object_id=deal_id,
+                    file=pitch_video,
+                    folder_prefix=f"{self.folder_prefix}/pitch_videos/"
+                )
+
+            if investment_scheme_appendix:
+                investment_scheme_appendix_key = await self._upload_file_background(
+                    background_tasks=background_tasks, 
+                    object_id=deal_id, 
+                    file=investment_scheme_appendix, 
+                    folder_prefix=f"{self.folder_prefix}/investment_scheme_appendix/"
+                )
 
             deal_data.update({
                 "current_valuation": current_valuation,
