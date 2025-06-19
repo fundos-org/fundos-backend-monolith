@@ -300,12 +300,12 @@ class ZohoService:
                             "estamping_request": {
                                 "stamp_duty_paid_by": "First Party",
                                 "stamp_state": "DL",
-                                "stamp_amount": os.getenv("STAMP_AMOUNT") or "100",
+                                "stamp_amount": os.getenv("STAMP_AMOUNT") or "10",
                                 "document_category": os.getenv("DOCUMENT_CATEGORY") or "1",
                                 "duty_payer_phone_number": "7400160348",
                                 "first_party_name": "Thirty3art Ventures LLP and Ors",
                                 "second_party_name": "Mitcon Credentia Trusteeship S Ltd",
-                                "consideration_amount": os.getenv("STAMP_AMOUNT") or "100",
+                                "consideration_amount": os.getenv("STAMP_AMOUNT") or "10",
                                 "document_reference_no": "111",
                                 "duty_payer_email_id": "Artventures.operations@gmail.com",
                                 "first_party_details": {
