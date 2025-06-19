@@ -136,7 +136,7 @@ class DealService:
         logo: UploadFile, 
         company_name: str, 
         about_company: str, 
-        company_website: str,
+        investment_scheme_appendix: str,
         session: AsyncSession,
         background_tasks: BackgroundTasks
     ) -> Dict:
@@ -169,7 +169,7 @@ class DealService:
             deal_data.update({
                 "company_name": company_name,
                 "about_company": about_company,
-                "company_website": company_website,
+                "investment_scheme_appendix": investment_scheme_appendix,
                 "logo_key": logo_key
             })
             await self._cache_deal_data(deal_id, deal_data)
@@ -380,7 +380,7 @@ class DealService:
                     updated_at=datetime.now(),
                     company_name=deal_data.get("company_name"),
                     about_company=deal_data.get("about_company"),
-                    company_website=deal_data.get("company_website"),
+                    investment_scheme_appendix=deal_data.get("investment_scheme_appendix"),
                     logo_url=deal_data.get("logo_key"),
                     industry=Industry(deal_data["industry"]) if deal_data.get("industry") else None,
                     problem_statement=deal_data.get("problem_statement"),

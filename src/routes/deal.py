@@ -3,7 +3,7 @@ from starlette import status
 from src.services.zoho import ZohoService
 from src.db.session import get_session
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Annotated, Any, Dict
+from typing import Annotated, Any, Dict, Optional
 from uuid import UUID
 from src.services.deal import DealService
 from src.schemas.deal import (
@@ -50,9 +50,9 @@ async def update_company_details(
             logo=logo,
             company_name=data.company_name,
             about_company=data.about_company,
-            company_website=data.company_website,
+            investment_scheme_appendix=data.investment_scheme_appendix,
             session=session,
-            background_tasks=background_tasks
+            background_tasks=background_tasks,
         )
         return {
             "deal_data": deal, 
@@ -108,9 +108,9 @@ async def update_valuation(
     session: Annotated[AsyncSession, Depends(get_session)], 
     background_tasks: BackgroundTasks,
     data: ValuationRequest = Depends(), 
-    pitch_deck: UploadFile = File(...), 
-    pitch_video: UploadFile = File(...), 
-    investment_scheme_appendix: UploadFile = File(...)
+    pitch_deck: Optional[UploadFile] = File(...), 
+    pitch_video: Optional[UploadFile] = File(...), 
+    investment_scheme_appendix: Optional[UploadFile] = File(...)
 ) -> Any:
     try:
         deal = await deal_service.update_valuation(

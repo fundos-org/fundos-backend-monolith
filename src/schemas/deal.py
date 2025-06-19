@@ -15,7 +15,7 @@ class CompanyDetailsRequest(BaseModel):
     deal_id: str
     company_name: str
     about_company: str
-    company_website: str
+    investment_scheme_appendix: str
 
 class IndustryProblemRequest(BaseModel):
     deal_id: str

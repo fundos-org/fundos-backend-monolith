@@ -558,9 +558,10 @@ class ZohoService:
 
         try:
             # Sample extraction logic — adjust field names as per actual model
+            date = datetime.now().strftime("%d/%m/%Y")
             investor_name = user.full_name
             investor_email = user.email
-            investment_scheme = "Sample Scheme" # need to add a field for this in deal model
+            investment_scheme = deal.investment_scheme_appendix # need to add a field for this in deal model
             company_name = deal.company_name
             capital_commitment = user.capital_commitment
             investment_amount_str = f"{investment_amount:,.2f}"
@@ -590,39 +591,35 @@ class ZohoService:
                 "templates": {
                     "field_data": {
                         "field_text_data": {
+                            "date": date,
                             "investor": investor_name,
                             "investment_scheme": investment_scheme,
                             "company_name": company_name,
                             "Investment_amount": investment_amount_str,
                             "management_fee": management_fee_str,
                             "total_payable": total_payable_str,
-                            "capital_commitment": capital_commitment_str,
-                            "drawdown_so_far": drawdown_so_far,
-                            "undrawn_capital_commitment": undrawn_commitment,
                         },
                         "field_boolean_data": {},
-                        "field_date_data": {
-                            "date": datetime.today().strftime("%d %B %Y")  # Example: "04 June 2025"
-                        },
+                        "field_date_data": {},
                         "field_radio_data": {},
-                        "field_checkboxgroup_data": {},
+                        "field_checkboxgroup_data": {}
                     },
                     "notes": "",
                     "actions": [
                         {
                             "recipient_name": "Amit Tyagi",
                             "recipient_email": "amit@fundos.solutions",
-                            "action_id": "80016000000209128",
+                            "action_id": "80016000000241628",
                             "action_type": "SIGN",
                             "signing_order": 1,
-                            "role": "Investor",
+                            "role": "Owner",
                             "verify_recipient": False,
                             "private_notes": ""
-                        }, 
+                        },
                         {
                             "recipient_name": investor_name,
-                            "recipient_email": investor_email, 
-                            "action_id": "80016000000225454",
+                            "recipient_email": investor_email,
+                            "action_id": "80016000000241680",
                             "action_type": "VIEW",
                             "signing_order": 2,
                             "role": "Investor",
