@@ -108,9 +108,9 @@ async def update_valuation(
     session: Annotated[AsyncSession, Depends(get_session)], 
     background_tasks: BackgroundTasks,
     data: ValuationRequest = Depends(), 
-    pitch_deck: Optional[UploadFile] = File(...), 
-    pitch_video: Optional[UploadFile] = File(...), 
-    investment_scheme_appendix: Optional[UploadFile] = File(...)
+    pitch_deck: Optional[UploadFile] = File(None), 
+    pitch_video: Optional[UploadFile] = File(None), 
+    investment_scheme_appendix: Optional[UploadFile] = File(None)
 ) -> Any:
     try:
         deal = await deal_service.update_valuation(

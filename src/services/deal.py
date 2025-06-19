@@ -268,9 +268,9 @@ class DealService:
         round_size: float,
         syndicate_commitment: float,
         minimum_investment: float, 
-        pitch_deck: UploadFile,
-        pitch_video: UploadFile, 
-        investment_scheme_appendix: UploadFile,
+        pitch_deck: Optional[UploadFile],
+        pitch_video: Optional[UploadFile], 
+        investment_scheme_appendix: Optional[UploadFile],
         session: AsyncSession,
         background_tasks: BackgroundTasks
     ) -> Dict:
