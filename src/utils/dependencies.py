@@ -29,9 +29,9 @@ async def get_user(user_id: UUID, session: AsyncSession = None) -> User:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return user
 
-async def get_kyc_row(user_id: UUID, session: AsyncSession = Depends(get_session)) -> KYC: 
+async def get_kyc(user_id: UUID, session: AsyncSession = None) -> KYC: 
     statement = select(KYC).where(KYC.user_id == user_id) 
-    result: Result = await session.exec(statement) 
+    result: Result = await session.execute(statement) 
     kyc_row: Optional[KYC] = result.scalar_one_or_none()
 
     if not kyc_row:

@@ -211,7 +211,7 @@ class KycService:
 
         match = re.match(r"(S/O|D/O|C/O)\s+(.*)", care_of, re.IGNORECASE)
         father_name = match.group(2) if match else None
-        user.father_name = father_name
+        user.father_name = father_name or care_of
 
         # Update or create KYC record
         statement = select(KYC).where(KYC.user_id == user_id)

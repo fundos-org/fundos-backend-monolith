@@ -10,12 +10,13 @@ from src.logging.logging_setup import get_logger # assuming you have a logger se
 from pydantic import EmailStr
 from src.models.user import User, investorType, OnboardingStatus
 from src.models.subadmin import Subadmin
-from src.utils.dependencies import get_user
+from src.utils.dependencies import get_user, get_kyc
 from uuid import UUID
 from src.services.s3 import S3Service
 from src.services.email import EmailService
 from typing import Dict, Any, Optional
 from src.configs.configs import aws_config
+from src.schemas.user import ZohoDetails
 
 logger = get_logger(__name__) 
 
@@ -475,6 +476,69 @@ class DummyService:
                 "user_id": user.id,
             }
 
+        except Exception as e:
+            await session.rollback()
+            raise HTTPException(status_code=500, detail=f"Failed to update user details: {str(e)}")
+        
+    async def send_zoho_required_fields(
+        self, 
+        user_id: UUID, 
+        session: AsyncSession   
+    ) -> Dict[str, Any]:
+        try: 
+            user = await session.get(User, user_id)
+
+            kyc = await get_kyc(user_id=user_id, session=session)
+            
+
+            zoho_required_details = {
+                "name": user.full_name,
+                "email": user.email,
+                "phone": user.phone_number,
+                "address": user.address,
+                "father_name": user.father_name,
+                "entity_type": user.investor_type.value, 
+                "pan_number": kyc.pan_number,
+                "capital_commitment": user.capital_commitment,
+                "resident": user.country,
+                "date_of_birth": user.date_of_birth,
+            }
+
+            response =  {
+                "message": "fetching Zoho required fields",
+                "user_id": user.id,
+                "data": zoho_required_details,
+                "success": True
+            }
+
+            return response
+        
+        except Exception as e:
+            await session.rollback()
+            raise HTTPException(status_code=500, detail=f"Failed to update user details: {str(e)}")
+      
+    async def update_zoho_required_fields(
+        self, 
+        session: AsyncSession, 
+        zoho_required_details: ZohoDetails
+    ): 
+        try: 
+            user_id = zoho_required_details.user_id
+            user = await get_user(user_id=user_id, session=session)
+
+            update_data = zoho_required_details.model_dump(exclude_unset=True, exclude={"user_id"})
+
+            for key, value in update_data.items():
+                setattr(user, key, value)
+
+            await session.commit()
+            await session.refresh(user) 
+
+            return {
+                "message": "User details updated successfully",
+                "user_id": user.id,
+                "success": True
+            }
         except Exception as e:
             await session.rollback()
             raise HTTPException(status_code=500, detail=f"Failed to update user details: {str(e)}")

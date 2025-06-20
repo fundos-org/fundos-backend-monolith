@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from starlette import status
 from pydantic import EmailStr
@@ -10,7 +11,9 @@ from src.schemas.kyc import (EmailVerifyOtpRequest, EmailVerifyOtpResponse, Agre
                             PhoneNumSendOtpRequest, EmailSendOtpRequest, EmailSendOtpResponse, PhoneNumSendOtpResponse, 
                             PhoneNumVerifyOtpRequest, PhoneNumVerifyOtpResponse, UserDetailsRequest, UserDetailsResponse, 
                             ProfessionalBackgroundRequest, ProfessionalBackgroundResponse, PhotoUploadRequest, PhotoUploadResponse
-                            , UserOnboardingStartResponse, UserOnboardingStartRequest)
+                            , UserOnboardingStartResponse, UserOnboardingStartRequest) 
+
+from src.schemas.user import ZohoDetails
 from src.services.dummy import DummyService
 from src.services.email import EmailService 
 from src.services.zoho import ZohoService
@@ -153,6 +156,31 @@ async def professional_back(
 
     return ProfessionalBackgroundResponse(**result)
 
+@router.get("/user/details")
+async def get_user_details(
+    user_id: UUID, 
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> Dict[str, Any]:
+     
+    response = await dummy_service.send_zoho_required_fields(
+        user_id=user_id, 
+        session=session
+    )
+    return response
+
+@router.post("/user/details/update")
+async def update_user_details(
+    data: ZohoDetails, 
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> Dict[str, Any]: 
+    
+    response = await dummy_service.update_zoho_required_fields(
+        zoho_required_details=data,
+        session=session
+    )
+
+    return response
+
 @router.post("/user/sign-agreement")
 async def sign_agreement(
     data: AgreementRequest, 
@@ -173,12 +201,6 @@ async def sign_agreement(
             user_id=data.user_id,
             session=session
         )
-
-        # # Send document for signing
-        # send_result = await zoho_service.send_document_for_signing(
-        #     user_id=str(data.user_id),
-        #     session=session
-        # )
 
         result = {
             "success": True,
