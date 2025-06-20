@@ -240,7 +240,7 @@ class AdminService:
                 email_response = await self.email_service.send_invitation_to_subadmin(
                     email=subadmin.email,
                     invite_code=subadmin.invite_code,
-                    user_name=subadmin.name or "",
+                    user_name=subadmin.username or "",
                     password=subadmin.password or "",
                     apk_link=app_config.apk_link
                 )

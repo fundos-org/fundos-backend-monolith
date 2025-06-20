@@ -161,8 +161,9 @@ class EmailService:
             body_html = f"""
                 <div>
                     <p>Hi {user_name or 'User'},</p>
-                    <p>You have been invited by {subadmin_name or 'the team'} to join their subadmin team.</p>
-                    <p>Please click on the following link to accept the invitation: <a href="{invite_link}">{invite_link}</a></p>
+                    <p>You have been invited by {subadmin_name or 'the team'} to join their Angel Syndicate.</p>
+                    <p>Please click on the following link to download the App: <a href="{invite_link}">{invite_link}</a></p>
+                    <p>your invite code is: {invite_code}</p>
                     <p>Thank you,</p>
                     <p>Best regards,<br>{subadmin_name or 'The Team'}</p>
                 </div>
