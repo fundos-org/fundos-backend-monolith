@@ -9,6 +9,7 @@ from src.routes.dummy import router as dummyRouter
 from src.routes.admin import router as adminRouter
 from src.routes.subadmin import router as subadminRouter
 from src.routes.release import router as releaseRouter
+from src.routes.index import router as indexRouter
 from src.utils.lifespan import lifespan
 from src.middlewares.exception_handlers import (
     general_exception_handler,
@@ -32,24 +33,15 @@ app.add_exception_handler(Exception, general_exception_handler)
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
-# health route 
-@app.get("/health", tags=["index"])
-async def health():
-    return JSONResponse(
-        status_code=200, 
-        content={
-            "message" : f"server is healthy and up and running on Port: {app_config.port}",
-            "success": True, 
-            "version": f"{app_config.version}"
-            }
-        )
 
 # adding api Routers 
+app.include_router(router=indexRouter, tags=["index"])
 app.include_router(router=kycRouter, prefix=f"{api_prefix}/kyc", tags=["investor"])
 app.include_router(router=dealsRouter, prefix=f"{api_prefix}/deals", tags=["deals"]) 
 app.include_router(router=adminRouter, prefix=f"{api_prefix}/admin", tags=["admin"])
 app.include_router(router=subadminRouter, prefix=f"{api_prefix}/subadmin", tags=["subadmin"])
 app.include_router(router=releaseRouter, prefix=f"{api_prefix}/release", tags=["release"])
+
 
 # Test api Routers
 app.include_router(router=dummyRouter, prefix=f"{api_prefix_v0}", tags=["test", "investor"])
