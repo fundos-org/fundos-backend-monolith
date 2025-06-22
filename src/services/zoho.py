@@ -109,8 +109,7 @@ class ZohoService:
         month = current_date.strftime("%B")
         year = str(current_date.year)
         current_date = f"{month} {day} {year}"
-        match = re.match(r"(S/O|D/O|C/O)\s+(.*)", user.care_of, re.IGNORECASE)
-        father_name = match.group(2) if match else None
+        father_name = user.father_name
         date_of_birth = user.date_of_birth
         dob_obj = datetime.strptime(date_of_birth, "%d-%m-%Y")
         formatted_dob = dob_obj.strftime("%b %d %Y")
@@ -692,7 +691,6 @@ class ZohoService:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to create drawdown: {str(e)}")
             
-
     async def get_document_status(
         self, 
         request_id: str, 
