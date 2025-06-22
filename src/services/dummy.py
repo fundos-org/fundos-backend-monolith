@@ -492,9 +492,9 @@ class DummyService:
             
 
             zoho_required_details = {
-                "name": user.full_name,
+                "full_name": user.full_name,
                 "email": user.email,
-                "phone": user.phone_number,
+                "phone_number": user.phone_number,
                 "address": user.address,
                 "father_name": user.father_name,
                 "entity_type": user.investor_type.value, 
