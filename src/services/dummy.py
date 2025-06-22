@@ -541,6 +541,7 @@ class DummyService:
             }
         except Exception as e:
             await session.rollback()
+            logger.error(f"Failed to update user details: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Failed to update user details: {str(e)}")
         
     async def contribution_agreement(
@@ -566,6 +567,7 @@ class DummyService:
 
         except Exception as e:
             await session.rollback()
+            logger.error(f"Failed to update user details: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Failed to update user details: {str(e)}")
         
     async def upload_photograph(
