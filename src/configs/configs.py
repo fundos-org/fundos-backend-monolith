@@ -95,7 +95,7 @@ class ZohoConfigs(BaseSettings):
     zoho_refresh_token: str = "1000.fdcc4342e7597414eed476837c2dbebe.03c4d33175919ce6dea6907551d1c447"
     zoho_redirect_uri: str = "https%3A%2F%2Fsign.zoho.com"
     zoho_grant_type: str = "refresh_token"
-    drawdown_template_id: str = "80016000000209107"
+    drawdown_template_id: str = "80016000000241607"
     contribution_template_id: str = "80016000000197395"
     zoho_base_url: str = "https://sign.zoho.in/api/v1"
     zoho_auth_url: str = "https://accounts.zoho.in/oauth/v2/token"
