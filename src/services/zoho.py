@@ -594,7 +594,7 @@ class ZohoService:
                             "investor": investor_name,
                             "investment_scheme": investment_scheme,
                             "company_name": company_name,
-                            "Investment_amount": investment_amount_str,
+                            "investment_amount": investment_amount_str,
                             "management_fee": management_fee_str,
                             "total_payable": total_payable_str,
                         },
