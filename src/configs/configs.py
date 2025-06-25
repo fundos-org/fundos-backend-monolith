@@ -93,7 +93,7 @@ class ZohoConfigs(BaseSettings):
     zoho_client_id: str = "1000.HV5DRVU8JJN4QDSSX2UG24TU5539SK"
     zoho_client_secret: str = "789827012f3380e26d0408648b7f4d702cfd8bf995"
     zoho_refresh_token: str = "1000.fdcc4342e7597414eed476837c2dbebe.03c4d33175919ce6dea6907551d1c447"
-    zoho_redirect_uri: str = "https%3A%2F%2Fsign.zoho.com"
+    zoho_redirect_uri: str = "https://api.fundos.services/"
     zoho_grant_type: str = "refresh_token"
     drawdown_template_id: str = "80016000000241607"
     contribution_template_id: str = "80016000000197395"
@@ -143,6 +143,9 @@ redis_configs = RedisConfigs()
 class DigitapConfigs(BaseSettings):
     digitap_base_url: str = "https://svc.digitap.ai"
     validation_base_url: str = "https://svc.digitap.ai/validation"
+    ukyc_uat_base_url: str = "https://svcdemo.digitap.work"
+    uat_client_id: str = "47135769"
+    uat_client_secret: str = "AXl86HqoGJ601sVYeH0cDTKTACnjIpu1"
     client_id: str = "17137231"
     client_secret: str = "RhoLU35zsKc2OMao9SNec3kpcHJjIWAk"
 

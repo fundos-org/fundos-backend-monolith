@@ -10,6 +10,7 @@ from src.routes.admin import router as adminRouter
 from src.routes.subadmin import router as subadminRouter
 from src.routes.release import router as releaseRouter
 from src.routes.index import router as indexRouter
+from src.routes.v2.kyc import router as KycRouterV2
 from src.utils.lifespan import lifespan
 from src.middlewares.exception_handlers import (
     general_exception_handler,
@@ -17,11 +18,10 @@ from src.middlewares.exception_handlers import (
     http_exception_handler,
 )
 
-version = "v1"
-api_prefix = "/api/v1/live" 
 
-version_v0 = "v0" 
+api_prefix_v1 = "/api/v1/live" 
 api_prefix_v0 = "/api/v0/test" 
+api_prefix_v2 = "/api/v2/live"
 
 app = FastAPI(lifespan=lifespan) 
 
@@ -34,17 +34,20 @@ app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 
-# adding api Routers 
+# Mount v1 api routers 
 app.include_router(router=indexRouter, tags=["index"])
-app.include_router(router=kycRouter, prefix=f"{api_prefix}/kyc", tags=["investor"])
-app.include_router(router=dealsRouter, prefix=f"{api_prefix}/deals", tags=["deals"]) 
-app.include_router(router=adminRouter, prefix=f"{api_prefix}/admin", tags=["admin"])
-app.include_router(router=subadminRouter, prefix=f"{api_prefix}/subadmin", tags=["subadmin"])
-app.include_router(router=releaseRouter, prefix=f"{api_prefix}/release", tags=["release"])
+app.include_router(router=kycRouter, prefix=f"{api_prefix_v1}/kyc", tags=["investor"])
+app.include_router(router=dealsRouter, prefix=f"{api_prefix_v1}/deals", tags=["deals"]) 
+app.include_router(router=adminRouter, prefix=f"{api_prefix_v1}/admin", tags=["admin"])
+app.include_router(router=subadminRouter, prefix=f"{api_prefix_v1}/subadmin", tags=["subadmin"])
+app.include_router(router=releaseRouter, prefix=f"{api_prefix_v1}/release", tags=["release"])
 
 
-# Test api Routers
+# Mount v0 api routers
 app.include_router(router=dummyRouter, prefix=f"{api_prefix_v0}", tags=["test", "investor"])
+
+# Mount v2 api routers 
+app.include_router(router=KycRouterV2, prefix=f"{api_prefix_v2}/kyc", tags=["investor_v2"])
 
 
 
