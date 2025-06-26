@@ -27,6 +27,7 @@ REDIS_HOST = redis_configs.redis_host
 REDIS_PORT = redis_configs.redis_port
 REDIS_DB = redis_configs.redis_db
 CACHE_TTL = redis_configs.redis_cache_ttl  # 5 minutes in seconds, aligned with likely Digitap session timeout
+RATE_LIMIT = redis_configs.redis_rate_limit
 
 class UnifiedKycService:
     def __init__(self):
@@ -76,7 +77,7 @@ class UnifiedKycService:
         # Check rate limit (60-second interval)
         rate_limit_key = self._get_rate_limit_key(user_id)
         if self.redis.get(rate_limit_key):
-            logger.error(f"KYC request rate limit exceeded for user_id: {user_id}")
+            logger.error(f"KYC request rate lim it exceeded for user_id: {user_id}")
             raise HTTPException(status_code=429, detail="Please wait 60 seconds before requesting a new KYC URL")
 
         # Generate unique ID for Digitap API
@@ -118,7 +119,7 @@ class UnifiedKycService:
         cache_key = self._get_cache_key(unique_id)
         self.redis.setex(cache_key, CACHE_TTL, json.dumps(cache_value))
         # Set rate limit key (600 seconds as per your update)
-        self.redis.setex(rate_limit_key, 600, "1")
+        self.redis.setex(rate_limit_key, RATE_LIMIT, "1")
         logger.info(f"Cached unified KYC data for user_id: {user_id}, unique_id: {unique_id}, cache_key: {cache_key}")
 
         return {

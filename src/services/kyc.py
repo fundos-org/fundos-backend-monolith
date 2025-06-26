@@ -26,6 +26,7 @@ REDIS_HOST = redis_configs.redis_host
 REDIS_PORT = redis_configs.redis_port
 REDIS_DB = redis_configs.redis_db
 CACHE_TTL = redis_configs.redis_cache_ttl  # 5 minutes in seconds, aligned with likely Digitap session timeout
+RATE_LIMIT = redis_configs.redis_rate_limit
 
 class KycService:
     def __init__(self):
@@ -108,7 +109,7 @@ class KycService:
         cache_key = self._get_cache_key(user_id)
         self.redis.setex(cache_key, CACHE_TTL, json.dumps(response_data))
         # Set rate limit key (60 seconds)
-        self.redis.setex(rate_limit_key, 60, "1")
+        self.redis.setex(rate_limit_key, RATE_LIMIT, "1")
         logger.info(f"Cached OTP data for user_id: {user_id}, cache_key: {cache_key}")
 
         response = {
@@ -320,7 +321,7 @@ class KycService:
         # Update cache with new data
         self.redis.setex(cache_key, CACHE_TTL, json.dumps(response_data))
         # Set rate limit key (60 seconds)
-        self.redis.setex(rate_limit_key, 60, "1")
+        self.redis.setex(rate_limit_key, RATE_LIMIT, "1")
         logger.info(f"Updated cache for user_id: {user_id}")
 
         return response_data

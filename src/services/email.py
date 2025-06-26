@@ -24,6 +24,9 @@ REDIS_PORT = redis_configs.redis_port
 REDIS_DB = redis_configs.redis_db
 CACHE_TTL = redis_configs.redis_cache_ttl  # 5 minutes in seconds, aligned with KycService
 
+# Rate limit configuration
+RATE_LIMIT = redis_configs.redis_rate_limit
+
 class EmailService:
     def __init__(self):
         self.smtp_server = SMTP_SERVER
@@ -57,7 +60,7 @@ class EmailService:
     ) -> Any:
         """Send an OTP email using Zoho ZeptoMail SMTP."""
         try:
-            # Check rate limit (60-second interval)
+            # Check rate limit (10-second interval)
             rate_limit_key = self._get_rate_limit_key(email)
             if self.redis.get(rate_limit_key):
                 logger.error(f"OTP request rate limit exceeded for email: {email}")
@@ -95,9 +98,9 @@ class EmailService:
                 logger.error(f"SMTP error while sending OTP email: {str(e)}")
                 raise HTTPException(status_code=500, detail=f"Failed to send OTP email: {str(e)}")
 
-            # Set rate limit key (60 seconds)
+            # Set rate limit key (10 seconds)
             try:
-                self.redis.setex(rate_limit_key, 60, "1")
+                self.redis.setex(rate_limit_key, RATE_LIMIT, "1")
             except redis.RedisError as e:
                 logger.error(f"Redis error while setting rate limit: {str(e)}")
                 raise HTTPException(status_code=500, detail="Failed to set rate limit")

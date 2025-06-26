@@ -129,7 +129,8 @@ class RedisConfigs(BaseSettings):
     redis_host: str = "redis"
     redis_port: int = 6379
     redis_db: int = 0
-    redis_cache_ttl: int = 300
+    redis_cache_ttl: int = 600
+    redis_rate_limit: int = 10
 
     model_config = SettingsConfigDict(
         env_file=".env",
