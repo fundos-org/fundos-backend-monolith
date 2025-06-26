@@ -21,8 +21,8 @@ logger = get_logger(__name__)
 DIGITAP_BASE_URL = digitap_configs.digitap_base_url
 VALIDATION_BASE_URL = digitap_configs.validation_base_url
 UAT_BASE_URL = digitap_configs.ukyc_uat_base_url
-CLIENT_ID = digitap_configs.uat_client_id  # Use the UAT client_id
-CLIENT_SECRET = digitap_configs.uat_client_secret  # Use the UAT client_secret
+CLIENT_ID = digitap_configs.client_id  # Use the UAT client_id
+CLIENT_SECRET = digitap_configs.client_secret  # Use the UAT client_secret
 REDIS_HOST = redis_configs.redis_host
 REDIS_PORT = redis_configs.redis_port
 REDIS_DB = redis_configs.redis_db
@@ -83,7 +83,7 @@ class UnifiedKycService:
         # Generate unique ID for Digitap API
         unique_id = self._generate_unique_id(user_id)
 
-        url = f"{self.uat_base_url}/kyc-unified/v1/generate-url/"
+        url = f"{self.base_url}/kyc-unified/v1/generate-url/"
         payload = {
             "redirectionUrl": "https://api.fundos.services",
             "uniqueId": unique_id,
@@ -162,7 +162,7 @@ class UnifiedKycService:
             logger.error(f"No unified_transaction_id found in cache for user_id: {user_id}")
             raise HTTPException(status_code=400, detail="No unified transaction ID found")
 
-        url = f"{self.uat_base_url}/kyc-unified/v1/{unified_transaction_id}/details/"
+        url = f"{self.base_url}/kyc-unified/v1/{unified_transaction_id}/details/"
         headers = self.get_auth_header_basic()
 
         async with httpx.AsyncClient(timeout=30.0) as client:
