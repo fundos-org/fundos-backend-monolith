@@ -436,7 +436,7 @@ class KycService:
             logger.error(f"Invalid user_id format: {user_id}")
             raise HTTPException(status_code=400, detail="Invalid user_id format")
 
-        url = "https://svc.digitap.ai/validation/misc/v1/pan-account-linkage" # 
+        url = "https://svc.digitap.ai/validation/misc/v1/pan-account-linkage" # prod url
         demo_url = "https://svcdemo.digitap.work/validation/misc/v1/pan-account-linkage" # change it to a variable later
         payload = {
             "client_ref_num": f"pan-bank-{user_id}",
@@ -444,6 +444,7 @@ class KycService:
             "account_number": bank_account_number,
             "ifsc_code": ifsc_code
         }
+
         headers = self.get_auth_header_basic()
 
         demo_headers = {
@@ -452,7 +453,7 @@ class KycService:
         }
 
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(demo_url, json=payload, headers=demo_headers)
+            response = await client.post(url=demo_url, json=payload, headers=demo_headers)
 
         if response.status_code != 200:
             logger.error(f"PAN to Bank Account link verification failed: {response.status_code} {response.text}")

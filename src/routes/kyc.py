@@ -99,9 +99,6 @@ async def verify_pan_bank_link(
     session: Annotated[AsyncSession, Depends(get_session)]
 ) -> Any:  
     try:
-        return {
-            "success": True
-        }
         response = await kyc_service.verify_pan_bank_link(
             user_id=pan_details.user_id,
             pan_number=pan_details.pan_number,
