@@ -1,8 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
 from src.logging.logging_middleware import LoggingMiddleware
-from src.configs.configs import app_config
 from src.routes.kyc import router as kycRouter
 from src.routes.deal import router as dealsRouter 
 from src.routes.dummy import router as dummyRouter
@@ -11,6 +9,7 @@ from src.routes.subadmin import router as subadminRouter
 from src.routes.release import router as releaseRouter
 from src.routes.index import router as indexRouter
 from src.routes.v2.kyc import router as KycRouterV2
+from src.routes.v2.payments import router as paymentsRouterV2
 from src.utils.lifespan import lifespan
 from src.middlewares.exception_handlers import (
     general_exception_handler,
@@ -48,6 +47,7 @@ app.include_router(router=dummyRouter, prefix=f"{api_prefix_v0}", tags=["test", 
 
 # Mount v2 api routers 
 app.include_router(router=KycRouterV2, prefix=f"{api_prefix_v2}/kyc", tags=["investor_v2"])
+app.include_router(router=paymentsRouterV2, prefix=f"{api_prefix_v2}/payments", tags=["payment_v2"])
 
 
 
