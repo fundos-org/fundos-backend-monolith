@@ -1,7 +1,8 @@
 import os
 import json
 import base64
-from datetime import datetime, timezone
+from typing import Any, Dict, List
+from datetime import datetime, timedelta, timezone
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 import httpx
@@ -9,8 +10,11 @@ from fastapi import HTTPException
 import redis
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
+from src.models.investment import Investment, InvestmentStatus
 from src.logging.logging_setup import get_logger
 from src.models.transaction import Transaction, TransactionType, TransactionStatus
+from src.models.deal import Deal
+from src.models.user import User
 from src.configs.benepay import benepay_configs
 from src.configs.configs import redis_configs
 
@@ -23,6 +27,12 @@ BASE_URL = benepay_configs.base_url
 AUTH_URL = benepay_configs.auth_url
 PAY_URL = benepay_configs.pay_url
 API_KEY = benepay_configs.api_key
+ENCRYPTION_KEY = benepay_configs.encryption_key
+COMMENTS = benepay_configs.comments
+CHARGES = benepay_configs.charges
+CHARGES_REASON = benepay_configs.charges_reason
+RETURN_URL = benepay_configs.return_url
+MERCHANT_ID = benepay_configs.merchant_id
 
 # Initiate redis credentials
 REDIS_HOST = redis_configs.redis_host
@@ -41,6 +51,11 @@ class PaymentService:
         self.auth_url = AUTH_URL
         self.api_key = API_KEY
         self.auth_token = None
+        self.charges = CHARGES
+        self.charges_reason = CHARGES_REASON
+        self.return_url = RETURN_URL
+        self.comments = COMMENTS
+        self.merchant_id = MERCHANT_ID
 
         self.payment_request_url = PAY_URL
         self.redis = redis.Redis(
@@ -118,47 +133,144 @@ class PaymentService:
 
     def _get_payment_payload(
         self,
-        investment_id: str,
-        amount: float,
-        customer_name: str,
-        customer_email: str,
-        customer_phone: str,
-        description: str,
-        currency: str,
-        expiry_in_minutes: int
-    ) -> dict:
+        user: User,
+        deal: Deal, 
+        amount: float
+    ) -> Dict[str, Any]:
         """Generate the payment payload for BenePay API."""
-        return {
-            "merchantid": self.api_key,
-            "transactionid": str(investment_id),
-            "amount": str(amount),
-            "currency": currency,
-            "description": description,
-            "payerName": customer_name,
-            "payerEmail": customer_email,
-            "payerMobile": customer_phone,
-            "expiryInMinutes": str(expiry_in_minutes)
-        }
 
+        # Define the payment payload variables
+        current_date: str = datetime.now(timezone(timedelta(hours=5, minutes=30))).date().isoformat()
+        collectionAmountCurrency: str = "INR"
+        collectionReferenceNumber: str = f"{user.id}-{deal.id}-{current_date}"
+        debtorEmailId: str = user.email, 
+        debtorName: str = user.full_name,
+        finalDueAmount: str = amount.__str__()
+        requestorTransactionId: str = "0655097f-b6df-4984-96bf9c651fb32f8d"
+        debtorMobileNumber: str = user.phone_number
+        debtorWhatsAppNumber: str = user.phone_number
+        reasonForCollection: str = "OnlinePayment"
+        initialDueAmount: str = amount.__str__()
+        charges: str = self.charges.__str__()
+        reasonForCharges: str = self.charges_reason 
+        finalDueDate: str = current_date
+        additionalComments: str = self.comments
+        payVia: List[str] = ["UI", "CC"]
+        returnUrl: str = self.return_url
+        merchantId: str = self.merchant_id
+
+        payload: Dict = {
+            "collectionAmountCurrency": collectionAmountCurrency,
+            "collectionReferenceNumber": collectionReferenceNumber,
+            "debtorEmailId": debtorEmailId,
+            "debtorName": debtorName,
+            "finalDueAmount": finalDueAmount,
+            "requestorTransactionId": requestorTransactionId,
+            "debtorMobileNumber": debtorMobileNumber,
+            "debtorWhatsAppNumber": debtorWhatsAppNumber,
+            "reasonForCollection": reasonForCollection,
+            "initialDueAmount": initialDueAmount,
+            "charges": charges,
+            "reasonForCharges": reasonForCharges,
+            "finalDueDate": finalDueDate,
+            "additionalComments": additionalComments,
+            "payVia": payVia,
+            "returnUrl": returnUrl,
+            "merchantId": merchantId
+        }
+        return payload
+
+    async def _create_investment_and_transaction(
+        self,
+        user: User,
+        deal: Deal,
+        amount: float,
+        idempotency_key: str,
+        session: AsyncSession
+    ) -> tuple[Investment, Transaction, dict]:
+        # Check if a transaction is already active
+        if session.in_transaction():
+            # No need to start a new transaction
+            investment = Investment(
+                investor_id=user.id,
+                deal_id=deal.id,
+                amount=amount,
+                status=InvestmentStatus.PENDING,
+            )
+            session.add(investment)
+            await session.flush()  # Get investment.id
+
+            transaction = Transaction(
+                investment_id=investment.id,
+                user_id=user.id,
+                deal_id=deal.id,
+                status=TransactionStatus.PENDING,
+                amount=amount,
+                type=TransactionType.PAYMENT,
+                idempotency_key=idempotency_key
+            )
+            session.add(transaction)
+            await session.flush()  # Get transaction.id
+        else:
+            # Start a new transaction if none exists
+            async with session.begin():  # Full ACID
+                investment = Investment(
+                    user_id=user.id,
+                    deal_id=deal.id,
+                    amount=amount,
+                    status=InvestmentStatus.PENDING,
+                )
+                session.add(investment)
+                await session.flush()  # Get investment.id
+
+                transaction = Transaction(
+                    investment_id=investment.id,
+                    user_id=user.id,
+                    deal_id=deal.id,
+                    status=TransactionStatus.PENDING,
+                    amount=amount,
+                    type=TransactionType.PAYMENT,
+                    idempotency_key=idempotency_key
+                )
+                session.add(transaction)
+                await session.flush()  # Get transaction.id
+
+        return investment, transaction
+    
     async def send_payment_url(
         self,
         session: AsyncSession,
-        investment_id: str,
-        amount: float,
-        customer_name: str,
-        customer_email: str,
-        customer_phone: str,
-        description: str = "Investment Payment",
-        currency: str = "INR",
-        expiry_in_minutes: int = 30
+        user_id: str,
+        deal_id: str,
+        amount: float, 
+        idempotency_key: str
     ) -> str:
         """Initiate a payment request and return the payment URL."""
+
+        # Check if request has already been processed
+        stmt = select(Transaction).where(Transaction.idempotency_key == idempotency_key)
+        existing = await session.execute(stmt)
+        existing_txn = existing.scalar_one_or_none()
+
+        if existing_txn:
+            # Return previous payment URL or info if already sent
+            return existing_txn.payment_url  # Assuming you store it
+        
         auth_token = await self._get_auth_token()
-        payload = self._get_payment_payload(
-            investment_id, amount, customer_name, customer_email, customer_phone,
-            description, currency, expiry_in_minutes
+
+        user: User = await session.get(User, user_id)
+        deal: Deal = await session.get(Deal, deal_id)
+
+        investment, transaction = await self._create_investment_and_transaction(
+            user=user, 
+            deal=deal, 
+            amount=amount, 
+            idempotency_key=idempotency_key,
+            session=session
         )
-        encrypted_payload = self._encrypt_data(payload)
+
+        payload = self._get_payment_payload(user, deal, amount) #  get payload
+        encrypted_payload = self._encrypt_data(payload) # encrypt payload
         headers = {
             "Authorization": f"Bearer {auth_token}",
             "Header": self.api_key,
@@ -168,45 +280,37 @@ class PaymentService:
 
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.post(self.payment_request_url, headers=headers, json=data)
+                response: Dict[str, Any] = await client.post(self.payment_request_url, headers=headers, json=data)
                 response.raise_for_status()
-                encrypted_response = base64.urlsafe_b64decode(response.json().get("encryptedData"))
-                decrypted_response = self._decrypt_data(encrypted_response)
 
-            transaction = Transaction(
-                investment_id=investment_id,
-                transaction_type=TransactionType.PAYMENT,
-                order_id=str(investment_id),
-                transaction_id=decrypted_response.get("transactionid"),
-                amount=amount,
-                currency=currency,
-                description=description,
-                status=TransactionStatus.PENDING,
-                response_code=decrypted_response.get("response_code")
-            )
-            session.add(transaction)
+                if response.get("statusCode") != 302:
+                    raise HTTPException(status_code=response.get("statusCode"), detail=response.get("message"))
+
+                if response.get("statusCode") == 302: 
+                    transaction.payment_url = response.get("message")
+
             await session.commit()
-            await session.refresh(transaction)
-            logger.info(f"Payment initiated for transaction {transaction.transaction_id}")
-
-            return decrypted_response.get("payment_url")
+            return response
 
         except httpx.HTTPStatusError as e:
-            logger.error(f"Failed to initiate payment for investment_id {investment_id}: {str(e)}")
+            logger.error(f"Failed to initiate payment for user_id: {user_id}, deal_id: {deal_id}: {str(e)}")
             raise HTTPException(status_code=500, detail="Payment initiation failed")
         except Exception as e:
-            logger.error(f"Unexpected error for investment_id {investment_id}: {str(e)}")
+            logger.error(f"Unexpected error for user_id: {user_id}, deal_id: {deal_id}  : {str(e)}")
             await session.rollback()
             raise HTTPException(status_code=500, detail="Internal server error")
+        except ValueError as ve: 
+            logger.error(f"Failed to initiate payment for user_id: {user_id}, deal_id: {deal_id}: {str(ve)}")
+            raise HTTPException(status_code=500, detail="Payment initiation failed")
     
     async def handle_webhook(
         self, 
         session: AsyncSession, 
-        webhook_data: dict
+        webhook_data: str
     ) -> None:
         """Process incoming webhook data from BenePay."""
         try:
-            encrypted_data = base64.urlsafe_b64decode(webhook_data.get("encryptedData"))
+            encrypted_data = base64.urlsafe_b64decode(webhook_data)
             decrypted_data = self._decrypt_data(encrypted_data)
 
             logger.info(f"Received webhook data: {decrypted_data}")

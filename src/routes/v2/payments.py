@@ -19,7 +19,10 @@ async def create_payment(
     logger.info(f"Received data: {data}")
 
     response = await payment_service.send_payment_url(
-        data=data, 
+        user_id=data.user_id,
+        deal_id=data.deal_id,
+        amount=data.amount,
+        idempotency_key=data.idempotency_key,
         session=session
     )
     return response
@@ -30,5 +33,7 @@ async def handle_payment_webhook(
 ) -> Dict[str, Any]:
     logger.info(f"Received data: {data}")
     
-    response = await payment_service.handle_webhook(data)
+    response = await payment_service.handle_webhook(
+        webhook_data=data.encData
+        )
     return response

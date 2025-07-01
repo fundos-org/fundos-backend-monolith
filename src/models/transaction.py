@@ -1,6 +1,6 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import Enum
 from uuid import UUID, uuid4
 
@@ -17,10 +17,14 @@ class TransactionStatus(str, Enum):
 class Transaction(SQLModel, table=True):
     id: UUID = Field(primary_key=True, default_factory=uuid4)
     investment_id: UUID = Field(foreign_key="investment.id")
+    idempotency_key: Optional[str] = Field(default=None, index=True, unique=True, max_length=64)
     transaction_type: TransactionType = Field(default=TransactionType.PAYMENT)
-    order_id: Optional[str] = Field(default=None)  # Payaid order_id
-    transaction_id: Optional[str] = Field(default=None)  # Payaid transaction_id
-    refund_id: Optional[str] = Field(default=None)  # Payaid refund_id
+    order_id: Optional[str] = Field(default=None) # reference_id from benepay 
+    user_id: Optional[UUID] = Field(default=None)
+    deal_id: Optional[UUID] = Field(default=None)
+    transaction_id: Optional[str] = Field(default=None)
+    payment_url: Optional[str] = Field(default=None)
+    refund_id: Optional[str] = Field(default=None)
     amount: float
     currency: str = Field(default="INR")
     description: Optional[str] = Field(default=None)
@@ -30,6 +34,6 @@ class Transaction(SQLModel, table=True):
     refund_amount: Optional[float] = Field(default=None)
     refund_status: Optional[str] = Field(default=None)
     refund_details: Optional[str] = Field(default=None)  # JSON string for refund_details
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now())
     updated_at: Optional[datetime]
     investment: Optional["Investment"] = Relationship(back_populates="transactions")  # type: ignore # noqa: F821

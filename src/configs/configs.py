@@ -1,5 +1,4 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-import os
 
 class AppConfigs(BaseSettings):
     env: str = "DEV"

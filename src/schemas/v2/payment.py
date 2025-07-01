@@ -1,12 +1,13 @@
 from pydantic import BaseModel, Field
-from typing import Dict, Any
+from uuid import UUID
 
 
 class PaymentWebhookData(BaseModel):
     encData: str = Field(..., description="Encrypted data from the payment webhook") 
 
 class PaymentRequestData(BaseModel): 
-    user_id: str = Field(..., description="User ID of the Investor")
-    deal_id: str =Field(..., description="ID of the deal")
+    user_id: UUID = Field(..., description="User ID of the Investor")
+    deal_id: UUID =Field(..., description="ID of the deal")
     amount: float = Field(..., description="Amount of investment")
+    idempotency_key: str = Field(..., description="Unique identifier for the payment", max_length=64)
     
