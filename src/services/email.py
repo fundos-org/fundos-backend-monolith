@@ -8,6 +8,7 @@ from fastapi import HTTPException
 from typing import Dict, Any
 from src.logging.logging_setup import get_logger
 from src.configs.configs import mail_configs, redis_configs, app_config
+from src.utils.email_templates import (WELCOME_INVESTOR_SUBJECT,WELCOME_INVESTOR_PLAIN,WELCOME_INVESTOR_HTML)
 
 logger = get_logger(__name__)
 
@@ -155,30 +156,19 @@ class EmailService:
         invite_code: str,
         subadmin_name: str = "",
         user_name: str = "",
-        apk_link: str = app_config.apk_key
+        apk_link: str = app_config.apk_link
     ) -> Dict[str, str]:
         """Send an invitation email using Zoho ZeptoMail SMTP."""
         try:
-            invite_link = f"{apk_link}"
-            subject = "You have been invited to join a subadmin team"
-            body_html = f"""
-                <div>
-                    <p>Hi {user_name or 'User'},</p>
-                    <p>You have been invited by {subadmin_name or 'the team'} to join their Angel Syndicate.</p>
-                    <p>Please click on the following link to download the App: <a href="{invite_link}">{invite_link}</a></p>
-                    <p>your invite code is: {invite_code}</p>
-                    <p>Thank you,</p>
-                    <p>Best regards,<br>{subadmin_name or 'The Team'}</p>
-                </div>
-            """
+            invite_link = f"{apk_link}"  # noqa: F841
 
             # Prepare email
             msg = EmailMessage()
-            msg['Subject'] = subject
+            msg['Subject'] = WELCOME_INVESTOR_SUBJECT
             msg['From'] = f"fundos <{FROM_EMAIL}>"
             msg['To'] = email
-            msg.set_content(f"You have been invited by {subadmin_name or 'the team'} to join their subadmin team. Please click on the link to accept: {invite_link}")
-            msg.add_alternative(body_html, subtype='html')
+            msg.set_content(WELCOME_INVESTOR_PLAIN)
+            msg.add_alternative(WELCOME_INVESTOR_HTML, subtype='html')
 
             # Send email via SMTP
             try:
@@ -210,7 +200,6 @@ class EmailService:
     ) -> Any: 
         """Send an invitation email using Zoho ZeptoMail SMTP."""
         try:
-            invite_link = apk_link
             subject = "You have been invited to join a subadmin team"
             body_html = f"""
                         <html>

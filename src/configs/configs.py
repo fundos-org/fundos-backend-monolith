@@ -6,7 +6,7 @@ class AppConfigs(BaseSettings):
     debug: bool = True
     host: str = "0.0.0.0"
     version: str = "v1_21_June_2025"
-    apk_link: str = "http://43.205.36.168/api/v1/live/release/app"
+    apk_link: str = "https://mobile.fundos.services"
     apk_key: str = "assets/FundOS_v1.apk"
     
 

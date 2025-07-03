@@ -22,3 +22,6 @@ db-setup.txt
 
 # env file 
 .env
+
+# test files
+test.py

@@ -132,4 +132,4 @@ class Deal(SQLModel, table=True):
             "overlaps": "deal,investments,investor",
         }
     )
-    user_preferences: List["UserDealPreference"] = Relationship(back_populates="deal") # type: ignore
+    user_preferences: List["UserDealPreference"] = Relationship(back_populates="deal") # type: ignore  # noqa: F821

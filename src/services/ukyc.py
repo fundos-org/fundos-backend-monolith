@@ -3,7 +3,6 @@ import httpx
 import base64
 import redis
 import json
-import os
 from fastapi import HTTPException
 from uuid import UUID
 from sqlalchemy import select

@@ -272,11 +272,14 @@ class PaymentService:
         payload = self._get_payment_payload(user, deal, amount) #  get payload
         encrypted_payload = self._encrypt_data(payload) # encrypt payload
         headers = {
+            "x-api-key": self.api_key,
             "Authorization": f"Bearer {auth_token}",
-            "Header": self.api_key,
             "Content-Type": "application/json"
         }
+        logger.info(f"headers: {headers}")
+
         data = {"encryptedData": encrypted_payload}
+        logger.info(f"Json Payload: {data}")
 
         try:
             async with httpx.AsyncClient() as client:
