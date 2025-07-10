@@ -163,3 +163,21 @@ async def add_member(
         raise HTTPException(status_code=400, detail="failed to get subadmin details")
 
     return result
+
+@router.get("/investors/list/{subadmin_id}")
+async def get_investors_list(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    subadmin_id: UUID,
+    page: int = 1,
+    per_page: int = 20
+) -> Any:
+    result = await subadmin_services.get_investors_list(
+        session=session,
+        subadmin_id=subadmin_id,
+        page=page,
+        per_page=per_page
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Failed to fetch investors list")
+
+    return result

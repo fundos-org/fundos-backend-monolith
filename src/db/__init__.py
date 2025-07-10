@@ -9,5 +9,6 @@ async def init_db():
         async with async_engine.begin() as conn:
             await conn.run_sync(SQLModel.metadata.create_all)
         logger.info("Database connection successful and schema initialized.")
+        logger.info(f"Database URL: {async_engine.url}")
     except Exception as e:
         logger.error(f"Failed to initialize the database, error: {e}", exc_info=True)

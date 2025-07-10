@@ -25,3 +25,13 @@ db-setup.txt
 
 # test files
 test.py
+
+# cursor rules and userinput
+.cursor/
+userinput.py
+
+# synthetic data file
+synthetic_data_generator.py
+
+# env example
+env.example

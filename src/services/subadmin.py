@@ -5,7 +5,8 @@ from sqlalchemy.orm import joinedload
 from src.logging.logging_setup import get_logger
 from src.models.subadmin import Subadmin
 from src.models.deal import Deal, DealStatus
-from src.models.user import User, KycStatus, Role
+from src.models.user import User, KycStatus, Role, OnboardingStatus
+from sqlalchemy import cast, String
 from src.models.investment import Investment
 from src.models.transaction import Transaction, TransactionStatus, TransactionType
 from src.services.s3 import S3Service
@@ -748,4 +749,120 @@ class SubAdminService:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to change deal status: {str(e)}"
+            )
+
+    async def get_investors_list(
+        self,
+        session: AsyncSession,
+        subadmin_id: UUID,
+        page: int = 1,
+        per_page: int = 20
+    ) -> dict:
+        try:
+            # Fetch subadmin
+            subadmin = await session.get(Subadmin, subadmin_id)
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
+
+            # Calculate offset for pagination
+            offset = (page - 1) * per_page
+
+            # Get total count of investors with onboarded status
+            total_count_stmt = select(func.count(User.id)).where(
+                and_(
+                    User.fund_manager_id == subadmin_id,
+                    User.role == Role.INVESTOR,
+                    # User.onboarding_status == OnboardingStatus.Completed
+                    cast(User.onboarding_status, String) == OnboardingStatus.Completed
+                )
+            )
+            total_count_result = await session.execute(total_count_stmt)
+            total_records = total_count_result.scalar() or 0
+
+            # Calculate total pages
+            total_pages = (total_records + per_page - 1) // per_page
+
+            # Fetch investors with pagination
+            investors_stmt = select(User).where(
+                and_(
+                    User.fund_manager_id == subadmin_id,
+                    User.role == Role.INVESTOR,
+                    # User.onboarding_status == OnboardingStatus.Completed
+                    cast(User.onboarding_status, String) == OnboardingStatus.Completed
+                )
+            ).options(joinedload(User.investments)).offset(offset).limit(per_page)
+            
+            investors_result = await session.execute(investors_stmt)
+            investors = investors_result.unique().scalars().all()
+
+            # Prepare investors list
+            investors_list = []
+            for investor in investors:
+                # Count deals invested
+                deals_invested = len(investor.investments)
+                
+                investors_list.append({
+                    "name": investor.full_name or f"{investor.first_name or ''} {investor.last_name or ''}".strip(),
+                    "mail": investor.email or "",
+                    "type": investor.investor_type.value if investor.investor_type else "",
+                    "deals_invested": deals_invested,
+                    "kyc_status": investor.kyc_status,
+                    "mca": investor.mca_key or "",
+                    "joined_on": investor.created_at.strftime("%Y-%m-%d") if investor.created_at else "",
+                    "profile_pic": investor.profile_image_url or ""
+                })
+
+            # Calculate metadata
+            all_investors_stmt = select(User).where(
+                and_(
+                    User.fund_manager_id == subadmin_id,
+                    User.role == Role.INVESTOR
+                )
+            ).options(joinedload(User.investments))
+            all_investors_result = await session.execute(all_investors_stmt)
+            all_investors = all_investors_result.unique().scalars().all()
+  
+            investor_onboarded = sum(1 for inv in all_investors if inv.onboarding_status == OnboardingStatus.Completed)
+            # this will return the count of kyc pending where role is investor and kyc is pending irrespective of onboarding status
+            # kyc_pending = sum(1 for inv in all_investors if inv.kyc_status == KycStatus.PENDING)
+            
+            # this will return the count of kyc pending where role is investor and kyc is pending and onboarding status is completed
+            kyc_pending = 0
+            for inv in all_investors:
+                if inv.role == Role.INVESTOR and inv.onboarding_status == OnboardingStatus.Completed and inv.kyc_status == KycStatus.PENDING:
+                    kyc_pending += 1
+                    print(kyc_pending)
+            started_investing = sum(1 for inv in all_investors if len(inv.investments) > 0)
+
+
+            # Prepare pagination info
+            pagination_info = {
+                "page": page,
+                "per_page": per_page,
+                "total_records": total_records,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_prev": page > 1
+            }
+
+            return {
+                "subadmin_id": str(subadmin.id),
+                "subadmin_name": subadmin.name or "",
+                "investors": investors_list,
+                "metadata": {
+                    "investor_onboarded": investor_onboarded,
+                    "kyc_pending": kyc_pending,
+                    "started_investing": started_investing
+                },
+                "pagination": pagination_info,
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to fetch investors list: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch investors list: {str(e)}"
             )

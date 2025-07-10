@@ -122,3 +122,34 @@ class SubAdminAddMembersRes(BaseModel):
     email: str
     role: Role
     success: bool
+
+class InvestorListItem(BaseModel):
+    name: str
+    mail: str
+    type: str
+    deals_invested: int
+    kyc_status: KycStatus
+    mca: str
+    joined_on: str
+    profile_pic: str
+
+class InvestorListMetadata(BaseModel):
+    investor_onboarded: int
+    kyc_pending: int
+    started_investing: int
+
+class InvestorListResponse(BaseModel):
+    subadmin_id: str
+    subadmin_name: str
+    investors: List[InvestorListItem]
+    metadata: InvestorListMetadata
+    pagination: dict
+    success: bool
+
+class PaginationInfo(BaseModel):
+    page: int
+    per_page: int
+    total_records: int
+    total_pages: int
+    has_next: bool
+    has_prev: bool

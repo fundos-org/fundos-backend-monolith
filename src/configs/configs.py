@@ -20,19 +20,31 @@ class AppConfigs(BaseSettings):
 # Usage
 app_config = AppConfigs() 
 
-class DbConfigs(BaseSettings): 
-    user: str = "fundos"
-    password: str = "Tx2ESTRpEmcpHmnD3UyP"
-    host: str = "aws-postgres.cnqyumwq0t3u.ap-south-1.rds.amazonaws.com"
-    port: int = 5432
-    dbname: str = "postgres"
+import os
+os.environ["DB_USER"] = "fundos_local"
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_prefix="db",
-        case_sensitive=True,
-        extra="ignore"
-    )
+#! important: Pydantic's BaseSettings loads values from environment variables by default, even if you have defaults in your class.
+
+# class DbConfigs(BaseSettings): 
+class DbConfigs():
+    user: str = "fundos_local"
+    password: str = "password"
+    host: str = "localhost"
+    port: int = 5432
+    dbname: str = "fundos"
+
+    # model_config = SettingsConfigDict(
+    #     env_file=".env",
+    #     env_prefix="db",
+    #     case_sensitive=True,
+    #     extra="ignore"
+    # )
+    @property
+    def SQLALCHEMY_DATABASE_URI(self) -> str:
+        return (
+            f"postgresql+psycopg2://{self.user}:{self.password}"
+            f"@{self.host}:{self.port}/{self.dbname}"
+        )
 
 # Usage
 db_config = DbConfigs()
@@ -55,20 +67,20 @@ class AwsConfigs(BaseSettings):
 # Usage
 aws_config = AwsConfigs()
 
-class PaymentConfigs(BaseSettings):
-    api_key: str = "c7036088-4387-4e56-b3dc-e3f81642fd70"
-    salt: str = "4f738d43bedc00376816fb2050fd347602cf0cac"
-    base_url: str = "https://mystore.payaidpayments.com"
+# class PaymentConfigs(BaseSettings):
+#     api_key: str = "c7036088-4387-4e56-b3dc-e3f81642fd70"
+#     salt: str = "4f738d43bedc00376816fb2050fd347602cf0cac"
+#     base_url: str = "https://mystore.payaidpayments.com"
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_prefix="",
-        case_sensitive=True,
-        extra="ignore"
-    )
+#     model_config = SettingsConfigDict(
+#         env_file=".env",
+#         env_prefix="",
+#         case_sensitive=True,
+#         extra="ignore"
+#     )
 
-# Usage
-payment_configs = PaymentConfigs()
+# # Usage
+# payment_configs = PaymentConfigs()
 
 class MailConfigs(BaseSettings):
     from_email: str = "noreply@fundos.solutions"
@@ -124,7 +136,7 @@ class MSG91Configs(BaseSettings):
 
 msg91_configs = MSG91Configs() 
 
-class RedisConfigs(BaseSettings):
+class RedisConfigs():
     redis_host: str = "redis"
     redis_port: int = 6379
     redis_db: int = 0

@@ -1,4 +1,5 @@
 from logging.config import fileConfig
+from src.logging.logging_setup import get_logger
 import os
 
 from sqlalchemy import engine_from_config
@@ -9,6 +10,7 @@ from src.models import metadata
 from dotenv import load_dotenv
 
 load_dotenv()
+logger = get_logger(__name__)
 
 def get_env(name: str) -> str:
     value = os.getenv(name)
@@ -23,6 +25,7 @@ PORT = get_env("port")
 DBNAME = get_env("dbname")
 
 DB_URL = f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}"
+logger.ingo(f"Using database URL: {DB_URL}")
 
 
 # this is the Alembic Config object, which provides
