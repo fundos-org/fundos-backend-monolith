@@ -181,3 +181,33 @@ async def get_investors_list(
         raise HTTPException(status_code=400, detail="Failed to fetch investors list")
 
     return result
+
+@router.get("/investors/metadata/{subadmin_id}")
+async def get_investors_metadata(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    subadmin_id: UUID
+) -> Any:
+    result = await subadmin_services.get_investors_metadata(
+        session=session,
+        subadmin_id=subadmin_id
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Failed to fetch investors metadata")
+
+    return result
+
+@router.delete("/investors/delete/{subadmin_id}/{investor_id}")
+async def delete_investor(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    subadmin_id: UUID,
+    investor_id: UUID
+) -> Any:
+    result = await subadmin_services.delete_investor(
+        session=session,
+        subadmin_id=subadmin_id,
+        investor_id=investor_id
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Failed to delete investor")
+
+    return result

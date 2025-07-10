@@ -7,7 +7,7 @@ from src.models.subadmin import Subadmin
 from src.models.deal import Deal, DealStatus
 from src.models.user import User, KycStatus, Role, OnboardingStatus
 from sqlalchemy import cast, String
-from src.models.investment import Investment
+from src.models.investment import Investment, InvestmentStatus
 from src.models.transaction import Transaction, TransactionStatus, TransactionType
 from src.services.s3 import S3Service
 from src.services.email import EmailService
@@ -812,29 +812,6 @@ class SubAdminService:
                     "profile_pic": investor.profile_image_url or ""
                 })
 
-            # Calculate metadata
-            all_investors_stmt = select(User).where(
-                and_(
-                    User.fund_manager_id == subadmin_id,
-                    User.role == Role.INVESTOR
-                )
-            ).options(joinedload(User.investments))
-            all_investors_result = await session.execute(all_investors_stmt)
-            all_investors = all_investors_result.unique().scalars().all()
-  
-            investor_onboarded = sum(1 for inv in all_investors if inv.onboarding_status == OnboardingStatus.Completed)
-            # this will return the count of kyc pending where role is investor and kyc is pending irrespective of onboarding status
-            # kyc_pending = sum(1 for inv in all_investors if inv.kyc_status == KycStatus.PENDING)
-            
-            # this will return the count of kyc pending where role is investor and kyc is pending and onboarding status is completed
-            kyc_pending = 0
-            for inv in all_investors:
-                if inv.role == Role.INVESTOR and inv.onboarding_status == OnboardingStatus.Completed and inv.kyc_status == KycStatus.PENDING:
-                    kyc_pending += 1
-                    print(kyc_pending)
-            started_investing = sum(1 for inv in all_investors if len(inv.investments) > 0)
-
-
             # Prepare pagination info
             pagination_info = {
                 "page": page,
@@ -849,11 +826,6 @@ class SubAdminService:
                 "subadmin_id": str(subadmin.id),
                 "subadmin_name": subadmin.name or "",
                 "investors": investors_list,
-                "metadata": {
-                    "investor_onboarded": investor_onboarded,
-                    "kyc_pending": kyc_pending,
-                    "started_investing": started_investing
-                },
                 "pagination": pagination_info,
                 "success": True
             }
@@ -865,4 +837,122 @@ class SubAdminService:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to fetch investors list: {str(e)}"
+            )
+
+    async def get_investors_metadata(
+        self,
+        session: AsyncSession,
+        subadmin_id: UUID
+    ) -> dict:
+        try:
+            # Fetch subadmin
+            subadmin = await session.get(Subadmin, subadmin_id)
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
+
+            # Calculate metadata
+            all_investors_stmt = select(User).where(
+                and_(
+                    User.fund_manager_id == subadmin_id,
+                    User.role == Role.INVESTOR
+                )
+            ).options(joinedload(User.investments))
+            all_investors_result = await session.execute(all_investors_stmt)
+            all_investors = all_investors_result.unique().scalars().all()
+
+            investor_onboarded = sum(1 for inv in all_investors if inv.onboarding_status == OnboardingStatus.Completed)
+            
+            # this will return the count of kyc pending where role is investor and kyc is pending and onboarding status is completed
+            kyc_pending = 0
+            for inv in all_investors:
+                if inv.role == Role.INVESTOR and inv.onboarding_status == OnboardingStatus.Completed and inv.kyc_status == KycStatus.PENDING:
+                    kyc_pending += 1
+            
+            started_investing = sum(1 for inv in all_investors if len(inv.investments) > 0)
+
+            return {
+                "subadmin_id": str(subadmin.id),
+                "subadmin_name": subadmin.name or "",
+                "metadata": {
+                    "investor_onboarded": investor_onboarded,
+                    "kyc_pending": kyc_pending,
+                    "started_investing": started_investing
+                },
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to fetch investors metadata: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch investors metadata: {str(e)}"
+            )
+
+    async def delete_investor(
+        self,
+        session: AsyncSession,
+        subadmin_id: UUID,
+        investor_id: UUID
+    ) -> dict:
+        try:
+            # Fetch subadmin
+            subadmin = await session.get(Subadmin, subadmin_id)
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
+
+            # Fetch investor
+            investor = await session.get(User, investor_id)
+            if not investor:
+                raise HTTPException(status_code=404, detail="Investor not found")
+
+            # Verify investor belongs to this subadmin
+            if investor.fund_manager_id != subadmin_id:
+                raise HTTPException(status_code=403, detail="Investor does not belong to this subadmin")
+
+            # Verify investor role
+            if investor.role != Role.INVESTOR:
+                raise HTTPException(status_code=400, detail="User is not an investor")
+
+            # Check if investor has any active investments
+            investments_stmt = select(Investment).where(
+                and_(
+                    Investment.investor_id == investor_id,
+                    cast(Investment.status, String).in_([InvestmentStatus.PENDING.name, InvestmentStatus.COMPLETED.name])
+                )
+            )
+            investments_result = await session.execute(investments_stmt)
+            active_investments = investments_result.scalars().all()
+
+            if active_investments:
+                raise HTTPException(
+                    status_code=400, 
+                    detail="Cannot delete investor with active investments"
+                )
+
+            # Store investor details for response
+            investor_name = investor.full_name or f"{investor.first_name or ''} {investor.last_name or ''}".strip()
+            investor_email = investor.email or ""
+
+            # Delete investor
+            await session.delete(investor)
+            await session.commit()
+
+            logger.info(f"Investor {investor_name} ({investor_email}) deleted by subadmin {subadmin.name}")
+
+            return {
+                "subadmin_id": str(subadmin.id),
+                "investor_id": str(investor_id),
+                "message": f"Investor {investor_name} has been successfully deleted",
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to delete investor: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to delete investor: {str(e)}"
             )

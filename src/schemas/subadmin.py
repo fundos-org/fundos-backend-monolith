@@ -142,8 +142,13 @@ class InvestorListResponse(BaseModel):
     subadmin_id: str
     subadmin_name: str
     investors: List[InvestorListItem]
-    metadata: InvestorListMetadata
     pagination: dict
+    success: bool
+
+class InvestorMetadataResponse(BaseModel):
+    subadmin_id: str
+    subadmin_name: str
+    metadata: InvestorListMetadata
     success: bool
 
 class PaginationInfo(BaseModel):
@@ -153,3 +158,12 @@ class PaginationInfo(BaseModel):
     total_pages: int
     has_next: bool
     has_prev: bool
+
+class DeleteInvestorRequest(BaseModel):
+    investor_id: str
+
+class DeleteInvestorResponse(BaseModel):
+    subadmin_id: str
+    investor_id: str
+    message: str
+    success: bool
