@@ -41,10 +41,11 @@ class DbConfigs():
     # )
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
-        return (
-            f"postgresql+psycopg2://{self.user}:{self.password}"
-            f"@{self.host}:{self.port}/{self.dbname}"
-        )
+        # return (
+        #     f"postgresql+psycopg2://{self.user}:{self.password}"
+        #     f"@{self.host}:{self.port}/{self.dbname}"
+        # )
+        return "postgresql+asyncpg://fundos:yQHcqyGCkFQ84EodBC1Sc87v4M8dC35M@dpg-d1ohbqc9c44c73fkt7l0-a.oregon-postgres.render.com/fundos"
 
 # Usage
 db_config = DbConfigs()
