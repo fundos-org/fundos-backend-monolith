@@ -17,7 +17,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import and_ 
 from src.configs.configs import aws_config, app_config
 from datetime import datetime
-import pytz
+
 
 
 # sample data for frontend 
@@ -1042,9 +1042,7 @@ class SubAdminService:
                     kyc_record.bank_ifsc = kyc_data["bank_ifsc"]
 
                 # Update KYC updated_at timestamp
-                from sqlalchemy import func
-                # kyc_record.updated_at = datetime.now(pytz.utc)
-                kyc_record.updated_at = func.now()
+                kyc_record.updated_at = datetime.now()
 
             await session.commit()
 
