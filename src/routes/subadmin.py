@@ -172,7 +172,7 @@ async def add_member(
 
     return result
 
-@router.get("/investors/list/{subadmin_id}")
+@router.get("/investors/list/{subadmin_id}", tags=["manish_dev_changes"])
 async def get_investors_list(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID,
@@ -190,7 +190,7 @@ async def get_investors_list(
 
     return result
 
-@router.get("/investors/metadata/{subadmin_id}")
+@router.get("/investors/metadata/{subadmin_id}", tags=["manish_dev_changes"])
 async def get_investors_metadata(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID
@@ -204,7 +204,7 @@ async def get_investors_metadata(
 
     return result
 
-@router.delete("/investors/delete/{subadmin_id}/{investor_id}")
+@router.delete("/investors/delete/{subadmin_id}/{investor_id}", tags=["manish_dev_changes"])
 async def delete_investor(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID,
@@ -220,30 +220,25 @@ async def delete_investor(
 
     return result
 
-@router.put("/investors/update/{subadmin_id}/{investor_id}")
+@router.put("/investors/update/{subadmin_id}/{investor_id}", tags=["manish_dev_changes"])
 async def update_investor(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID,
     investor_id: UUID,
     update_data: dict
 ) -> Any:
-    # Extract user_data and kyc_data from the request
-    user_data = update_data.get("user_data", {})
-    kyc_data = update_data.get("kyc_data", {})
-    
     result = await subadmin_services.update_investor(
         session=session,
         subadmin_id=subadmin_id,
         investor_id=investor_id,
-        user_data=user_data,
-        kyc_data=kyc_data
+        update_data=update_data
     )
     if not result["success"]:
         raise HTTPException(status_code=400, detail="Failed to update investor")
 
     return result
 
-@router.get("/investors/abount_info/{investor_id}")
+@router.get("/investors/abount_info/{investor_id}", tags=["manish_dev_changes"])
 async def get_investor_about_info(
     session: Annotated[AsyncSession, Depends(get_session)],
     investor_id: UUID
@@ -257,7 +252,7 @@ async def get_investor_about_info(
 
     return result
 
-@router.get("/investors/investments_info/{investor_id}")
+@router.get("/investors/investments_info/{investor_id}", tags=["manish_dev_changes"])
 async def get_investor_investments_info(
     session: Annotated[AsyncSession, Depends(get_session)],
     investor_id: UUID
@@ -271,7 +266,7 @@ async def get_investor_investments_info(
 
     return result
 
-@router.get("/investors/investments_metadata/{investor_id}")
+@router.get("/investors/investments_metadata/{investor_id}", tags=["manish_dev_changes"])
 async def get_investor_investments_metadata(
     session: Annotated[AsyncSession, Depends(get_session)],
     investor_id: UUID
@@ -285,7 +280,7 @@ async def get_investor_investments_metadata(
 
     return result
 
-@router.get("/investors/transactions/{investor_id}")
+@router.get("/investors/transactions/{investor_id}", tags=["manish_dev_changes"])
 async def get_investor_transactions(
     session: Annotated[AsyncSession, Depends(get_session)],
     investor_id: UUID
@@ -299,7 +294,7 @@ async def get_investor_transactions(
 
     return result
 
-@router.get("/investors/documents_info/{investor_id}")
+@router.get("/investors/documents_info/{investor_id}", tags=["manish_dev_changes"])
 async def get_investor_documents_info(
     session: Annotated[AsyncSession, Depends(get_session)],
     investor_id: UUID

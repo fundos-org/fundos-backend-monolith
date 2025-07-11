@@ -29,3 +29,8 @@ dependencies = [
     "sqlmodel>=0.0.24",
     "uvicorn>=0.34.2",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12.3",
+]

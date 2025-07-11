@@ -168,25 +168,13 @@ class DeleteInvestorResponse(BaseModel):
     message: str
     success: bool
 
-class UpdateInvestorUserData(BaseModel):
+class UpdateInvestorRequest(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
-    email: Optional[str] = None
-    phone_number: Optional[str] = None
     occupation: Optional[str] = None
     income_source: Optional[str] = None
     annual_income: Optional[float] = None
     capital_commitment: Optional[float] = None
-
-class UpdateInvestorKycData(BaseModel):
-    pan_number: Optional[str] = None
-    aadhaar_number: Optional[str] = None
-    bank_account_number: Optional[str] = None
-    bank_ifsc: Optional[str] = None
-
-class UpdateInvestorRequest(BaseModel):
-    user_data: UpdateInvestorUserData
-    kyc_data: UpdateInvestorKycData
     
 
 class UpdateInvestorResponse(BaseModel):
@@ -206,6 +194,7 @@ class PersonalDetails(BaseModel):
 class BankDetails(BaseModel):
     bank_account_number: Optional[str] = None
     bank_ifsc: Optional[str] = None
+    account_holder_name: Optional[str] = None
 
 class ProfessionalBackground(BaseModel):
     occupation: Optional[str] = None
@@ -228,6 +217,9 @@ class DealInfo(BaseModel):
     logo_url: str
     status: str
     created_at: str
+    deal_capital_commitment: Optional[float] = None
+    equity: Optional[float] = None
+    term_sheet: Optional[str] = None
 
 class InvestorMetadata(BaseModel):
     first_name: Optional[str] = None
@@ -264,6 +256,8 @@ class InvestorTransactionsResponse(BaseModel):
 
 class InvestorDocumentsInfo(BaseModel):
     mca_key: Optional[str] = None
+    share_certificate_key: Optional[str] = None
+    term_sheet_key: Optional[str] = None
 
 class InvestorDocumentsResponse(BaseModel):
     investor_id: str
