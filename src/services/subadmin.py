@@ -806,6 +806,7 @@ class SubAdminService:
                 deals_invested = len(investor.investments)
                 
                 investors_list.append({
+                    "investor_id": str(investor.id),
                     "name": investor.full_name or f"{investor.first_name or ''} {investor.last_name or ''}".strip(),
                     "mail": investor.email or "",
                     "type": investor.investor_type.value if investor.investor_type else "",
@@ -1012,7 +1013,7 @@ class SubAdminService:
                     investor.capital_commitment = update_data["capital_commitment"]
 
                 # Update updated_at timestamp
-                investor.updated_at = datetime.now().replace(tzinfo=None)
+                investor.updated_at = datetime.now()
 
             await session.commit()
 
