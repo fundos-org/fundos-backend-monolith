@@ -12,11 +12,11 @@ def get_env(name: str) -> str:
         raise ValueError(f"Missing required environment variable: {name}")
     return value
 
-USER = get_env("user")
-PASSWORD = get_env("password")
-HOST = get_env("host")
-PORT = get_env("port")
-DBNAME = get_env("dbname")
+# USER = get_env("user")
+# PASSWORD = get_env("password")
+# HOST = get_env("host")
+# PORT = get_env("port")
+# DBNAME = get_env("dbname")
 
 # DATABASE_URL = f"postgresql+asyncpg://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}"
 DATABASE_URL = "postgresql+asyncpg://fundos:yQHcqyGCkFQ84EodBC1Sc87v4M8dC35M@dpg-d1ohbqc9c44c73fkt7l0-a.oregon-postgres.render.com/fundos"
