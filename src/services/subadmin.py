@@ -1,4 +1,4 @@
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select, func
 from sqlalchemy.orm import joinedload
@@ -6,15 +6,19 @@ from src.logging.logging_setup import get_logger
 from src.models.subadmin import Subadmin
 from src.models.deal import Deal, DealStatus
 from src.models.user import User, KycStatus, Role, OnboardingStatus
+from src.models.kyc import KYC
 from sqlalchemy import cast, String
 from src.models.investment import Investment, InvestmentStatus
 from src.models.transaction import Transaction, TransactionStatus, TransactionType
 from src.services.s3 import S3Service
 from src.services.email import EmailService
 from uuid import UUID
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import and_ 
 from src.configs.configs import aws_config, app_config
+from datetime import datetime
+import pytz
+
 
 # sample data for frontend 
 from src.utils.dummy_data import (
@@ -956,3 +960,369 @@ class SubAdminService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to delete investor: {str(e)}"
             )
+
+    async def update_investor(
+        self,
+        session: AsyncSession,
+        subadmin_id: UUID,
+        investor_id: UUID,
+        user_data: dict = Body(..., example={"first_name": "John", "last_name": "Doe"}),
+        kyc_data: dict = Body(..., example={})
+    ) -> dict:
+        try:
+            # Fetch subadmin
+            subadmin = await session.get(Subadmin, subadmin_id)
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
+
+            # Fetch investor
+            investor = await session.get(User, investor_id)
+            if not investor:
+                raise HTTPException(status_code=404, detail="Investor not found")
+
+            # Verify investor belongs to this subadmin
+            if investor.fund_manager_id != subadmin_id:
+                raise HTTPException(status_code=403, detail="Investor does not belong to this subadmin")
+
+            # Verify investor role
+            if investor.role != Role.INVESTOR:
+                raise HTTPException(status_code=400, detail="User is not an investor")
+
+            # Update user data
+            if user_data:
+                # Update first_name and last_name
+                if user_data.get("first_name") is not None:
+                    investor.first_name = user_data["first_name"]
+                if user_data.get("last_name") is not None:
+                    investor.last_name = user_data["last_name"]
+                
+                # Update full_name (concatenate first_name and last_name)
+                if user_data.get("first_name") is not None or user_data.get("last_name") is not None:
+                    first_name = user_data.get("first_name", investor.first_name) or ""
+                    last_name = user_data.get("last_name", investor.last_name) or ""
+                    investor.full_name = f"{first_name} {last_name}".strip()
+
+                # Update other user fields
+                if user_data.get("email") is not None:
+                    investor.email = user_data["email"]
+                if user_data.get("phone_number") is not None:
+                    investor.phone_number = user_data["phone_number"]
+                if user_data.get("occupation") is not None:
+                    investor.occupation = user_data["occupation"]
+                if user_data.get("income_source") is not None:
+                    investor.income_source = user_data["income_source"]
+                if user_data.get("annual_income") is not None:
+                    investor.annual_income = user_data["annual_income"]
+                if user_data.get("capital_commitment") is not None:
+                    investor.capital_commitment = user_data["capital_commitment"]
+
+                # Update updated_at timestamp
+                investor.updated_at = datetime.now().replace(tzinfo=None)
+
+            # Update KYC data
+            if kyc_data:
+                # Fetch KYC record for this user
+                kyc_stmt = select(KYC).where(KYC.user_id == investor_id)
+                kyc_result = await session.execute(kyc_stmt)
+                kyc_record = kyc_result.scalar_one_or_none()
+
+                if not kyc_record:
+                    # Create new KYC record if it doesn't exist
+                    kyc_record = KYC(user_id=investor_id)
+                    session.add(kyc_record)
+
+                # Update KYC fields
+                if kyc_data.get("pan_number") is not None:
+                    kyc_record.pan_number = kyc_data["pan_number"]
+                if kyc_data.get("aadhaar_number") is not None:
+                    kyc_record.aadhaar_number = kyc_data["aadhaar_number"]
+                if kyc_data.get("bank_account_number") is not None:
+                    kyc_record.bank_account_number = kyc_data["bank_account_number"]
+                if kyc_data.get("bank_ifsc") is not None:
+                    kyc_record.bank_ifsc = kyc_data["bank_ifsc"]
+
+                # Update KYC updated_at timestamp
+                from sqlalchemy import func
+                # kyc_record.updated_at = datetime.now(pytz.utc)
+                kyc_record.updated_at = func.now()
+
+            await session.commit()
+
+            # Get updated investor name for response
+            investor_name = investor.full_name or f"{investor.first_name or ''} {investor.last_name or ''}".strip()
+
+            logger.info(f"Investor {investor_name} updated by subadmin {subadmin.name}")
+
+            return {
+                "subadmin_id": str(subadmin.id),
+                "investor_id": str(investor_id),
+                "message": f"Investor {investor_name} has been successfully updated",
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to update investor: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to update investor: {str(e)}"
+            )
+
+    async def get_investor_about_info(
+        self,
+        session: AsyncSession,
+        investor_id: UUID
+    ) -> dict:
+        try:
+            # Fetch investor
+            investor = await session.get(User, investor_id)
+            if not investor:
+                raise HTTPException(status_code=404, detail="Investor not found")
+
+            # Verify investor role
+            if investor.role != Role.INVESTOR:
+                raise HTTPException(status_code=400, detail="User is not an investor")
+
+            # Fetch KYC record for this investor
+            kyc_stmt = select(KYC).where(KYC.user_id == investor_id)
+            kyc_result = await session.execute(kyc_stmt)
+            kyc_record = kyc_result.scalar_one_or_none()
+
+            # Prepare personal details
+            personal_details = {
+                "first_name": investor.first_name,
+                "last_name": investor.last_name,
+                "email": investor.email,
+                "phone_number": investor.phone_number,
+                "pan_number": kyc_record.pan_number if kyc_record else None,
+                "aadhaar_number": kyc_record.aadhaar_number if kyc_record else None
+            }
+
+            # Prepare bank details
+            bank_details = {
+                "bank_account_number": kyc_record.bank_account_number if kyc_record else None,
+                "bank_ifsc": kyc_record.bank_ifsc if kyc_record else None
+            }
+
+            # Prepare professional background
+            professional_background = {
+                "occupation": investor.occupation,
+                "income_source": investor.income_source,
+                "annual_income": investor.annual_income,
+                "capital_commitment": investor.capital_commitment
+            }
+
+            logger.info(f"Investor info fetched for investor ID: {investor_id}")
+
+            return {
+                "investor_id": str(investor_id),
+                "personal_details": personal_details,
+                "bank_details": bank_details,
+                "professional_background": professional_background,
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to fetch investor info: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch investor info: {str(e)}"
+            )
+
+    async def get_investor_investments_info(
+        self,
+        session: AsyncSession,
+        investor_id: UUID
+    ) -> dict:
+        try:
+            # Fetch investor
+            investor = await session.get(User, investor_id)
+            if not investor:
+                raise HTTPException(status_code=404, detail="Investor not found")
+
+            # Verify investor role
+            if investor.role != Role.INVESTOR:
+                raise HTTPException(status_code=400, detail="User is not an investor")
+
+            # Fetch all deals for this investor through investments
+            investments_stmt = select(Investment).where(
+                Investment.investor_id == investor_id
+            ).options(joinedload(Investment.deal))
+            
+            investments_result = await session.execute(investments_stmt)
+            investments = investments_result.unique().scalars().all()
+
+            # Prepare deals list
+            deals_list = []
+            for investment in investments:
+                if investment.deal:
+                    deals_list.append({
+                        "company_name": investment.deal.company_name or "",
+                        "about_company": investment.deal.about_company or "",
+                        "industry": investment.deal.industry or "",
+                        "company_stage": investment.deal.company_stage or "",
+                        "logo_url": investment.deal.logo_url or "",
+                        "status": investment.deal.status.value if investment.deal.status else "",
+                        "created_at": investment.deal.created_at.strftime("%Y-%m-%d") if investment.deal.created_at else ""
+                    })
+
+            logger.info(f"Investor investments info fetched for investor ID: {investor_id}")
+
+            return {
+                "investor_id": str(investor_id),
+                "deals": deals_list,
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to fetch investor investments info: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch investor investments info: {str(e)}"
+            )
+
+    async def get_investor_investments_metadata(
+        self,
+        session: AsyncSession,
+        investor_id: UUID
+    ) -> dict:
+        try:
+            # Fetch investor
+            investor = await session.get(User, investor_id)
+            if not investor:
+                raise HTTPException(status_code=404, detail="Investor not found")
+
+            # Verify investor role
+            if investor.role != Role.INVESTOR:
+                raise HTTPException(status_code=400, detail="User is not an investor")
+
+            # Count total deals for this investor
+            total_deals_stmt = select(func.count(Investment.id)).where(
+                Investment.investor_id == investor_id
+            )
+            total_deals_result = await session.execute(total_deals_stmt)
+            total_deals = total_deals_result.scalar() or 0
+
+            # Prepare metadata
+            metadata = {
+                "first_name": investor.first_name,
+                "last_name": investor.last_name,
+                "investor_type": investor.investor_type.value if investor.investor_type else "",
+                "role": investor.role.value if investor.role else "",
+                "capital_commitment": investor.capital_commitment,
+                "profile_image_url": investor.profile_image_url,
+                "created_at": investor.created_at.strftime("%Y-%m-%d") if investor.created_at else "",
+                "total_deals": total_deals
+            }
+
+            logger.info(f"Investor investments metadata fetched for investor ID: {investor_id}")
+
+            return {
+                "investor_id": str(investor_id),
+                "metadata": metadata,
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to fetch investor investments metadata: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch investor investments metadata: {str(e)}"
+            )
+
+    async def get_investor_transactions(
+        self,
+        session: AsyncSession,
+        investor_id: UUID
+    ) -> dict:
+        try:
+            # Fetch investor
+            investor = await session.get(User, investor_id)
+            if not investor:
+                raise HTTPException(status_code=404, detail="Investor not found")
+
+            # Verify investor role
+            if investor.role != Role.INVESTOR:
+                raise HTTPException(status_code=400, detail="User is not an investor")
+
+            # Fetch all transactions for this investor through investments
+            transactions_stmt = select(Transaction).join(Investment).where(
+                Investment.investor_id == investor_id
+            )
+            transactions_result = await session.execute(transactions_stmt)
+            transactions = transactions_result.unique().scalars().all()
+
+            # Prepare transactions list
+            transactions_list = []
+            for transaction in transactions:
+                transactions_list.append({
+                    "transaction_type": transaction.transaction_type.value if transaction.transaction_type else "",
+                    "amount": transaction.amount,
+                    "currency": transaction.currency,
+                    "status": transaction.status.value if transaction.status else "",
+                    "created_at": transaction.created_at.strftime("%Y-%m-%d %H:%M:%S") if transaction.created_at else "",
+                    "invitation_code": investor.invitation_code
+                })
+
+            logger.info(f"Investor transactions fetched for investor ID: {investor_id}")
+
+            return {
+                "investor_id": str(investor_id),
+                "transactions": transactions_list,
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to fetch investor transactions: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch investor transactions: {str(e)}"
+            )
+
+    async def get_investor_documents_info(
+        self,
+        session: AsyncSession,
+        investor_id: UUID
+    ) -> dict:
+        try:
+            # Fetch investor
+            investor = await session.get(User, investor_id)
+            if not investor:
+                raise HTTPException(status_code=404, detail="Investor not found")
+
+            # Verify investor role
+            if investor.role != Role.INVESTOR:
+                raise HTTPException(status_code=400, detail="User is not an investor")
+
+            # Prepare documents info
+            documents_info = {
+                "mca_key": investor.mca_key
+            }
+
+            logger.info(f"Investor documents info fetched for investor ID: {investor_id}")
+
+            return {
+                "investor_id": str(investor_id),
+                "documents": documents_info,
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to fetch investor documents info: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch investor documents info: {str(e)}"
+            )
+        
+    

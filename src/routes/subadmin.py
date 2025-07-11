@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from typing import Any, Annotated
+from typing import Any, Annotated, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 from src.models.deal import DealStatus
@@ -8,6 +8,14 @@ from src.schemas.subadmin import (SubAdminSignInReq, SubAdminDashboardStatistics
                                   SubAdminDashboardActivitiesRes, SubAdminDashboardOverviewGraphRes, SubAdminDealsOverviewRes,
                                   SubAdminDealsStatisticsRes, SubAdminMembersStatisticsRes)
 from src.services.subadmin import SubAdminService
+from src.models.user import User, Role
+from src.models.transaction import Transaction
+from sqlalchemy import select
+import logging
+from fastapi import status
+from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter() 
 
@@ -209,5 +217,98 @@ async def delete_investor(
     )
     if not result["success"]:
         raise HTTPException(status_code=400, detail="Failed to delete investor")
+
+    return result
+
+@router.put("/investors/update/{subadmin_id}/{investor_id}")
+async def update_investor(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    subadmin_id: UUID,
+    investor_id: UUID,
+    update_data: dict
+) -> Any:
+    # Extract user_data and kyc_data from the request
+    user_data = update_data.get("user_data", {})
+    kyc_data = update_data.get("kyc_data", {})
+    
+    result = await subadmin_services.update_investor(
+        session=session,
+        subadmin_id=subadmin_id,
+        investor_id=investor_id,
+        user_data=user_data,
+        kyc_data=kyc_data
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Failed to update investor")
+
+    return result
+
+@router.get("/investors/abount_info/{investor_id}")
+async def get_investor_about_info(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    investor_id: UUID
+) -> Any:
+    result = await subadmin_services.get_investor_about_info(
+        session=session,
+        investor_id=investor_id
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Failed to fetch investor info")
+
+    return result
+
+@router.get("/investors/investments_info/{investor_id}")
+async def get_investor_investments_info(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    investor_id: UUID
+) -> Any:
+    result = await subadmin_services.get_investor_investments_info(
+        session=session,
+        investor_id=investor_id
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Failed to fetch investor investments info")
+
+    return result
+
+@router.get("/investors/investments_metadata/{investor_id}")
+async def get_investor_investments_metadata(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    investor_id: UUID
+) -> Any:
+    result = await subadmin_services.get_investor_investments_metadata(
+        session=session,
+        investor_id=investor_id
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Failed to fetch investor investments metadata")
+
+    return result
+
+@router.get("/investors/transactions/{investor_id}")
+async def get_investor_transactions(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    investor_id: UUID
+) -> Any:
+    result = await subadmin_services.get_investor_transactions(
+        session=session,
+        investor_id=investor_id
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Failed to fetch investor transactions")
+
+    return result
+
+@router.get("/investors/documents_info/{investor_id}")
+async def get_investor_documents_info(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    investor_id: UUID
+) -> Any:
+    result = await subadmin_services.get_investor_documents_info(
+        session=session,
+        investor_id=investor_id
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Failed to fetch investor documents info")
 
     return result

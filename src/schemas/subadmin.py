@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from src.models.user import KycStatus, Role
 
 class SubAdminSignInReq(BaseModel):
@@ -166,4 +166,106 @@ class DeleteInvestorResponse(BaseModel):
     subadmin_id: str
     investor_id: str
     message: str
+    success: bool
+
+class UpdateInvestorUserData(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    phone_number: Optional[str] = None
+    occupation: Optional[str] = None
+    income_source: Optional[str] = None
+    annual_income: Optional[float] = None
+    capital_commitment: Optional[float] = None
+
+class UpdateInvestorKycData(BaseModel):
+    pan_number: Optional[str] = None
+    aadhaar_number: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    bank_ifsc: Optional[str] = None
+
+class UpdateInvestorRequest(BaseModel):
+    user_data: UpdateInvestorUserData
+    kyc_data: UpdateInvestorKycData
+    
+
+class UpdateInvestorResponse(BaseModel):
+    subadmin_id: str
+    investor_id: str
+    message: str
+    success: bool
+
+class PersonalDetails(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    phone_number: Optional[str] = None
+    pan_number: Optional[str] = None
+    aadhaar_number: Optional[str] = None
+
+class BankDetails(BaseModel):
+    bank_account_number: Optional[str] = None
+    bank_ifsc: Optional[str] = None
+
+class ProfessionalBackground(BaseModel):
+    occupation: Optional[str] = None
+    income_source: Optional[str] = None
+    annual_income: Optional[float] = None
+    capital_commitment: Optional[float] = None
+
+class InvestorInfoResponse(BaseModel):
+    investor_id: str
+    personal_details: PersonalDetails
+    bank_details: BankDetails
+    professional_background: ProfessionalBackground
+    success: bool
+
+class DealInfo(BaseModel):
+    company_name: str
+    about_company: str
+    industry: str
+    company_stage: str
+    logo_url: str
+    status: str
+    created_at: str
+
+class InvestorMetadata(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    investor_type: str
+    role: str
+    capital_commitment: Optional[float] = None
+    profile_image_url: Optional[str] = None
+    created_at: str
+    total_deals: int
+
+class InvestorInvestmentsResponse(BaseModel):
+    investor_id: str
+    deals: List[DealInfo]
+    success: bool
+
+class InvestorInvestmentsMetadataResponse(BaseModel):
+    investor_id: str
+    metadata: InvestorMetadata
+    success: bool
+
+class InvestorTransactionItem(BaseModel):
+    transaction_type: str
+    amount: float
+    currency: str
+    status: str
+    created_at: str
+    invitation_code: str
+
+class InvestorTransactionsResponse(BaseModel):
+    investor_id: str
+    transactions: List[InvestorTransactionItem]
+    success: bool
+
+class InvestorDocumentsInfo(BaseModel):
+    mca_key: Optional[str] = None
+
+class InvestorDocumentsResponse(BaseModel):
+    investor_id: str
+    documents: InvestorDocumentsInfo
     success: bool

@@ -13,7 +13,7 @@ class KYC(SQLModel, table=True):
     pan_aadhaar_linked: Optional[bool]
     bank_account_number: Optional[str]  # Encrypted
     bank_ifsc: Optional[str]
-    status: KycStatus = Field(default=KycStatus.PENDING)  # pending, verified, rejected
+    # status: KycStatus = Field(default=KycStatus.PENDING)  # pending, verified, rejected
     pan_bank_linked: Optional[bool] = Field(default=False) 
     created_at: datetime = Field(default_factory=datetime.now(timezone.utc)) 
     updated_at: datetime = Field(default=datetime.now(timezone.utc))
