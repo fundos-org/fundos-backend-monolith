@@ -129,7 +129,7 @@ class InvestorListItem(BaseModel):
     type: str
     deals_invested: int
     kyc_status: KycStatus
-    mca: str
+    mca_key: str
     joined_on: str
     profile_pic: str
 

@@ -16,6 +16,7 @@ from src.middlewares.exception_handlers import (
     validation_exception_handler,
     http_exception_handler,
 )
+from fastapi.middleware.cors import CORSMiddleware
 
 
 api_prefix_v1 = "/api/v1/live" 
@@ -48,6 +49,16 @@ app.include_router(router=dummyRouter, prefix=f"{api_prefix_v0}", tags=["test", 
 # Mount v2 api routers 
 app.include_router(router=KycRouterV2, prefix=f"{api_prefix_v2}/kyc", tags=["investor_v2"])
 app.include_router(router=paymentsRouterV2, prefix=f"{api_prefix_v2}/payments", tags=["payment_v2"])
+
+# Add CORS middleware if needed
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Adjust this to your needs
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 

@@ -812,7 +812,7 @@ class SubAdminService:
                     "type": investor.investor_type.value if investor.investor_type else "",
                     "deals_invested": deals_invested,
                     "kyc_status": investor.kyc_status,
-                    "mca": investor.mca_key or "",
+                    "mca_key": investor.mca_key or "",
                     "joined_on": investor.created_at.strftime("%Y-%m-%d") if investor.created_at else "",
                     "profile_pic": investor.profile_image_url or ""
                 })
