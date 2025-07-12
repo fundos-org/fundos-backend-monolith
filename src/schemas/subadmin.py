@@ -124,12 +124,13 @@ class SubAdminAddMembersRes(BaseModel):
     success: bool
 
 class InvestorListItem(BaseModel):
+    investor_id: str
     name: str
     mail: str
     type: str
     deals_invested: int
     kyc_status: KycStatus
-    mca_key: str
+    mca: str
     joined_on: str
     profile_pic: str
 
@@ -262,4 +263,93 @@ class InvestorDocumentsInfo(BaseModel):
 class InvestorDocumentsResponse(BaseModel):
     investor_id: str
     documents: InvestorDocumentsInfo
+    success: bool
+
+class MarkDealInactiveRequest(BaseModel):
+    deal_id: str
+
+class MarkDealInactiveResponse(BaseModel):
+    subadmin_id: str
+    deal_id: str
+    message: str
+    success: bool
+
+class EditDealCompanyDetailsRequest(BaseModel):
+    logo_url: Optional[str] = None
+    company_name: Optional[str] = None
+    about_company: Optional[str] = None
+    company_website: Optional[str] = None
+    problem_statement: Optional[str] = None
+
+class EditDealMarketDetailsRequest(BaseModel):
+    industry: Optional[str] = None
+    business_model: Optional[str] = None
+    company_stage: Optional[str] = None
+
+class EditDealRequest(BaseModel):
+    current_valuation: Optional[float] = None
+    round_size: Optional[float] = None
+    syndicate_commitment: Optional[float] = None
+    conversion_terms: Optional[str] = None
+    instrument_type: Optional[str] = None
+    pitch_deck_url: Optional[str] = None
+    pitch_video_url: Optional[str] = None
+
+class EditDealResponse(BaseModel):
+    subadmin_id: str
+    deal_id: str
+    message: str
+    success: bool
+
+class DealAboutInfo(BaseModel):
+    company_name: Optional[str] = None
+    company_website: Optional[str] = None
+    company_email: Optional[str] = None
+    industry: Optional[str] = None
+    business_model: Optional[str] = None
+
+class DealAboutResponse(BaseModel):
+    subadmin_id: str
+    deal_id: str
+    about_info: DealAboutInfo
+    success: bool
+
+class DealInvestorItem(BaseModel):
+    investor_id: str
+    first_name: str
+    last_name: str
+    investor_type: str
+    commitments: float
+    created_at: str
+    status: str
+    term_sheet_key: str
+    deal_investor_status: int
+
+class DealInvestorsResponse(BaseModel):
+    deal_id: str
+    investors: List[DealInvestorItem]
+    pagination: dict
+    success: bool
+
+class DealTransactionItem(BaseModel):
+    transaction_id: str
+    invitation_code: str
+    transaction_type: str
+    amount: float
+    created_at: str
+    status: str
+
+class DealTransactionsResponse(BaseModel):
+    deal_id: str
+    transactions: List[DealTransactionItem]
+    pagination: dict
+    success: bool
+
+class DealDocumentsInfo(BaseModel):
+    pitchdeck_final_key: Optional[str] = None
+    video_pitch_key: Optional[str] = None
+
+class DealDocumentsResponse(BaseModel):
+    deal_id: str
+    documents: DealDocumentsInfo
     success: bool

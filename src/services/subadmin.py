@@ -1299,5 +1299,466 @@ class SubAdminService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to fetch investor documents info: {str(e)}"
             )
+
+    async def mark_deal_inactive(
+        self,
+        session: AsyncSession,
+        subadmin_id: UUID,
+        deal_id: UUID
+    ) -> dict:
+        try:
+            # Fetch subadmin
+            subadmin = await session.get(Subadmin, subadmin_id)
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
+
+            # Fetch deal
+            deal = await session.get(Deal, deal_id)
+            if not deal:
+                raise HTTPException(status_code=404, detail="Deal not found")
+
+            # Verify deal belongs to this subadmin
+            if deal.fund_manager_id != subadmin_id:
+                raise HTTPException(status_code=403, detail="Deal does not belong to this subadmin")
+
+            # Check if deal is already closed
+            if deal.status == DealStatus.CLOSED:
+                raise HTTPException(status_code=400, detail="Deal is already closed")
+
+            # Mark deal as inactive (closed)
+            deal.status = DealStatus.CLOSED
+            deal.updated_at = datetime.now()
+            await session.commit()
+
+            logger.info(f"Deal {deal.company_name} marked as inactive by subadmin {subadmin.name}")
+
+            return {
+                "subadmin_id": str(subadmin.id),
+                "deal_id": str(deal_id),
+                "message": f"Deal {deal.company_name} has been successfully marked as inactive",
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to mark deal inactive: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to mark deal inactive: {str(e)}"
+            )
+
+    async def edit_deal_company_details(
+        self,
+        session: AsyncSession,
+        subadmin_id: UUID,
+        deal_id: UUID,
+        update_data: dict
+    ) -> dict:
+        try:
+            # Fetch subadmin
+            subadmin = await session.get(Subadmin, subadmin_id)
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
+
+            # Fetch deal
+            deal = await session.get(Deal, deal_id)
+            if not deal:
+                raise HTTPException(status_code=404, detail="Deal not found")
+
+            # Verify deal belongs to this subadmin
+            if deal.fund_manager_id != subadmin_id:
+                raise HTTPException(status_code=403, detail="Deal does not belong to this subadmin")
+
+            # Update company details
+            if update_data.get("logo_url") is not None:
+                deal.logo_url = update_data["logo_url"]
+            if update_data.get("company_name") is not None:
+                deal.company_name = update_data["company_name"]
+            if update_data.get("about_company") is not None:
+                deal.about_company = update_data["about_company"]
+            if update_data.get("company_website") is not None:
+                deal.company_website = update_data["company_website"]
+            if update_data.get("problem_statement") is not None:
+                deal.problem_statement = update_data["problem_statement"]
+
+            # Update updated_at timestamp
+            deal.updated_at = datetime.now()
+            await session.commit()
+
+            logger.info(f"Deal company details updated for {deal.company_name} by subadmin {subadmin.name}")
+
+            return {
+                "subadmin_id": str(subadmin.id),
+                "deal_id": str(deal_id),
+                "message": f"Deal company details have been successfully updated",
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to update deal company details: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to update deal company details: {str(e)}"
+            )
+
+    async def edit_deal_market_details(
+        self,
+        session: AsyncSession,
+        subadmin_id: UUID,
+        deal_id: UUID,
+        update_data: dict
+    ) -> dict:
+        try:
+            # Fetch subadmin
+            subadmin = await session.get(Subadmin, subadmin_id)
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
+
+            # Fetch deal
+            deal = await session.get(Deal, deal_id)
+            if not deal:
+                raise HTTPException(status_code=404, detail="Deal not found")
+
+            # Verify deal belongs to this subadmin
+            if deal.fund_manager_id != subadmin_id:
+                raise HTTPException(status_code=403, detail="Deal does not belong to this subadmin")
+
+            # Update market details
+            if update_data.get("industry") is not None:
+                deal.industry = update_data["industry"]
+            if update_data.get("business_model") is not None:
+                deal.business_model = update_data["business_model"]
+            if update_data.get("company_stage") is not None:
+                deal.company_stage = update_data["company_stage"]
+
+            # Update updated_at timestamp
+            deal.updated_at = datetime.now()
+            await session.commit()
+
+            logger.info(f"Deal market details updated for {deal.company_name} by subadmin {subadmin.name}")
+
+            return {
+                "subadmin_id": str(subadmin.id),
+                "deal_id": str(deal_id),
+                "message": f"Deal market details have been successfully updated",
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to update deal market details: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to update deal market details: {str(e)}"
+            )
+
+    async def edit_deal(
+        self,
+        session: AsyncSession,
+        subadmin_id: UUID,
+        deal_id: UUID,
+        update_data: dict
+    ) -> dict:
+        try:
+            # Fetch subadmin
+            subadmin = await session.get(Subadmin, subadmin_id)
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
+
+            # Fetch deal
+            deal = await session.get(Deal, deal_id)
+            if not deal:
+                raise HTTPException(status_code=404, detail="Deal not found")
+
+            # Verify deal belongs to this subadmin
+            if deal.fund_manager_id != subadmin_id:
+                raise HTTPException(status_code=403, detail="Deal does not belong to this subadmin")
+
+            # Update deal fields
+            if update_data.get("current_valuation") is not None:
+                deal.current_valuation = update_data["current_valuation"]
+            if update_data.get("round_size") is not None:
+                deal.round_size = update_data["round_size"]
+            if update_data.get("syndicate_commitment") is not None:
+                deal.syndicate_commitment = update_data["syndicate_commitment"]
+            if update_data.get("conversion_terms") is not None:
+                deal.conversion_terms = update_data["conversion_terms"]
+            if update_data.get("instrument_type") is not None:
+                deal.instrument_type = update_data["instrument_type"]
+            if update_data.get("pitch_deck_url") is not None:
+                deal.pitch_deck_url = update_data["pitch_deck_url"]
+            if update_data.get("pitch_video_url") is not None:
+                deal.pitch_video_url = update_data["pitch_video_url"]
+
+            # Update updated_at timestamp
+            deal.updated_at = datetime.now()
+            await session.commit()
+
+            logger.info(f"Deal details updated for {deal.company_name} by subadmin {subadmin.name}")
+
+            return {
+                "subadmin_id": str(subadmin.id),
+                "deal_id": str(deal_id),
+                "message": f"Deal details have been successfully updated",
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to update deal details: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to update deal details: {str(e)}"
+            )
+
+    async def get_deal_about_info(
+        self,
+        session: AsyncSession,
+        subadmin_id: UUID,
+        deal_id: UUID
+    ) -> dict:
+        try:
+            # Fetch subadmin
+            subadmin = await session.get(Subadmin, subadmin_id)
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
+
+            # Fetch deal
+            deal = await session.get(Deal, deal_id)
+            if not deal:
+                raise HTTPException(status_code=404, detail="Deal not found")
+
+            # Verify deal belongs to this subadmin
+            if deal.fund_manager_id != subadmin_id:
+                raise HTTPException(status_code=403, detail="Deal does not belong to this subadmin")
+
+            # Prepare about info
+            about_info = {
+                "company_name": deal.company_name,
+                "company_website": deal.company_website,
+                "company_email": "contact@example.com",  # Mock data
+                "industry": deal.industry.value if deal.industry else None,
+                "business_model": deal.business_model.value if deal.business_model else None
+            }
+
+            logger.info(f"Deal about info fetched for deal ID: {deal_id}")
+
+            return {
+                "subadmin_id": str(subadmin.id),
+                "deal_id": str(deal_id),
+                "about_info": about_info,
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to fetch deal about info: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch deal about info: {str(e)}"
+            )
+
+    async def get_deal_investors(
+        self,
+        session: AsyncSession,
+        deal_id: UUID,
+        page: int = 1,
+        per_page: int = 20
+    ) -> dict:
+        try:
+            # Fetch deal
+            deal = await session.get(Deal, deal_id)
+            if not deal:
+                raise HTTPException(status_code=404, detail="Deal not found")
+
+            # Calculate offset for pagination
+            offset = (page - 1) * per_page
+
+            # Mock data for investors (since no real data in database)
+            mock_investors = [
+                {
+                    "investor_id": "inv-001",
+                    "first_name": "John",
+                    "last_name": "Doe",
+                    "investor_type": "individual",
+                    "commitments": 50000.0,
+                    "created_at": "2024-01-15",
+                    "status": "active",
+                    "term_sheet_key": "TERM_SHEET_001",
+                    "deal_investor_status": 1
+                },
+                {
+                    "investor_id": "inv-002",
+                    "first_name": "Jane",
+                    "last_name": "Smith",
+                    "investor_type": "entity",
+                    "commitments": 100000.0,
+                    "created_at": "2024-01-20",
+                    "status": "pending",
+                    "term_sheet_key": "TERM_SHEET_002",
+                    "deal_investor_status": 0
+                },
+                {
+                    "investor_id": "inv-003",
+                    "first_name": "Mike",
+                    "last_name": "Johnson",
+                    "investor_type": "individual",
+                    "commitments": 75000.0,
+                    "created_at": "2024-01-25",
+                    "status": "active",
+                    "term_sheet_key": "TERM_SHEET_003",
+                    "deal_investor_status": 1
+                }
+            ]
+
+            # Apply pagination to mock data
+            total_records = len(mock_investors)
+            total_pages = (total_records + per_page - 1) // per_page
+            paginated_investors = mock_investors[offset:offset + per_page]
+
+            # Prepare pagination info
+            pagination_info = {
+                "page": page,
+                "per_page": per_page,
+                "total_records": total_records,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_prev": page > 1
+            }
+
+            logger.info(f"Deal investors fetched for deal ID: {deal_id}")
+
+            return {
+                "deal_id": str(deal_id),
+                "investors": paginated_investors,
+                "pagination": pagination_info,
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to fetch deal investors: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch deal investors: {str(e)}"
+            )
+
+    async def get_deal_transactions(
+        self,
+        session: AsyncSession,
+        deal_id: UUID,
+        page: int = 1,
+        per_page: int = 20
+    ) -> dict:
+        try:
+            # Fetch deal
+            deal = await session.get(Deal, deal_id)
+            if not deal:
+                raise HTTPException(status_code=404, detail="Deal not found")
+
+            # Calculate offset for pagination
+            offset = (page - 1) * per_page
+
+            # Mock data for transactions (since no real data in database)
+            mock_transactions = [
+                {
+                    "transaction_id": "txn-001",
+                    "invitation_code": "INVITE_001",
+                    "transaction_type": "payment",
+                    "amount": 50000.0,
+                    "created_at": "2024-01-15 10:30:00",
+                    "status": "completed"
+                },
+                {
+                    "transaction_id": "txn-002",
+                    "invitation_code": "INVITE_002",
+                    "transaction_type": "payment",
+                    "amount": 100000.0,
+                    "created_at": "2024-01-20 14:45:00",
+                    "status": "pending"
+                },
+                {
+                    "transaction_id": "txn-003",
+                    "invitation_code": "INVITE_003",
+                    "transaction_type": "refund",
+                    "amount": 25000.0,
+                    "created_at": "2024-01-25 09:15:00",
+                    "status": "completed"
+                }
+            ]
+
+            # Apply pagination to mock data
+            total_records = len(mock_transactions)
+            total_pages = (total_records + per_page - 1) // per_page
+            paginated_transactions = mock_transactions[offset:offset + per_page]
+
+            # Prepare pagination info
+            pagination_info = {
+                "page": page,
+                "per_page": per_page,
+                "total_records": total_records,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_prev": page > 1
+            }
+
+            logger.info(f"Deal transactions fetched for deal ID: {deal_id}")
+
+            return {
+                "deal_id": str(deal_id),
+                "transactions": paginated_transactions,
+                "pagination": pagination_info,
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to fetch deal transactions: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch deal transactions: {str(e)}"
+            )
+
+    async def get_deal_documents(
+        self,
+        session: AsyncSession,
+        deal_id: UUID
+    ) -> dict:
+        try:
+            # Fetch deal
+            deal = await session.get(Deal, deal_id)
+            if not deal:
+                raise HTTPException(status_code=404, detail="Deal not found")
+
+            # Prepare documents info (mock data)
+            documents_info = {
+                "pitchdeck_final_key": "PITCH_DECK_FINAL_123",
+                "video_pitch_key": "VIDEO_PITCH_456"
+            }
+
+            logger.info(f"Deal documents fetched for deal ID: {deal_id}")
+
+            return {
+                "deal_id": str(deal_id),
+                "documents": documents_info,
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to fetch deal documents: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch deal documents: {str(e)}"
+            )
         
     

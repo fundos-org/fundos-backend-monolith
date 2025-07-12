@@ -307,3 +307,139 @@ async def get_investor_documents_info(
         raise HTTPException(status_code=400, detail="Failed to fetch investor documents info")
 
     return result
+
+@router.post("/deals/mark_inactive/{subadmin_id}/{deal_id}", tags=["manish_dev_changes"])
+async def mark_deal_inactive(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    subadmin_id: UUID,
+    deal_id: UUID
+) -> Any:
+    result = await subadmin_services.mark_deal_inactive(
+        session=session,
+        subadmin_id=subadmin_id,
+        deal_id=deal_id
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Failed to mark deal inactive")
+
+    return result
+
+@router.put("/deals/edit_deals/company_details/{subadmin_id}/{deal_id}", tags=["manish_dev_changes"])
+async def edit_deal_company_details(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    subadmin_id: UUID,
+    deal_id: UUID,
+    update_data: dict
+) -> Any:
+    result = await subadmin_services.edit_deal_company_details(
+        session=session,
+        subadmin_id=subadmin_id,
+        deal_id=deal_id,
+        update_data=update_data
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Failed to update deal company details")
+
+    return result
+
+@router.put("/deals/edit_deals/market_details/{subadmin_id}/{deal_id}", tags=["manish_dev_changes"])
+async def edit_deal_market_details(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    subadmin_id: UUID,
+    deal_id: UUID,
+    update_data: dict
+) -> Any:
+    result = await subadmin_services.edit_deal_market_details(
+        session=session,
+        subadmin_id=subadmin_id,
+        deal_id=deal_id,
+        update_data=update_data
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Failed to update deal market details")
+
+    return result
+
+@router.put("/deals/edit_deals/{subadmin_id}/{deal_id}", tags=["manish_dev_changes"])
+async def edit_deal(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    subadmin_id: UUID,
+    deal_id: UUID,
+    update_data: dict
+) -> Any:
+    result = await subadmin_services.edit_deal(
+        session=session,
+        subadmin_id=subadmin_id,
+        deal_id=deal_id,
+        update_data=update_data
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Failed to update deal details")
+
+    return result
+
+@router.get("/deals/deal_info/about/{subadmin_id}/{deal_id}", tags=["manish_dev_changes"])
+async def get_deal_about_info(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    subadmin_id: UUID,
+    deal_id: UUID
+) -> Any:
+    result = await subadmin_services.get_deal_about_info(
+        session=session,
+        subadmin_id=subadmin_id,
+        deal_id=deal_id
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Failed to fetch deal about info")
+
+    return result
+
+@router.get("/deals/deal_info/investors/{deal_id}", tags=["manish_dev_changes"])
+async def get_deal_investors(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    deal_id: UUID,
+    page: int = 1,
+    per_page: int = 20
+) -> Any:
+    result = await subadmin_services.get_deal_investors(
+        session=session,
+        deal_id=deal_id,
+        page=page,
+        per_page=per_page
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Failed to fetch deal investors")
+
+    return result
+
+@router.get("/deals/deal_info/transactions/{deal_id}", tags=["manish_dev_changes"])
+async def get_deal_transactions(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    deal_id: UUID,
+    page: int = 1,
+    per_page: int = 20
+) -> Any:
+    result = await subadmin_services.get_deal_transactions(
+        session=session,
+        deal_id=deal_id,
+        page=page,
+        per_page=per_page
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Failed to fetch deal transactions")
+
+    return result
+
+@router.get("/deals/deal_info/documents/{deal_id}", tags=["manish_dev_changes"])
+async def get_deal_documents(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    deal_id: UUID
+) -> Any:
+    result = await subadmin_services.get_deal_documents(
+        session=session,
+        deal_id=deal_id
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Failed to fetch deal documents")
+
+    return result
