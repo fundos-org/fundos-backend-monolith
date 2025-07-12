@@ -443,3 +443,93 @@ async def get_deal_documents(
         raise HTTPException(status_code=400, detail="Failed to fetch deal documents")
 
     return result
+
+@router.get("/communication/welcome_mail_get/{subadmin_id}", tags=["manish_dev_changes"])
+async def get_welcome_mail(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    subadmin_id: UUID
+) -> Any:
+    result = await subadmin_services.get_welcome_mail(
+        session=session,
+        subadmin_id=subadmin_id
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Failed to fetch welcome mail")
+
+    return result
+
+@router.put("/communication/welcome_mail_update/{subadmin_id}", tags=["manish_dev_changes"])
+async def update_welcome_mail(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    subadmin_id: UUID,
+    update_data: dict
+) -> Any:
+    result = await subadmin_services.update_welcome_mail(
+        session=session,
+        subadmin_id=subadmin_id,
+        update_data=update_data
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Failed to update welcome mail")
+
+    return result
+
+@router.get("/communication/onboarding_mail_get/{subadmin_id}", tags=["manish_dev_changes"])
+async def get_onboarding_mail(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    subadmin_id: UUID
+) -> Any:
+    result = await subadmin_services.get_onboarding_mail(
+        session=session,
+        subadmin_id=subadmin_id
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Failed to fetch onboarding mail")
+
+    return result
+
+@router.put("/communication/onboarding_mail_update/{subadmin_id}", tags=["manish_dev_changes"])
+async def update_onboarding_mail(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    subadmin_id: UUID,
+    update_data: dict
+) -> Any:
+    result = await subadmin_services.update_onboarding_mail(
+        session=session,
+        subadmin_id=subadmin_id,
+        update_data=update_data
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Failed to update onboarding mail")
+
+    return result
+
+@router.get("/communication/consent_mail_get/{subadmin_id}", tags=["manish_dev_changes"])
+async def get_consent_mail(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    subadmin_id: UUID
+) -> Any:
+    result = await subadmin_services.get_consent_mail(
+        session=session,
+        subadmin_id=subadmin_id
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Failed to fetch consent mail")
+
+    return result
+
+@router.put("/communication/consent_mail_update/{subadmin_id}", tags=["manish_dev_changes"])
+async def update_consent_mail(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    subadmin_id: UUID,
+    update_data: dict
+) -> Any:
+    result = await subadmin_services.update_consent_mail(
+        session=session,
+        subadmin_id=subadmin_id,
+        update_data=update_data
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="Failed to update consent mail")
+
+    return result

@@ -1760,5 +1760,206 @@ class SubAdminService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to fetch deal documents: {str(e)}"
             )
+
+    async def get_welcome_mail(
+        self,
+        session: AsyncSession,
+        subadmin_id: UUID
+    ) -> dict:
+        try:
+            # Fetch subadmin
+            subadmin = await session.get(Subadmin, subadmin_id)
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
+
+            # Mock data for welcome mail
+            welcome_mail = {
+                "subject": "Welcome to Fundos - Your Investment Journey Begins",
+                "body": "Dear {investor_name},\n\nWelcome to Fundos! We're excited to have you join our investment platform.\n\nThis is a mock welcome email template that can be customized by subadmins.\n\nBest regards,\nThe Fundos Team"
+            }
+
+            logger.info(f"Welcome mail fetched for subadmin ID: {subadmin_id}")
+
+            return {
+                "subadmin_id": str(subadmin.id),
+                "welcome_mail": welcome_mail,
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to fetch welcome mail: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch welcome mail: {str(e)}"
+            )
+
+    async def update_welcome_mail(
+        self,
+        session: AsyncSession,
+        subadmin_id: UUID,
+        update_data: dict
+    ) -> dict:
+        try:
+            # Fetch subadmin
+            subadmin = await session.get(Subadmin, subadmin_id)
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
+
+            # Mock update - in real implementation, this would update database
+            subject = update_data.get("subject", "")
+            body = update_data.get("body", "")
+
+            logger.info(f"Welcome mail updated for subadmin ID: {subadmin_id}")
+
+            return {
+                "subadmin_id": str(subadmin.id),
+                "message": "Welcome mail has been successfully updated",
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to update welcome mail: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to update welcome mail: {str(e)}"
+            )
+
+    async def get_onboarding_mail(
+        self,
+        session: AsyncSession,
+        subadmin_id: UUID
+    ) -> dict:
+        try:
+            # Fetch subadmin
+            subadmin = await session.get(Subadmin, subadmin_id)
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
+
+            # Mock data for onboarding mail
+            onboarding_mail = {
+                "subject": "Complete Your Onboarding - Fundos Investment Platform",
+                "body": "Dear {investor_name},\n\nThank you for joining Fundos! To complete your onboarding process, please follow the steps below:\n\n1. Verify your email address\n2. Complete your KYC\n3. Set up your investment preferences\n\nThis is a mock onboarding email template.\n\nBest regards,\nThe Fundos Team"
+            }
+
+            logger.info(f"Onboarding mail fetched for subadmin ID: {subadmin_id}")
+
+            return {
+                "subadmin_id": str(subadmin.id),
+                "onboarding_mail": onboarding_mail,
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to fetch onboarding mail: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch onboarding mail: {str(e)}"
+            )
+
+    async def update_onboarding_mail(
+        self,
+        session: AsyncSession,
+        subadmin_id: UUID,
+        update_data: dict
+    ) -> dict:
+        try:
+            # Fetch subadmin
+            subadmin = await session.get(Subadmin, subadmin_id)
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
+
+            # Mock update - in real implementation, this would update database
+            subject = update_data.get("subject", "")
+            body = update_data.get("body", "")
+
+            logger.info(f"Onboarding mail updated for subadmin ID: {subadmin_id}")
+
+            return {
+                "subadmin_id": str(subadmin.id),
+                "message": "Onboarding mail has been successfully updated",
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to update onboarding mail: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to update onboarding mail: {str(e)}"
+            )
+
+    async def get_consent_mail(
+        self,
+        session: AsyncSession,
+        subadmin_id: UUID
+    ) -> dict:
+        try:
+            # Fetch subadmin
+            subadmin = await session.get(Subadmin, subadmin_id)
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
+
+            # Mock data for consent mail
+            consent_mail = {
+                "subject": "Investment Consent Required - Fundos Platform",
+                "body": "Dear {investor_name},\n\nWe require your consent to proceed with the investment process. Please review the terms and conditions carefully.\n\nThis is a mock consent email template for investment agreements.\n\nBest regards,\nThe Fundos Team"
+            }
+
+            logger.info(f"Consent mail fetched for subadmin ID: {subadmin_id}")
+
+            return {
+                "subadmin_id": str(subadmin.id),
+                "consent_mail": consent_mail,
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to fetch consent mail: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch consent mail: {str(e)}"
+            )
+
+    async def update_consent_mail(
+        self,
+        session: AsyncSession,
+        subadmin_id: UUID,
+        update_data: dict
+    ) -> dict:
+        try:
+            # Fetch subadmin
+            subadmin = await session.get(Subadmin, subadmin_id)
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
+
+            # Mock update - in real implementation, this would update database
+            subject = update_data.get("subject", "")
+            body = update_data.get("body", "")
+
+            logger.info(f"Consent mail updated for subadmin ID: {subadmin_id}")
+
+            return {
+                "subadmin_id": str(subadmin.id),
+                "message": "Consent mail has been successfully updated",
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to update consent mail: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to update consent mail: {str(e)}"
+            )
         
     

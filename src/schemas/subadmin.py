@@ -353,3 +353,57 @@ class DealDocumentsResponse(BaseModel):
     deal_id: str
     documents: DealDocumentsInfo
     success: bool
+
+class WelcomeMailInfo(BaseModel):
+    subject: str
+    body: str
+
+class WelcomeMailResponse(BaseModel):
+    subadmin_id: str
+    welcome_mail: WelcomeMailInfo
+    success: bool
+
+class WelcomeMailUpdateRequest(BaseModel):
+    subject: str
+    body: str
+
+class WelcomeMailUpdateResponse(BaseModel):
+    subadmin_id: str
+    message: str
+    success: bool
+
+class OnboardingMailInfo(BaseModel):
+    subject: str
+    body: str
+
+class OnboardingMailResponse(BaseModel):
+    subadmin_id: str
+    onboarding_mail: OnboardingMailInfo
+    success: bool
+
+class OnboardingMailUpdateRequest(BaseModel):
+    subject: str
+    body: str
+
+class OnboardingMailUpdateResponse(BaseModel):
+    subadmin_id: str
+    message: str
+    success: bool
+
+class ConsentMailInfo(BaseModel):
+    subject: str
+    body: str
+
+class ConsentMailResponse(BaseModel):
+    subadmin_id: str
+    consent_mail: ConsentMailInfo
+    success: bool
+
+class ConsentMailUpdateRequest(BaseModel):
+    subject: str
+    body: str
+
+class ConsentMailUpdateResponse(BaseModel):
+    subadmin_id: str
+    message: str
+    success: bool
