@@ -24,6 +24,13 @@ api_prefix_v0 = "/api/v0/test"
 api_prefix_v2 = "/api/v2/live"
 
 app = FastAPI(lifespan=lifespan) 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Adjust this to your needs
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # add logging middleware
 # app.add_middleware(LoggingMiddleware)
@@ -52,13 +59,6 @@ app.include_router(router=paymentsRouterV2, prefix=f"{api_prefix_v2}/payments", 
 
 # Add CORS middleware if needed
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Adjust this to your needs
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 
 
