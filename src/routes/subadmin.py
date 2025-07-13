@@ -6,7 +6,10 @@ from src.models.deal import DealStatus
 from src.utils.dependencies import get_session
 from src.schemas.subadmin import (SubAdminSignInReq, SubAdminDashboardStatisticsRes, SubAdminDashboardTransactionsRes, 
                                   SubAdminDashboardActivitiesRes, SubAdminDashboardOverviewGraphRes, SubAdminDealsOverviewRes,
-                                  SubAdminDealsStatisticsRes, SubAdminMembersStatisticsRes)
+                                  SubAdminDealsStatisticsRes, SubAdminMembersStatisticsRes, InvestorListResponse, InvestorListMetadata,
+                                  DeleteInvestorResponse, UpdateInvestorResponse, InvestorInfoResponse, InvestorInvestmentsResponse, InvestorInvestmentsMetadataResponse, InvestorTransactionsResponse,
+                                  InvestorDocumentsResponse, MarkDealInactiveResponse, EditDealResponse, DealAboutResponse, DealInvestorsResponse, DealTransactionsResponse,
+                                  DealDocumentsResponse, WelcomeMailResponse, OnboardingMailResponse, ConsentMailResponse, WelcomeMailUpdateResponse, OnboardingMailUpdateResponse, ConsentMailUpdateResponse)
 from src.services.subadmin import SubAdminService
 from src.models.user import User, Role
 from src.models.transaction import Transaction
@@ -178,7 +181,7 @@ async def get_investors_list(
     subadmin_id: UUID,
     page: int = 1,
     per_page: int = 20
-) -> Any:
+) -> InvestorListResponse:
     result = await subadmin_services.get_investors_list(
         session=session,
         subadmin_id=subadmin_id,
@@ -194,7 +197,7 @@ async def get_investors_list(
 async def get_investors_metadata(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID
-) -> Any:
+) -> InvestorListMetadata:
     result = await subadmin_services.get_investors_metadata(
         session=session,
         subadmin_id=subadmin_id
@@ -209,7 +212,7 @@ async def delete_investor(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID,
     investor_id: UUID
-) -> Any:
+) -> DeleteInvestorResponse:
     result = await subadmin_services.delete_investor(
         session=session,
         subadmin_id=subadmin_id,
@@ -226,7 +229,7 @@ async def update_investor(
     subadmin_id: UUID,
     investor_id: UUID,
     update_data: dict
-) -> Any:
+) -> UpdateInvestorResponse:
     result = await subadmin_services.update_investor(
         session=session,
         subadmin_id=subadmin_id,
@@ -242,7 +245,7 @@ async def update_investor(
 async def get_investor_about_info(
     session: Annotated[AsyncSession, Depends(get_session)],
     investor_id: UUID
-) -> Any:
+) -> InvestorInfoResponse:
     result = await subadmin_services.get_investor_about_info(
         session=session,
         investor_id=investor_id
@@ -256,7 +259,7 @@ async def get_investor_about_info(
 async def get_investor_investments_info(
     session: Annotated[AsyncSession, Depends(get_session)],
     investor_id: UUID
-) -> Any:
+) -> InvestorInvestmentsResponse:
     result = await subadmin_services.get_investor_investments_info(
         session=session,
         investor_id=investor_id
@@ -270,7 +273,7 @@ async def get_investor_investments_info(
 async def get_investor_investments_metadata(
     session: Annotated[AsyncSession, Depends(get_session)],
     investor_id: UUID
-) -> Any:
+) -> InvestorInvestmentsMetadataResponse:
     result = await subadmin_services.get_investor_investments_metadata(
         session=session,
         investor_id=investor_id
@@ -284,7 +287,7 @@ async def get_investor_investments_metadata(
 async def get_investor_transactions(
     session: Annotated[AsyncSession, Depends(get_session)],
     investor_id: UUID
-) -> Any:
+) -> InvestorTransactionsResponse:
     result = await subadmin_services.get_investor_transactions(
         session=session,
         investor_id=investor_id
@@ -298,7 +301,7 @@ async def get_investor_transactions(
 async def get_investor_documents_info(
     session: Annotated[AsyncSession, Depends(get_session)],
     investor_id: UUID
-) -> Any:
+) -> InvestorDocumentsResponse:
     result = await subadmin_services.get_investor_documents_info(
         session=session,
         investor_id=investor_id
@@ -313,7 +316,7 @@ async def mark_deal_inactive(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID,
     deal_id: UUID
-) -> Any:
+) -> MarkDealInactiveResponse:
     result = await subadmin_services.mark_deal_inactive(
         session=session,
         subadmin_id=subadmin_id,
@@ -330,7 +333,7 @@ async def edit_deal_company_details(
     subadmin_id: UUID,
     deal_id: UUID,
     update_data: dict
-) -> Any:
+) -> EditDealResponse:
     result = await subadmin_services.edit_deal_company_details(
         session=session,
         subadmin_id=subadmin_id,
@@ -348,7 +351,7 @@ async def edit_deal_market_details(
     subadmin_id: UUID,
     deal_id: UUID,
     update_data: dict
-) -> Any:
+) -> EditDealResponse:
     result = await subadmin_services.edit_deal_market_details(
         session=session,
         subadmin_id=subadmin_id,
@@ -366,7 +369,7 @@ async def edit_deal(
     subadmin_id: UUID,
     deal_id: UUID,
     update_data: dict
-) -> Any:
+) -> EditDealResponse:
     result = await subadmin_services.edit_deal(
         session=session,
         subadmin_id=subadmin_id,
@@ -383,7 +386,7 @@ async def get_deal_about_info(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID,
     deal_id: UUID
-) -> Any:
+) -> DealAboutResponse:
     result = await subadmin_services.get_deal_about_info(
         session=session,
         subadmin_id=subadmin_id,
@@ -400,7 +403,7 @@ async def get_deal_investors(
     deal_id: UUID,
     page: int = 1,
     per_page: int = 20
-) -> Any:
+) -> DealInvestorsResponse:
     result = await subadmin_services.get_deal_investors(
         session=session,
         deal_id=deal_id,
@@ -418,7 +421,7 @@ async def get_deal_transactions(
     deal_id: UUID,
     page: int = 1,
     per_page: int = 20
-) -> Any:
+) -> DealTransactionsResponse:
     result = await subadmin_services.get_deal_transactions(
         session=session,
         deal_id=deal_id,
@@ -434,7 +437,7 @@ async def get_deal_transactions(
 async def get_deal_documents(
     session: Annotated[AsyncSession, Depends(get_session)],
     deal_id: UUID
-) -> Any:
+) -> DealDocumentsResponse:
     result = await subadmin_services.get_deal_documents(
         session=session,
         deal_id=deal_id
@@ -448,7 +451,7 @@ async def get_deal_documents(
 async def get_welcome_mail(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID
-) -> Any:
+) -> WelcomeMailResponse:
     result = await subadmin_services.get_welcome_mail(
         session=session,
         subadmin_id=subadmin_id
@@ -463,7 +466,7 @@ async def update_welcome_mail(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID,
     update_data: dict
-) -> Any:
+) -> WelcomeMailUpdateResponse:
     result = await subadmin_services.update_welcome_mail(
         session=session,
         subadmin_id=subadmin_id,
@@ -478,7 +481,7 @@ async def update_welcome_mail(
 async def get_onboarding_mail(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID
-) -> Any:
+) -> OnboardingMailResponse:
     result = await subadmin_services.get_onboarding_mail(
         session=session,
         subadmin_id=subadmin_id
@@ -493,7 +496,7 @@ async def update_onboarding_mail(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID,
     update_data: dict
-) -> Any:
+) -> OnboardingMailUpdateResponse:
     result = await subadmin_services.update_onboarding_mail(
         session=session,
         subadmin_id=subadmin_id,
@@ -508,7 +511,7 @@ async def update_onboarding_mail(
 async def get_consent_mail(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID
-) -> Any:
+) -> ConsentMailResponse:
     result = await subadmin_services.get_consent_mail(
         session=session,
         subadmin_id=subadmin_id
@@ -523,7 +526,7 @@ async def update_consent_mail(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID,
     update_data: dict
-) -> Any:
+) -> ConsentMailUpdateResponse:
     result = await subadmin_services.update_consent_mail(
         session=session,
         subadmin_id=subadmin_id,
