@@ -133,6 +133,7 @@ class InvestorListItem(BaseModel):
     mca: str
     joined_on: str
     profile_pic: str
+    capital_commitment: float
 
 class InvestorListMetadata(BaseModel):
     investor_onboarded: int

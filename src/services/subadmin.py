@@ -814,7 +814,8 @@ class SubAdminService:
                     "kyc_status": investor.kyc_status,
                     "mca_key": investor.mca_key or "",
                     "joined_on": investor.created_at.strftime("%Y-%m-%d") if investor.created_at else "",
-                    "profile_pic": investor.profile_image_url or ""
+                    "profile_pic": investor.profile_image_url or "",
+                    "capital_commitment": investor.capital_commitment or 0,
                 })
 
             # Prepare pagination info
