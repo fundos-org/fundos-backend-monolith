@@ -13,5 +13,5 @@ class UserDealPreference(SQLModel, table=True):
     updated_at: Optional[datetime] = Field(default=None, nullable=True)
 
     # Relationships
-    user: "User" = Relationship(back_populates="deal_preferences") # type: ignore
-    deal: "Deal" = Relationship(back_populates="user_preferences") # type: ignore
+    user: "User" = Relationship(back_populates="deal_preferences") # type: ignore  # noqa: F821
+    deal: "Deal" = Relationship(back_populates="user_preferences") # type: ignore  # noqa: F821

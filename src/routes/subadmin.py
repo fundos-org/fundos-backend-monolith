@@ -3,7 +3,7 @@ from typing import Any, Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 from src.models.deal import DealStatus
-from src.utils.dependencies import get_session
+from src.utils.dependencies import get_session 
 from src.schemas.subadmin import (SubAdminSignInReq, SubAdminDashboardStatisticsRes, SubAdminDashboardTransactionsRes, 
                                   SubAdminDashboardActivitiesRes, SubAdminDashboardOverviewGraphRes, SubAdminDealsOverviewRes,
                                   SubAdminDealsStatisticsRes, SubAdminMembersStatisticsRes)
@@ -158,6 +158,21 @@ async def add_member(
         session=session,
         subadmin_id=subadmin_id,
         email=email
+    )
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail="failed to get subadmin details")
+
+    return result
+
+@router.get("/members/{subadmin_id}")
+async def get_all_members(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    subadmin_id: UUID,
+): 
+
+    result = await subadmin_services.get_all_members(
+        session=session,
+        subadmin_id=subadmin_id
     )
     if not result["success"]:
         raise HTTPException(status_code=400, detail="failed to get subadmin details")

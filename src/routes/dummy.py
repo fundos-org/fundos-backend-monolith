@@ -1,12 +1,11 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from starlette import status
-from pydantic import EmailStr
 from src.logging.logging_setup import get_logger
 from src.db.session import get_session 
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated, Dict, Any, Optional
-from src.schemas.kyc import (EmailVerifyOtpRequest, EmailVerifyOtpResponse, AgreementRequest, AgreementResponse, 
+from src.schemas.kyc import (EmailVerifyOtpRequest, EmailVerifyOtpResponse, AgreementRequest, AgreementResponse,  # noqa: F401
                             DeclarationRequest, DeclarationResponse, ChooseInvestorRequest, ChooseInvestorResponse, 
                             PhoneNumSendOtpRequest, EmailSendOtpRequest, EmailSendOtpResponse, PhoneNumSendOtpResponse, 
                             PhoneNumVerifyOtpRequest, PhoneNumVerifyOtpResponse, UserDetailsRequest, UserDetailsResponse, 

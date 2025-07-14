@@ -1,4 +1,3 @@
-import re
 from tempfile import SpooledTemporaryFile
 from typing import Any, Dict
 import httpx
@@ -108,19 +107,15 @@ class ZohoService:
         day = f"{current_date.day:02d}"
         month = current_date.strftime("%B")
         year = str(current_date.year)
+        name = user.full_name
         current_date = f"{month} {day} {year}"
+        phone = user.phone_number
+        address = user.address
+        email = user.email
         father_name = user.father_name
-        date_of_birth = user.date_of_birth
-        dob_obj = datetime.strptime(date_of_birth, "%d-%m-%Y")
-        formatted_dob = dob_obj.strftime("%b %d %Y")
+        entity_type = user.investor_type
+        pan_number = kyc.pan_number
         capital_commitment = float(user.capital_commitment) 
-        resident = user.country
-
-        if resident.lower() == "india":
-            formatted_dob = "N/A"
-            place_of_birth = "N/A"
-            resident = "N/A"
-            tax_identity_number = "N/A"
 
         if not capital_commitment:
             raise HTTPException(status_code=400, detail="Capital commitment is required")
@@ -137,69 +132,67 @@ class ZohoService:
         )
 
         payload = {
-            "templates": {
-                "field_data": {
-                    "field_text_data": {
-                        "current_date": current_date,
-                        "day": day,
-                        "month": month,
-                        "year": year,
-                        "name": user.full_name, 
-                        "address": user.address,
-                        "phone": user.phone_number, 
-                        "investor_email": user.email,
-                        "father_name": father_name, 
-                        "entity_type": user.investor_type,
-                        "law": "Not Applicable",
-                        "pan_number": kyc.pan_number,
-                        "phone_number": user.phone_number,
-                        "capital_commitment": str(capital_commitment),
-                        "capital_commitment_words": capital_commitment_in_word,
-                        "resident": resident,
-                        "tax_identity_number": tax_identity_number,
-                        "date_of_birth": formatted_dob,
-                        "place_of_birth": place_of_birth,
+                "templates": {
+                    "field_data": {
+                        "field_text_data": {
+                            "current_date": current_date,
+                            "day": day,
+                            "month": month,
+                            "year": year,
+                            "name": name,
+                            "address": address,
+                            "phone": phone,
+                            "investor_email": email,
+                            "father_name": father_name,
+                            "entity_type": entity_type,
+                            "law": "Not Applicable",
+                            "pan_number": pan_number,
+                            "phone_number": phone,
+                            "management_fee_default": "As per the Investment Scheme Appendix",
+                            "class_of_unit_default": "As per the Investment Scheme Appendix",
+                            "capital_commitment": capital_commitment,
+                            "capital_commitment_words": capital_commitment_in_word
+                        },
+                        "field_boolean_data": {},
+                        "field_date_data": {},
+                        "field_radio_data": {},
+                        "field_checkboxgroup_data": {}
                     },
-                    "field_boolean_data": {},
-                    "field_date_data": {},
-                    "field_radio_data": {},
-                    "field_checkboxgroup_data": {}
-                },
-                "notes": "",
-                "actions": [
-                    {
-                        "recipient_name": user.full_name if user.full_name else "Investor",
-                        "recipient_email": user.email,
-                        "action_id": "80016000000197416",
-                        "action_type": "SIGN",
-                        "signing_order": 1,
-                        "role": "Applicant",
-                        "verify_recipient": False,
-                        "private_notes": ""
-                    },
-                    {
-                        "recipient_name": "Amit",
-                        "recipient_email": "amit@fundos.solutions",
-                        "action_id": "80016000000197418",
-                        "action_type": "SIGN",
-                        "signing_order": 2,
-                        "role": "Signatory",
-                        "verify_recipient": False,
-                        "private_notes": ""
-                    },
-                    {
-                        "recipient_name": "Vaishali Goverdhan Urkude",
-                        "recipient_email": "Signatory@mitconcredentia.in",
-                        "action_id": "80016000000207922",
-                        "action_type": "SIGN",
-                        "signing_order": 3,
-                        "role": "Signatory",
-                        "verify_recipient": False,
-                        "private_notes": ""
-                    }
-                ]
+                    "notes": "",
+                    "actions": [
+                        {
+                            "recipient_name": name,
+                            "recipient_email": email,
+                            "action_id": "80016000000197416",
+                            "action_type": "SIGN",
+                            "signing_order": 1,
+                            "role": "Applicant",
+                            "verify_recipient": False,
+                            "private_notes": ""
+                        },
+                        {
+                            "recipient_name": "Amit Tyagi",
+                            "recipient_email": "amit@fundos.solutions",
+                            "action_id": "80016000000197418",
+                            "action_type": "SIGN",
+                            "signing_order": 2,
+                            "role": "Signatory",
+                            "verify_recipient": False,
+                            "private_notes": ""
+                        },
+                        {
+                            "recipient_name": "Neha Rathod",
+                            "recipient_email": "signatory@mitconcredentia.in",
+                            "action_id": "80016000000207922",
+                            "action_type": "SIGN",
+                            "signing_order": 3,
+                            "role": "Signatory",
+                            "verify_recipient": False,
+                            "private_notes": ""
+                        }
+                    ]
+                }
             }
-        }
 
         return payload
     
@@ -275,7 +268,7 @@ class ZohoService:
         metadata_key = self._get_cache_key(user_id, "metadata") #self._get_cache_key(user_id, "metadata")
         metadata = self.redis.get(metadata_key)
         if not metadata:
-            logger.error(f"Missing metadata for user_id: iswar")
+            logger.error(f"Missing metadata for user_id: {user_id}")
             raise HTTPException(status_code=400, detail="Missing document metadata")
 
         metadata = json.loads(metadata)
@@ -493,7 +486,7 @@ class ZohoService:
 
         request_id = payload["requests"].get("request_id")
         action_ids = [action["action_id"] for action in payload["requests"].get("actions", [])]
-        document_id = payload["requests"].get("document_ids", [{}])[0].get("document_id")
+        document_id = payload["requests"].get("document_ids", [{}])[0].get("document_id")  # noqa: F841
 
         if len(action_ids) != 3:
             logger.error(f"Expected 3 signers, found {len(action_ids)} for request_id: {request_id}")
@@ -577,13 +570,13 @@ class ZohoService:
             total_payable = investment_amount + total_fee
             total_payable_str = f"{total_payable:,.2f}" # total payable
 
-            capital_commitment_str = f"{capital_commitment:,.2f}"
+            capital_commitment_str = f"{capital_commitment:,.2f}"  # noqa: F841
 
             drawdown_so_far = drawdown_amount + total_payable # need to add a field for this in user model : user.drawdown_amount
             drawdown_so_far = f"{drawdown_so_far:,.2f}"
 
             undrawn_capital_commitment = capital_commitment - total_payable 
-            undrawn_commitment = f"{undrawn_capital_commitment:,.2f}"
+            undrawn_commitment = f"{undrawn_capital_commitment:,.2f}"  # noqa: F841
 
             # Construct the payload
             payload = {

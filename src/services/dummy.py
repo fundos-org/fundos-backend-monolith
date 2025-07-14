@@ -273,7 +273,7 @@ class DummyService:
             if not phone_number.isdigit():
                 raise HTTPException(status_code=400, detail="Phone number must contain only digits")
             if len(phone_number) != 10:
-                raise HTTPException(status_code=400, detail=f"Phone number must be 10 digits")
+                raise HTTPException(status_code=400, detail=f"Phone number must be 10 digits")  # noqa: F541
 
             # Check if invitation code exists in Subadmin table
             stmt = select(Subadmin).where(Subadmin.invite_code == invitation_code)

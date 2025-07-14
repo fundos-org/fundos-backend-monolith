@@ -1,7 +1,7 @@
 import boto3
 from botocore.exceptions import ClientError
 from botocore.response import StreamingBody
-from fastapi import UploadFile, HTTPException, BackgroundTasks
+from fastapi import UploadFile, HTTPException, BackgroundTasks  # noqa: F401
 from typing import Optional
 from urllib.parse import urlparse
 from uuid import UUID

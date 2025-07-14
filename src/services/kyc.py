@@ -3,13 +3,12 @@ import httpx
 import base64
 import redis
 import json
-import os
 from fastapi import HTTPException
 from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.kyc import KYC, KycStatus
-from src.models.user import User, OnboardingStatus
+from src.models.user import User, OnboardingStatus  # noqa: F401
 from src.logging.logging_setup import get_logger
 from datetime import datetime
 from src.configs.configs import redis_configs
@@ -436,7 +435,7 @@ class KycService:
             logger.error(f"Invalid user_id format: {user_id}")
             raise HTTPException(status_code=400, detail="Invalid user_id format")
 
-        url = "https://svc.digitap.ai/validation/misc/v1/pan-account-linkage" # prod url
+        url = "https://svc.digitap.ai/validation/misc/v1/pan-account-linkage" # prod url  # noqa: F841
         demo_url = "https://svcdemo.digitap.work/validation/misc/v1/pan-account-linkage" # change it to a variable later
         payload = {
             "client_ref_num": f"pan-bank-{user_id}",
@@ -445,7 +444,7 @@ class KycService:
             "ifsc_code": ifsc_code
         }
 
-        headers = self.get_auth_header_basic()
+        headers = self.get_auth_header_basic()  # noqa: F841
 
         demo_headers = {
             "Content-Type": "application/json",

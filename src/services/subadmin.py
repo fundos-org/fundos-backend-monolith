@@ -749,3 +749,24 @@ class SubAdminService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to change deal status: {str(e)}"
             )
+        
+    async def get_all_members(
+        self, 
+        session: AsyncSession,
+        subadmin_id: UUID
+    ): 
+        try:
+            subadmin = await session.get(Subadmin, subadmin_id)
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
+            return {
+                "subadmin": subadmin,
+                "members": subadmin.members,
+                "success": True
+            }
+        except HTTPException as he:
+            logger.error(f"Failed to get subadmin details: {str(he)}")
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to get subadmin details: {str(e)}")

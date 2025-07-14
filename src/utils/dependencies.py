@@ -1,5 +1,4 @@
 from starlette import status
-from fastapi import Depends 
 from fastapi.exceptions import HTTPException
 from sqlmodel import select
 from sqlalchemy.engine import Result
