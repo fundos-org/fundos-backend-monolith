@@ -275,19 +275,20 @@ class MarkDealInactiveResponse(BaseModel):
     message: str
     success: bool
 
-class EditDealCompanyDetailsRequest(BaseModel):
+class EditDealRequest(BaseModel):
+    # Company Details
     logo_url: Optional[str] = None
     company_name: Optional[str] = None
     about_company: Optional[str] = None
     company_website: Optional[str] = None
     problem_statement: Optional[str] = None
-
-class EditDealMarketDetailsRequest(BaseModel):
+    
+    # Market Details
     industry: Optional[str] = None
     business_model: Optional[str] = None
     company_stage: Optional[str] = None
-
-class EditDealRequest(BaseModel):
+    
+    # Deal Details
     current_valuation: Optional[float] = None
     round_size: Optional[float] = None
     syndicate_commitment: Optional[float] = None
@@ -300,6 +301,34 @@ class EditDealResponse(BaseModel):
     subadmin_id: str
     deal_id: str
     message: str
+    success: bool
+
+class DealDetailsInfo(BaseModel):
+    # Company Details
+    logo_url: Optional[str] = None
+    company_name: Optional[str] = None
+    about_company: Optional[str] = None
+    company_website: Optional[str] = None
+    problem_statement: Optional[str] = None
+    
+    # Market Details
+    industry: Optional[str] = None
+    business_model: Optional[str] = None
+    company_stage: Optional[str] = None
+    
+    # Deal Details
+    current_valuation: Optional[float] = None
+    round_size: Optional[float] = None
+    syndicate_commitment: Optional[float] = None
+    conversion_terms: Optional[str] = None
+    instrument_type: Optional[str] = None
+    pitch_deck_url: Optional[str] = None
+    pitch_video_url: Optional[str] = None
+
+class DealDetailsResponse(BaseModel):
+    subadmin_id: str
+    deal_id: str
+    deal_details: DealDetailsInfo
     success: bool
 
 class DealAboutInfo(BaseModel):

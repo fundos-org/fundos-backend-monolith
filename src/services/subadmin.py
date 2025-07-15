@@ -1349,7 +1349,70 @@ class SubAdminService:
                 detail=f"Failed to mark deal inactive: {str(e)}"
             )
 
-    async def edit_deal_company_details(
+    async def get_deal_details(
+        self,
+        session: AsyncSession,
+        subadmin_id: UUID,
+        deal_id: UUID
+    ) -> dict:
+        try:
+            # Fetch subadmin
+            subadmin = await session.get(Subadmin, subadmin_id)
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
+
+            # Fetch deal
+            deal = await session.get(Deal, deal_id)
+            if not deal:
+                raise HTTPException(status_code=404, detail="Deal not found")
+
+            # Verify deal belongs to this subadmin
+            if deal.fund_manager_id != subadmin_id:
+                raise HTTPException(status_code=403, detail="Deal does not belong to this subadmin")
+
+            # Prepare deal details
+            deal_details = {
+                # Company Details
+                "logo_url": deal.logo_url,
+                "company_name": deal.company_name,
+                "about_company": deal.about_company,
+                "company_website": deal.company_website,
+                "problem_statement": deal.problem_statement,
+                
+                # Market Details
+                "industry": deal.industry.value if deal.industry else None,
+                "business_model": deal.business_model.value if deal.business_model else None,
+                "company_stage": deal.company_stage.value if deal.company_stage else None,
+                
+                # Deal Details
+                "current_valuation": deal.current_valuation,
+                "round_size": deal.round_size,
+                "syndicate_commitment": deal.syndicate_commitment,
+                "conversion_terms": deal.conversion_terms,
+                "instrument_type": deal.instrument_type.value if deal.instrument_type else None,
+                "pitch_deck_url": deal.pitch_deck_url,
+                "pitch_video_url": deal.pitch_video_url
+            }
+
+            logger.info(f"Deal details fetched for deal ID: {deal_id}")
+
+            return {
+                "subadmin_id": str(subadmin.id),
+                "deal_id": str(deal_id),
+                "deal_details": deal_details,
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to fetch deal details: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch deal details: {str(e)}"
+            )
+
+    async def edit_deal(
         self,
         session: AsyncSession,
         subadmin_id: UUID,
@@ -1383,50 +1446,6 @@ class SubAdminService:
             if update_data.get("problem_statement") is not None:
                 deal.problem_statement = update_data["problem_statement"]
 
-            # Update updated_at timestamp
-            deal.updated_at = datetime.now()
-            await session.commit()
-
-            logger.info(f"Deal company details updated for {deal.company_name} by subadmin {subadmin.name}")
-
-            return {
-                "subadmin_id": str(subadmin.id),
-                "deal_id": str(deal_id),
-                "message": f"Deal company details have been successfully updated",
-                "success": True
-            }
-        except HTTPException as he:
-            raise he
-        except Exception as e:
-            await session.rollback()
-            logger.error(f"Failed to update deal company details: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to update deal company details: {str(e)}"
-            )
-
-    async def edit_deal_market_details(
-        self,
-        session: AsyncSession,
-        subadmin_id: UUID,
-        deal_id: UUID,
-        update_data: dict
-    ) -> dict:
-        try:
-            # Fetch subadmin
-            subadmin = await session.get(Subadmin, subadmin_id)
-            if not subadmin:
-                raise HTTPException(status_code=404, detail="Subadmin not found")
-
-            # Fetch deal
-            deal = await session.get(Deal, deal_id)
-            if not deal:
-                raise HTTPException(status_code=404, detail="Deal not found")
-
-            # Verify deal belongs to this subadmin
-            if deal.fund_manager_id != subadmin_id:
-                raise HTTPException(status_code=403, detail="Deal does not belong to this subadmin")
-
             # Update market details
             if update_data.get("industry") is not None:
                 deal.industry = update_data["industry"]
@@ -1435,51 +1454,7 @@ class SubAdminService:
             if update_data.get("company_stage") is not None:
                 deal.company_stage = update_data["company_stage"]
 
-            # Update updated_at timestamp
-            deal.updated_at = datetime.now()
-            await session.commit()
-
-            logger.info(f"Deal market details updated for {deal.company_name} by subadmin {subadmin.name}")
-
-            return {
-                "subadmin_id": str(subadmin.id),
-                "deal_id": str(deal_id),
-                "message": f"Deal market details have been successfully updated",
-                "success": True
-            }
-        except HTTPException as he:
-            raise he
-        except Exception as e:
-            await session.rollback()
-            logger.error(f"Failed to update deal market details: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to update deal market details: {str(e)}"
-            )
-
-    async def edit_deal(
-        self,
-        session: AsyncSession,
-        subadmin_id: UUID,
-        deal_id: UUID,
-        update_data: dict
-    ) -> dict:
-        try:
-            # Fetch subadmin
-            subadmin = await session.get(Subadmin, subadmin_id)
-            if not subadmin:
-                raise HTTPException(status_code=404, detail="Subadmin not found")
-
-            # Fetch deal
-            deal = await session.get(Deal, deal_id)
-            if not deal:
-                raise HTTPException(status_code=404, detail="Deal not found")
-
-            # Verify deal belongs to this subadmin
-            if deal.fund_manager_id != subadmin_id:
-                raise HTTPException(status_code=403, detail="Deal does not belong to this subadmin")
-
-            # Update deal fields
+            # Update deal details
             if update_data.get("current_valuation") is not None:
                 deal.current_valuation = update_data["current_valuation"]
             if update_data.get("round_size") is not None:

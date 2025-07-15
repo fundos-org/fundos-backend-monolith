@@ -8,7 +8,7 @@ from src.schemas.subadmin import (SubAdminSignInReq, SubAdminDashboardStatistics
                                   SubAdminDashboardActivitiesRes, SubAdminDashboardOverviewGraphRes, SubAdminDealsOverviewRes,
                                   SubAdminDealsStatisticsRes, SubAdminMembersStatisticsRes, InvestorListResponse, InvestorListMetadata,
                                   DeleteInvestorResponse, UpdateInvestorResponse, InvestorInfoResponse, InvestorInvestmentsResponse, InvestorInvestmentsMetadataResponse, InvestorTransactionsResponse,
-                                  InvestorDocumentsResponse, MarkDealInactiveResponse, EditDealResponse, DealAboutResponse, DealInvestorsResponse, DealTransactionsResponse,
+                                  InvestorDocumentsResponse, MarkDealInactiveResponse, EditDealRequest, EditDealResponse, DealDetailsResponse, DealAboutResponse, DealInvestorsResponse, DealTransactionsResponse,
                                   DealDocumentsResponse, WelcomeMailResponse, OnboardingMailResponse, ConsentMailResponse, WelcomeMailUpdateResponse, OnboardingMailUpdateResponse, ConsentMailUpdateResponse)
 from src.services.subadmin import SubAdminService
 from src.models.user import User, Role
@@ -327,39 +327,19 @@ async def mark_deal_inactive(
 
     return result
 
-@router.put("/deals/edit_deals/company_details/{subadmin_id}/{deal_id}", tags=["manish_dev_changes"])
-async def edit_deal_company_details(
+@router.get("/deals/deal_details/{subadmin_id}/{deal_id}", tags=["manish_dev_changes"])
+async def get_deal_details(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID,
-    deal_id: UUID,
-    update_data: dict
-) -> EditDealResponse:
-    result = await subadmin_services.edit_deal_company_details(
+    deal_id: UUID
+) -> DealDetailsResponse:
+    result = await subadmin_services.get_deal_details(
         session=session,
         subadmin_id=subadmin_id,
-        deal_id=deal_id,
-        update_data=update_data
+        deal_id=deal_id
     )
     if not result["success"]:
-        raise HTTPException(status_code=400, detail="Failed to update deal company details")
-
-    return result
-
-@router.put("/deals/edit_deals/market_details/{subadmin_id}/{deal_id}", tags=["manish_dev_changes"])
-async def edit_deal_market_details(
-    session: Annotated[AsyncSession, Depends(get_session)],
-    subadmin_id: UUID,
-    deal_id: UUID,
-    update_data: dict
-) -> EditDealResponse:
-    result = await subadmin_services.edit_deal_market_details(
-        session=session,
-        subadmin_id=subadmin_id,
-        deal_id=deal_id,
-        update_data=update_data
-    )
-    if not result["success"]:
-        raise HTTPException(status_code=400, detail="Failed to update deal market details")
+        raise HTTPException(status_code=400, detail="Failed to fetch deal details")
 
     return result
 
@@ -368,13 +348,13 @@ async def edit_deal(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID,
     deal_id: UUID,
-    update_data: dict
+    update_data: EditDealRequest
 ) -> EditDealResponse:
     result = await subadmin_services.edit_deal(
         session=session,
         subadmin_id=subadmin_id,
         deal_id=deal_id,
-        update_data=update_data
+        update_data=update_data.dict(exclude_unset=True)
     )
     if not result["success"]:
         raise HTTPException(status_code=400, detail="Failed to update deal details")
