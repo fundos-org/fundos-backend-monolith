@@ -1938,4 +1938,147 @@ class SubAdminService:
                 detail=f"Failed to update consent mail: {str(e)}"
             )
         
+    async def get_combined_emails(
+        self,
+        session: AsyncSession,
+        subadmin_id: UUID
+    ) -> dict:
+        try:
+            # Fetch subadmin
+            subadmin = await session.get(Subadmin, subadmin_id)
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
+
+            # Mock data for all email templates
+            welcome_mail = {
+                "subject": "Welcome to Fundos - Your Investment Journey Begins",
+                "body": "Dear {investor_name},\n\nWelcome to Fundos! We're excited to have you join our investment platform.\n\nThis is a mock welcome email template that can be customized by subadmins.\n\nBest regards,\nThe Fundos Team"
+            }
+
+            onboarding_mail = {
+                "subject": "Complete Your Onboarding - Fundos Investment Platform",
+                "body": "Dear {investor_name},\n\nThank you for joining Fundos! To complete your onboarding process, please follow the steps below:\n\n1. Verify your email address\n2. Complete your KYC\n3. Set up your investment preferences\n\nThis is a mock onboarding email template.\n\nBest regards,\nThe Fundos Team"
+            }
+
+            consent_mail = {
+                "subject": "Investment Consent Required - Fundos Platform",
+                "body": "Dear {investor_name},\n\nWe require your consent to proceed with the investment process. Please review the terms and conditions carefully.\n\nThis is a mock consent email template for investment agreements.\n\nBest regards,\nThe Fundos Team"
+            }
+
+            logger.info(f"Combined emails fetched for subadmin ID: {subadmin_id}")
+
+            return {
+                "subadmin_id": str(subadmin.id),
+                "welcome_mail": welcome_mail,
+                "onboarding_mail": onboarding_mail,
+                "consent_mail": consent_mail,
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to fetch combined emails: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch combined emails: {str(e)}"
+            )
+
+    async def update_combined_emails(
+        self,
+        session: AsyncSession,
+        subadmin_id: UUID,
+        update_data: dict
+    ) -> dict:
+        try:
+            # Fetch subadmin
+            subadmin = await session.get(Subadmin, subadmin_id)
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
+
+            # Mock update - in real implementation, this would update database
+            updated_templates = []
+            
+            if update_data.get("welcome_mail"):
+                updated_templates.append("welcome mail")
+            if update_data.get("onboarding_mail"):
+                updated_templates.append("onboarding mail")
+            if update_data.get("consent_mail"):
+                updated_templates.append("consent mail")
+
+            logger.info(f"Combined emails updated for subadmin ID: {subadmin_id}")
+
+            return {
+                "subadmin_id": str(subadmin.id),
+                "message": f"Successfully updated: {', '.join(updated_templates) if updated_templates else 'no templates'}",
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to update combined emails: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to update combined emails: {str(e)}"
+            )
+
+    async def get_all_subadmins(
+        self,
+        session: AsyncSession,
+        page: int = 1,
+        per_page: int = 20
+    ) -> dict:
+        try:
+            # Calculate offset for pagination
+            offset = (page - 1) * per_page
+
+            # Get total count
+            count_query = select(func.count(Subadmin.id))
+            total_count = await session.execute(count_query)
+            total_records = total_count.scalar()
+
+            # Get paginated subadmins
+            query = select(Subadmin.id, Subadmin.name).offset(offset).limit(per_page)
+            result = await session.execute(query)
+            subadmins = result.fetchall()
+
+            # Calculate pagination info
+            total_pages = (total_records + per_page - 1) // per_page
+            has_next = page < total_pages
+            has_prev = page > 1
+
+            # Format response
+            subadmin_list = [
+                {
+                    "subadmin_id": str(subadmin.id),
+                    "subadmin_name": subadmin.name or "Unnamed Subadmin"
+                }
+                for subadmin in subadmins
+            ]
+
+            pagination_info = {
+                "page": page,
+                "per_page": per_page,
+                "total_records": total_records,
+                "total_pages": total_pages,
+                "has_next": has_next,
+                "has_prev": has_prev
+            }
+
+            logger.info(f"Retrieved {len(subadmin_list)} subadmins (page {page})")
+
+            return {
+                "subadmins": subadmin_list,
+                "pagination": pagination_info,
+                "success": True
+            }
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to fetch subadmins: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch subadmins: {str(e)}"
+            )
+        
     

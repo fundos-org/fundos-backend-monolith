@@ -9,7 +9,8 @@ from src.schemas.subadmin import (SubAdminSignInReq, SubAdminDashboardStatistics
                                   SubAdminDealsStatisticsRes, SubAdminMembersStatisticsRes, InvestorListResponse, InvestorListMetadata,
                                   DeleteInvestorResponse, UpdateInvestorResponse, InvestorInfoResponse, InvestorInvestmentsResponse, InvestorInvestmentsMetadataResponse, InvestorTransactionsResponse,
                                   InvestorDocumentsResponse, MarkDealInactiveResponse, EditDealRequest, EditDealResponse, DealDetailsResponse, DealAboutResponse, DealInvestorsResponse, DealTransactionsResponse,
-                                  DealDocumentsResponse, WelcomeMailResponse, OnboardingMailResponse, ConsentMailResponse, WelcomeMailUpdateResponse, OnboardingMailUpdateResponse, ConsentMailUpdateResponse)
+                                  DealDocumentsResponse, WelcomeMailResponse, OnboardingMailResponse, ConsentMailResponse, WelcomeMailUpdateResponse, OnboardingMailUpdateResponse, ConsentMailUpdateResponse,
+                                  CombinedEmailResponse, EmailUpdateRequest, CombinedEmailUpdateResponse, SubadminListResponse)
 from src.services.subadmin import SubAdminService
 from src.models.user import User, Role
 from src.models.transaction import Transaction
@@ -427,92 +428,48 @@ async def get_deal_documents(
 
     return result
 
-@router.get("/communication/welcome_mail_get/{subadmin_id}", tags=["manish_dev_changes"])
-async def get_welcome_mail(
+@router.get("/communication/emails/{subadmin_id}", tags=["manish_dev_changes"])
+async def get_combined_emails(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID
-) -> WelcomeMailResponse:
-    result = await subadmin_services.get_welcome_mail(
+) -> CombinedEmailResponse:
+    result = await subadmin_services.get_combined_emails(
         session=session,
         subadmin_id=subadmin_id
     )
     if not result["success"]:
-        raise HTTPException(status_code=400, detail="Failed to fetch welcome mail")
+        raise HTTPException(status_code=400, detail="Failed to fetch combined emails")
 
     return result
 
-@router.put("/communication/welcome_mail_update/{subadmin_id}", tags=["manish_dev_changes"])
-async def update_welcome_mail(
+@router.put("/communication/emails/{subadmin_id}", tags=["manish_dev_changes"])
+async def update_combined_emails(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID,
-    update_data: dict
-) -> WelcomeMailUpdateResponse:
-    result = await subadmin_services.update_welcome_mail(
+    update_data: EmailUpdateRequest
+) -> CombinedEmailUpdateResponse:
+    result = await subadmin_services.update_combined_emails(
         session=session,
         subadmin_id=subadmin_id,
-        update_data=update_data
+        update_data=update_data.dict(exclude_none=True)
     )
     if not result["success"]:
-        raise HTTPException(status_code=400, detail="Failed to update welcome mail")
+        raise HTTPException(status_code=400, detail="Failed to update combined emails")
 
     return result
 
-@router.get("/communication/onboarding_mail_get/{subadmin_id}", tags=["manish_dev_changes"])
-async def get_onboarding_mail(
+@router.get("/list", tags=["manish_dev_changes"])
+async def get_all_subadmins(
     session: Annotated[AsyncSession, Depends(get_session)],
-    subadmin_id: UUID
-) -> OnboardingMailResponse:
-    result = await subadmin_services.get_onboarding_mail(
+    page: int = 1,
+    per_page: int = 20
+) -> SubadminListResponse:
+    result = await subadmin_services.get_all_subadmins(
         session=session,
-        subadmin_id=subadmin_id
+        page=page,
+        per_page=per_page
     )
     if not result["success"]:
-        raise HTTPException(status_code=400, detail="Failed to fetch onboarding mail")
-
-    return result
-
-@router.put("/communication/onboarding_mail_update/{subadmin_id}", tags=["manish_dev_changes"])
-async def update_onboarding_mail(
-    session: Annotated[AsyncSession, Depends(get_session)],
-    subadmin_id: UUID,
-    update_data: dict
-) -> OnboardingMailUpdateResponse:
-    result = await subadmin_services.update_onboarding_mail(
-        session=session,
-        subadmin_id=subadmin_id,
-        update_data=update_data
-    )
-    if not result["success"]:
-        raise HTTPException(status_code=400, detail="Failed to update onboarding mail")
-
-    return result
-
-@router.get("/communication/consent_mail_get/{subadmin_id}", tags=["manish_dev_changes"])
-async def get_consent_mail(
-    session: Annotated[AsyncSession, Depends(get_session)],
-    subadmin_id: UUID
-) -> ConsentMailResponse:
-    result = await subadmin_services.get_consent_mail(
-        session=session,
-        subadmin_id=subadmin_id
-    )
-    if not result["success"]:
-        raise HTTPException(status_code=400, detail="Failed to fetch consent mail")
-
-    return result
-
-@router.put("/communication/consent_mail_update/{subadmin_id}", tags=["manish_dev_changes"])
-async def update_consent_mail(
-    session: Annotated[AsyncSession, Depends(get_session)],
-    subadmin_id: UUID,
-    update_data: dict
-) -> ConsentMailUpdateResponse:
-    result = await subadmin_services.update_consent_mail(
-        session=session,
-        subadmin_id=subadmin_id,
-        update_data=update_data
-    )
-    if not result["success"]:
-        raise HTTPException(status_code=400, detail="Failed to update consent mail")
+        raise HTTPException(status_code=400, detail="Failed to fetch subadmins list")
 
     return result

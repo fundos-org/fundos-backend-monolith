@@ -437,3 +437,35 @@ class ConsentMailUpdateResponse(BaseModel):
     subadmin_id: str
     message: str
     success: bool
+
+# Combined email schemas
+class EmailTemplateInfo(BaseModel):
+    subject: str
+    body: str
+
+class CombinedEmailResponse(BaseModel):
+    subadmin_id: str
+    welcome_mail: EmailTemplateInfo
+    onboarding_mail: EmailTemplateInfo
+    consent_mail: EmailTemplateInfo
+    success: bool
+
+class EmailUpdateRequest(BaseModel):
+    welcome_mail: Optional[EmailTemplateInfo] = None
+    onboarding_mail: Optional[EmailTemplateInfo] = None
+    consent_mail: Optional[EmailTemplateInfo] = None
+
+class CombinedEmailUpdateResponse(BaseModel):
+    subadmin_id: str
+    message: str
+    success: bool
+
+# Subadmin listing schemas
+class SubadminListItem(BaseModel):
+    subadmin_id: str
+    subadmin_name: str
+
+class SubadminListResponse(BaseModel):
+    subadmins: List[SubadminListItem]
+    pagination: dict
+    success: bool
