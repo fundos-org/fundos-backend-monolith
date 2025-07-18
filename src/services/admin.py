@@ -2,7 +2,7 @@ from fastapi import HTTPException
 from fastapi import UploadFile
 from fastapi import status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import select, func
 from src.logging.logging_setup import get_logger # assuming you have a logger setup
 from src.models.subadmin import Subadmin
 from src.schemas.admin import SubadminDetails
@@ -189,12 +189,28 @@ class AdminService:
         
     async def get_all_subadmins(
         self, 
-        session: AsyncSession
+        session: AsyncSession,
+        page: int = 1,
+        per_page: int = 20
     ) -> Any:
         try:
-            # Query all Subadmin records
-            result = await session.execute(select(Subadmin))
+            # Calculate offset for pagination
+            offset = (page - 1) * per_page
+
+            # Get total count
+            count_query = select(func.count(Subadmin.id))
+            total_count = await session.execute(count_query)
+            total_records = total_count.scalar()
+
+            # Get paginated subadmins
+            query = select(Subadmin).offset(offset).limit(per_page)
+            result = await session.execute(query)
             subadmins = result.scalars().all()
+
+            # Calculate pagination info
+            total_pages = (total_records + per_page - 1) // per_page
+            has_next = page < total_pages
+            has_prev = page > 1
 
             # Prepare response data
             response = []
@@ -214,9 +230,19 @@ class AdminService:
                     onboarding_date=subadmin.created_at.strftime("%d/%m/%Y")
                 ))
 
+            pagination_info = {
+                "page": page,
+                "per_page": per_page,
+                "total_records": total_records,
+                "total_pages": total_pages,
+                "has_next": has_next,
+                "has_prev": has_prev
+            }
+
             return {
-                "success":True,
-                "subadmins": response
+                "success": True,
+                "subadmins": response,
+                "pagination": pagination_info
             }
         except HTTPException as he:
             raise he

@@ -82,10 +82,14 @@ async def get_subadmin(
 
 @router.get("/subadmins/")
 async def get_all_subadmins(
-    session: Annotated[AsyncSession, Depends(get_session)]
+    session: Annotated[AsyncSession, Depends(get_session)],
+    page: int = 1,
+    per_page: int = 20
 ) -> GetSubadminRes: 
     result = await admin_services.get_all_subadmins(
-        session=session
+        session=session,
+        page=page,
+        per_page=per_page
     )
     if not result["success"]:
         raise HTTPException(status_code=400, detail="failed to get subadmin details")

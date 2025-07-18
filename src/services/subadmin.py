@@ -2025,28 +2025,13 @@ class SubAdminService:
 
     async def get_all_subadmins(
         self,
-        session: AsyncSession,
-        page: int = 1,
-        per_page: int = 20
+        session: AsyncSession
     ) -> dict:
         try:
-            # Calculate offset for pagination
-            offset = (page - 1) * per_page
-
-            # Get total count
-            count_query = select(func.count(Subadmin.id))
-            total_count = await session.execute(count_query)
-            total_records = total_count.scalar()
-
-            # Get paginated subadmins
-            query = select(Subadmin.id, Subadmin.name).offset(offset).limit(per_page)
+            # Get all subadmins without pagination
+            query = select(Subadmin.id, Subadmin.name)
             result = await session.execute(query)
             subadmins = result.fetchall()
-
-            # Calculate pagination info
-            total_pages = (total_records + per_page - 1) // per_page
-            has_next = page < total_pages
-            has_prev = page > 1
 
             # Format response
             subadmin_list = [
@@ -2057,20 +2042,10 @@ class SubAdminService:
                 for subadmin in subadmins
             ]
 
-            pagination_info = {
-                "page": page,
-                "per_page": per_page,
-                "total_records": total_records,
-                "total_pages": total_pages,
-                "has_next": has_next,
-                "has_prev": has_prev
-            }
-
-            logger.info(f"Retrieved {len(subadmin_list)} subadmins (page {page})")
+            logger.info(f"Retrieved {len(subadmin_list)} subadmins")
 
             return {
                 "subadmins": subadmin_list,
-                "pagination": pagination_info,
                 "success": True
             }
         except Exception as e:

@@ -458,16 +458,12 @@ async def update_combined_emails(
 
     return result
 
-@router.get("/list", tags=["manish_dev_changes"])
+@router.get("/subadminsIds", tags=["manish_dev_changes"])
 async def get_all_subadmins(
-    session: Annotated[AsyncSession, Depends(get_session)],
-    page: int = 1,
-    per_page: int = 20
+    session: Annotated[AsyncSession, Depends(get_session)]
 ) -> SubadminListResponse:
     result = await subadmin_services.get_all_subadmins(
-        session=session,
-        page=page,
-        per_page=per_page
+        session=session
     )
     if not result["success"]:
         raise HTTPException(status_code=400, detail="Failed to fetch subadmins list")

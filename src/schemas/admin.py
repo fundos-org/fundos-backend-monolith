@@ -33,6 +33,7 @@ class SubadminDetails(BaseModel):
 
 class GetSubadminRes(BaseModel):
     subadmins: List[SubadminDetails]
+    pagination: dict
 
 
 class AdminSignInReq(BaseModel):

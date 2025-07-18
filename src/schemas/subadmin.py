@@ -467,5 +467,4 @@ class SubadminListItem(BaseModel):
 
 class SubadminListResponse(BaseModel):
     subadmins: List[SubadminListItem]
-    pagination: dict
     success: bool
