@@ -113,7 +113,7 @@ async def send_invitation(
 
     return result
 
-@router.get("/subadmins", response_model=SubadminListPaginatedResponse, tags=["manish+dev_changes"])
+@router.get("/subadmins", response_model=SubadminListPaginatedResponse, tags=["manish_dev_changes"])
 async def get_paginated_subadmins(
     session: Annotated[AsyncSession, Depends(get_session)],
     page: int = 1,
@@ -121,14 +121,14 @@ async def get_paginated_subadmins(
 ):
     return await admin_services.get_paginated_subadmins(session=session, page=page, per_page=per_page)
 
-@router.get("/subadmin_details/{subadmin_id}", response_model=SubadminDetailsResponse, tags=["manish+dev_changes"])
+@router.get("/subadmin_details/{subadmin_id}", response_model=SubadminDetailsResponse, tags=["manish_dev_changes"])
 async def get_subadmin_details_full(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID
 ):
     return await admin_services.get_subadmin_full_details(session=session, subadmin_id=subadmin_id)
 
-@router.put("/subadmin_details/{subadmin_id}", response_model=SubadminDetailsUpdateResponse, tags=["manish+dev_changes"])
+@router.put("/subadmin_details/{subadmin_id}", response_model=SubadminDetailsUpdateResponse, tags=["manish_dev_changes"])
 async def update_subadmin_details_full(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID,

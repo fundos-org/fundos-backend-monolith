@@ -236,6 +236,7 @@ class InvestorMetadata(BaseModel):
 class InvestorInvestmentsResponse(BaseModel):
     investor_id: str
     deals: List[DealInfo]
+    pagination: Optional[PaginationInfo] = None
     success: bool
 
 class InvestorInvestmentsMetadataResponse(BaseModel):
@@ -254,6 +255,7 @@ class InvestorTransactionItem(BaseModel):
 class InvestorTransactionsResponse(BaseModel):
     investor_id: str
     transactions: List[InvestorTransactionItem]
+    pagination: Optional[PaginationInfo] = None
     success: bool
 
 class InvestorDocumentsInfo(BaseModel):

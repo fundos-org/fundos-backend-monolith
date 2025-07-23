@@ -259,11 +259,15 @@ async def get_investor_about_info(
 @router.get("/investors/investments_info/{investor_id}", tags=["manish_dev_changes"])
 async def get_investor_investments_info(
     session: Annotated[AsyncSession, Depends(get_session)],
-    investor_id: UUID
+    investor_id: UUID,
+    page: int = 1,
+    per_page: int = 20
 ) -> InvestorInvestmentsResponse:
     result = await subadmin_services.get_investor_investments_info(
         session=session,
-        investor_id=investor_id
+        investor_id=investor_id,
+        page=page,
+        per_page=per_page
     )
     if not result["success"]:
         raise HTTPException(status_code=400, detail="Failed to fetch investor investments info")
@@ -287,11 +291,15 @@ async def get_investor_investments_metadata(
 @router.get("/investors/transactions/{investor_id}", tags=["manish_dev_changes"])
 async def get_investor_transactions(
     session: Annotated[AsyncSession, Depends(get_session)],
-    investor_id: UUID
+    investor_id: UUID,
+    page: int = 1,
+    per_page: int = 20
 ) -> InvestorTransactionsResponse:
     result = await subadmin_services.get_investor_transactions(
         session=session,
-        investor_id=investor_id
+        investor_id=investor_id,
+        page=page,
+        per_page=per_page
     )
     if not result["success"]:
         raise HTTPException(status_code=400, detail="Failed to fetch investor transactions")
@@ -312,15 +320,13 @@ async def get_investor_documents_info(
 
     return result
 
-@router.post("/deals/mark_inactive/{subadmin_id}/{deal_id}", tags=["manish_dev_changes"])
+@router.post("/deals/mark_inactive/{deal_id}", tags=["manish_dev_changes"])
 async def mark_deal_inactive(
     session: Annotated[AsyncSession, Depends(get_session)],
-    subadmin_id: UUID,
     deal_id: UUID
 ) -> MarkDealInactiveResponse:
     result = await subadmin_services.mark_deal_inactive(
         session=session,
-        subadmin_id=subadmin_id,
         deal_id=deal_id
     )
     if not result["success"]:
@@ -328,15 +334,13 @@ async def mark_deal_inactive(
 
     return result
 
-@router.get("/deals/deal_details/{subadmin_id}/{deal_id}", tags=["manish_dev_changes"])
+@router.get("/deals/deal_details/{deal_id}", tags=["manish_dev_changes"])
 async def get_deal_details(
     session: Annotated[AsyncSession, Depends(get_session)],
-    subadmin_id: UUID,
     deal_id: UUID
 ) -> DealDetailsResponse:
     result = await subadmin_services.get_deal_details(
         session=session,
-        subadmin_id=subadmin_id,
         deal_id=deal_id
     )
     if not result["success"]:
@@ -344,16 +348,14 @@ async def get_deal_details(
 
     return result
 
-@router.put("/deals/edit_deals/{subadmin_id}/{deal_id}", tags=["manish_dev_changes"])
+@router.put("/deals/edit_deals/{deal_id}", tags=["manish_dev_changes"])
 async def edit_deal(
     session: Annotated[AsyncSession, Depends(get_session)],
-    subadmin_id: UUID,
     deal_id: UUID,
     update_data: EditDealRequest
 ) -> EditDealResponse:
     result = await subadmin_services.edit_deal(
         session=session,
-        subadmin_id=subadmin_id,
         deal_id=deal_id,
         update_data=update_data.dict(exclude_unset=True)
     )
@@ -362,15 +364,13 @@ async def edit_deal(
 
     return result
 
-@router.get("/deals/deal_info/about/{subadmin_id}/{deal_id}", tags=["manish_dev_changes"])
+@router.get("/deals/deal_info/about/{deal_id}", tags=["manish_dev_changes"])
 async def get_deal_about_info(
     session: Annotated[AsyncSession, Depends(get_session)],
-    subadmin_id: UUID,
     deal_id: UUID
 ) -> DealAboutResponse:
     result = await subadmin_services.get_deal_about_info(
         session=session,
-        subadmin_id=subadmin_id,
         deal_id=deal_id
     )
     if not result["success"]:

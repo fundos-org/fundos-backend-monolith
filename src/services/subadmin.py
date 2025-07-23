@@ -1106,29 +1106,27 @@ class SubAdminService:
     async def get_investor_investments_info(
         self,
         session: AsyncSession,
-        investor_id: UUID
+        investor_id: UUID,
+        page: int = 1,
+        per_page: int = 20
     ) -> dict:
         try:
-            # Fetch investor
             investor = await session.get(User, investor_id)
             if not investor:
                 raise HTTPException(status_code=404, detail="Investor not found")
-
-            # Verify investor role
             if investor.role != Role.INVESTOR:
                 raise HTTPException(status_code=400, detail="User is not an investor")
-
-            # Fetch all deals for this investor through investments
             investments_stmt = select(Investment).where(
                 Investment.investor_id == investor_id
             ).options(joinedload(Investment.deal))
-            
             investments_result = await session.execute(investments_stmt)
             investments = investments_result.unique().scalars().all()
-
-            # Prepare deals list
+            total_records = len(investments)
+            total_pages = (total_records + per_page - 1) // per_page
+            offset = (page - 1) * per_page
+            paginated_investments = investments[offset:offset+per_page]
             deals_list = []
-            for investment in investments:
+            for investment in paginated_investments:
                 if investment.deal:
                     deals_list.append({
                         "company_name": investment.deal.company_name or "",
@@ -1138,16 +1136,23 @@ class SubAdminService:
                         "logo_url": investment.deal.logo_url or "",
                         "status": investment.deal.status.value if investment.deal.status else "",
                         "created_at": investment.deal.created_at.strftime("%Y-%m-%d") if investment.deal.created_at else "",
-                        "deal_capital_commitment": 500000.0,  # Mock data
-                        "equity": 15.5,  # Mock data
-                        "term_sheet": "https://example.com/term-sheet.pdf"  # Mock data
+                        "deal_capital_commitment": 500000.0,
+                        "equity": 15.5,
+                        "term_sheet": "https://example.com/term-sheet.pdf"
                     })
-
+            pagination_info = {
+                "page": page,
+                "per_page": per_page,
+                "total_records": total_records,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_prev": page > 1
+            }
             logger.info(f"Investor investments info fetched for investor ID: {investor_id}")
-
             return {
                 "investor_id": str(investor_id),
                 "deals": deals_list,
+                "pagination": pagination_info,
                 "success": True
             }
         except HTTPException as he:
@@ -1214,28 +1219,27 @@ class SubAdminService:
     async def get_investor_transactions(
         self,
         session: AsyncSession,
-        investor_id: UUID
+        investor_id: UUID,
+        page: int = 1,
+        per_page: int = 20
     ) -> dict:
         try:
-            # Fetch investor
             investor = await session.get(User, investor_id)
             if not investor:
                 raise HTTPException(status_code=404, detail="Investor not found")
-
-            # Verify investor role
             if investor.role != Role.INVESTOR:
                 raise HTTPException(status_code=400, detail="User is not an investor")
-
-            # Fetch all transactions for this investor through investments
             transactions_stmt = select(Transaction).join(Investment).where(
                 Investment.investor_id == investor_id
             )
             transactions_result = await session.execute(transactions_stmt)
             transactions = transactions_result.unique().scalars().all()
-
-            # Prepare transactions list
+            total_records = len(transactions)
+            total_pages = (total_records + per_page - 1) // per_page
+            offset = (page - 1) * per_page
+            paginated_transactions = transactions[offset:offset+per_page]
             transactions_list = []
-            for transaction in transactions:
+            for transaction in paginated_transactions:
                 transactions_list.append({
                     "transaction_type": transaction.transaction_type.value if transaction.transaction_type else "",
                     "amount": transaction.amount,
@@ -1244,12 +1248,19 @@ class SubAdminService:
                     "created_at": transaction.created_at.strftime("%Y-%m-%d %H:%M:%S") if transaction.created_at else "",
                     "invitation_code": investor.invitation_code
                 })
-
+            pagination_info = {
+                "page": page,
+                "per_page": per_page,
+                "total_records": total_records,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_prev": page > 1
+            }
             logger.info(f"Investor transactions fetched for investor ID: {investor_id}")
-
             return {
                 "investor_id": str(investor_id),
                 "transactions": transactions_list,
+                "pagination": pagination_info,
                 "success": True
             }
         except HTTPException as he:
@@ -1304,37 +1315,19 @@ class SubAdminService:
     async def mark_deal_inactive(
         self,
         session: AsyncSession,
-        subadmin_id: UUID,
         deal_id: UUID
     ) -> dict:
         try:
-            # Fetch subadmin
-            subadmin = await session.get(Subadmin, subadmin_id)
-            if not subadmin:
-                raise HTTPException(status_code=404, detail="Subadmin not found")
-
-            # Fetch deal
             deal = await session.get(Deal, deal_id)
             if not deal:
                 raise HTTPException(status_code=404, detail="Deal not found")
-
-            # Verify deal belongs to this subadmin
-            if deal.fund_manager_id != subadmin_id:
-                raise HTTPException(status_code=403, detail="Deal does not belong to this subadmin")
-
-            # Check if deal is already closed
             if deal.status == DealStatus.CLOSED:
                 raise HTTPException(status_code=400, detail="Deal is already closed")
-
-            # Mark deal as inactive (closed)
             deal.status = DealStatus.CLOSED
             deal.updated_at = datetime.now()
             await session.commit()
-
-            logger.info(f"Deal {deal.company_name} marked as inactive by subadmin {subadmin.name}")
-
+            logger.info(f"Deal {deal.company_name} marked as inactive")
             return {
-                "subadmin_id": str(subadmin.id),
                 "deal_id": str(deal_id),
                 "message": f"Deal {deal.company_name} has been successfully marked as inactive",
                 "success": True
@@ -1352,39 +1345,21 @@ class SubAdminService:
     async def get_deal_details(
         self,
         session: AsyncSession,
-        subadmin_id: UUID,
         deal_id: UUID
     ) -> dict:
         try:
-            # Fetch subadmin
-            subadmin = await session.get(Subadmin, subadmin_id)
-            if not subadmin:
-                raise HTTPException(status_code=404, detail="Subadmin not found")
-
-            # Fetch deal
             deal = await session.get(Deal, deal_id)
             if not deal:
                 raise HTTPException(status_code=404, detail="Deal not found")
-
-            # Verify deal belongs to this subadmin
-            if deal.fund_manager_id != subadmin_id:
-                raise HTTPException(status_code=403, detail="Deal does not belong to this subadmin")
-
-            # Prepare deal details
             deal_details = {
-                # Company Details
                 "logo_url": deal.logo_url,
                 "company_name": deal.company_name,
                 "about_company": deal.about_company,
                 "company_website": deal.company_website,
                 "problem_statement": deal.problem_statement,
-                
-                # Market Details
                 "industry": deal.industry.value if deal.industry else None,
                 "business_model": deal.business_model.value if deal.business_model else None,
                 "company_stage": deal.company_stage.value if deal.company_stage else None,
-                
-                # Deal Details
                 "current_valuation": deal.current_valuation,
                 "round_size": deal.round_size,
                 "syndicate_commitment": deal.syndicate_commitment,
@@ -1393,11 +1368,8 @@ class SubAdminService:
                 "pitch_deck_url": deal.pitch_deck_url,
                 "pitch_video_url": deal.pitch_video_url
             }
-
             logger.info(f"Deal details fetched for deal ID: {deal_id}")
-
             return {
-                "subadmin_id": str(subadmin.id),
                 "deal_id": str(deal_id),
                 "deal_details": deal_details,
                 "success": True
@@ -1415,26 +1387,13 @@ class SubAdminService:
     async def edit_deal(
         self,
         session: AsyncSession,
-        subadmin_id: UUID,
         deal_id: UUID,
         update_data: dict
     ) -> dict:
         try:
-            # Fetch subadmin
-            subadmin = await session.get(Subadmin, subadmin_id)
-            if not subadmin:
-                raise HTTPException(status_code=404, detail="Subadmin not found")
-
-            # Fetch deal
             deal = await session.get(Deal, deal_id)
             if not deal:
                 raise HTTPException(status_code=404, detail="Deal not found")
-
-            # Verify deal belongs to this subadmin
-            if deal.fund_manager_id != subadmin_id:
-                raise HTTPException(status_code=403, detail="Deal does not belong to this subadmin")
-
-            # Update company details
             if update_data.get("logo_url") is not None:
                 deal.logo_url = update_data["logo_url"]
             if update_data.get("company_name") is not None:
@@ -1445,16 +1404,12 @@ class SubAdminService:
                 deal.company_website = update_data["company_website"]
             if update_data.get("problem_statement") is not None:
                 deal.problem_statement = update_data["problem_statement"]
-
-            # Update market details
             if update_data.get("industry") is not None:
                 deal.industry = update_data["industry"]
             if update_data.get("business_model") is not None:
                 deal.business_model = update_data["business_model"]
             if update_data.get("company_stage") is not None:
                 deal.company_stage = update_data["company_stage"]
-
-            # Update deal details
             if update_data.get("current_valuation") is not None:
                 deal.current_valuation = update_data["current_valuation"]
             if update_data.get("round_size") is not None:
@@ -1469,15 +1424,10 @@ class SubAdminService:
                 deal.pitch_deck_url = update_data["pitch_deck_url"]
             if update_data.get("pitch_video_url") is not None:
                 deal.pitch_video_url = update_data["pitch_video_url"]
-
-            # Update updated_at timestamp
             deal.updated_at = datetime.now()
             await session.commit()
-
-            logger.info(f"Deal details updated for {deal.company_name} by subadmin {subadmin.name}")
-
+            logger.info(f"Deal details updated for {deal.company_name}")
             return {
-                "subadmin_id": str(subadmin.id),
                 "deal_id": str(deal_id),
                 "message": f"Deal details have been successfully updated",
                 "success": True
@@ -1495,37 +1445,21 @@ class SubAdminService:
     async def get_deal_about_info(
         self,
         session: AsyncSession,
-        subadmin_id: UUID,
         deal_id: UUID
     ) -> dict:
         try:
-            # Fetch subadmin
-            subadmin = await session.get(Subadmin, subadmin_id)
-            if not subadmin:
-                raise HTTPException(status_code=404, detail="Subadmin not found")
-
-            # Fetch deal
             deal = await session.get(Deal, deal_id)
             if not deal:
                 raise HTTPException(status_code=404, detail="Deal not found")
-
-            # Verify deal belongs to this subadmin
-            if deal.fund_manager_id != subadmin_id:
-                raise HTTPException(status_code=403, detail="Deal does not belong to this subadmin")
-
-            # Prepare about info
             about_info = {
                 "company_name": deal.company_name,
                 "company_website": deal.company_website,
-                "company_email": "contact@example.com",  # Mock data
+                "company_email": "contact@example.com",
                 "industry": deal.industry.value if deal.industry else None,
                 "business_model": deal.business_model.value if deal.business_model else None
             }
-
             logger.info(f"Deal about info fetched for deal ID: {deal_id}")
-
             return {
-                "subadmin_id": str(subadmin.id),
                 "deal_id": str(deal_id),
                 "about_info": about_info,
                 "success": True
