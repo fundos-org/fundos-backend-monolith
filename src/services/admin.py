@@ -5,7 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select, func
 from src.logging.logging_setup import get_logger # assuming you have a logger setup
 from src.models.subadmin import Subadmin
-from src.schemas.admin import SubadminDetails
+from src.models.user import User, KycStatus, Role
+from src.models.deal import Deal, DealStatus
+from src.schemas.admin import (
+    SubadminListPaginatedResponse, SubadminListItem, SubadminDetailsResponse, SubadminDetailsUpdateRequest, SubadminDetailsUpdateResponse
+)
 from uuid import UUID
 from src.services.s3 import S3Service
 from src.services.email import EmailService
@@ -293,3 +297,121 @@ class AdminService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to add member: {str(e)}"
             )
+
+    async def get_paginated_subadmins(
+        self,
+        session: AsyncSession,
+        page: int = 1,
+        per_page: int = 20
+    ) -> dict:
+        try:
+            offset = (page - 1) * per_page
+            count_query = select(func.count(Subadmin.id))
+            total_count = await session.execute(count_query)
+            total_records = total_count.scalar()
+            query = select(Subadmin).offset(offset).limit(per_page)
+            result = await session.execute(query)
+            subadmins = result.scalars().all()
+            total_pages = (total_records + per_page - 1) // per_page
+            has_next = page < total_pages
+            has_prev = page > 1
+            subadmin_list = []
+            for subadmin in subadmins:
+                # Count total_users (investors with VERIFIED KYC under this subadmin)
+                user_count_stmt = select(func.count(User.id)).where(
+                    User.fund_manager_id == subadmin.id,
+                    User.role == Role.INVESTOR,
+                    User.kyc_status == KycStatus.VERIFIED
+                )
+                user_count_result = await session.execute(user_count_stmt)
+                total_users = user_count_result.scalar() or 0
+                # Count active deals (OPEN status under this subadmin)
+                deal_count_stmt = select(func.count(Deal.id)).where(
+                    Deal.fund_manager_id == subadmin.id,
+                    Deal.status == DealStatus.OPEN
+                )
+                deal_count_result = await session.execute(deal_count_stmt)
+                active_deals = deal_count_result.scalar() or 0
+                subadmin_list.append(SubadminListItem(
+                    subadmin_id=subadmin.id,
+                    subadmin_name=subadmin.name or "",
+                    email=subadmin.email or "",
+                    invitation_code=subadmin.invite_code or "",
+                    onboarding_date=subadmin.created_at.strftime("%Y-%m-%d"),
+                    total_users=total_users,
+                    active_deals=active_deals
+                ))
+            pagination_info = {
+                "page": page,
+                "per_page": per_page,
+                "total_records": total_records,
+                "total_pages": total_pages,
+                "has_next": has_next,
+                "has_prev": has_prev
+            }
+            return {
+                "success": True,
+                "subadmins": subadmin_list,
+                "pagination": pagination_info
+            }
+        except Exception as e:
+            logger.error(f"Failed to fetch paginated subadmins: {str(e)}")
+            await session.rollback()
+            raise HTTPException(status_code=500, detail=f"Failed to fetch paginated subadmins: {str(e)}")
+
+    async def get_subadmin_full_details(
+        self,
+        session: AsyncSession,
+        subadmin_id: UUID
+    ) -> dict:
+        try:
+            subadmin = await session.get(Subadmin, subadmin_id)
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
+            # Use mock data for missing fields
+            response = SubadminDetailsResponse(
+                subadmin_id=subadmin.id,
+                logo=subadmin.logo or "https://mock.logo.url/logo.png",
+                name=subadmin.name or "",
+                email=subadmin.email or "",
+                contact=subadmin.contact or "",
+                about=subadmin.about or "",
+                username=subadmin.username or "",
+                password=subadmin.password or "",
+                reenter_password=subadmin.re_entered_password or "",
+                app_name=subadmin.app_name or "FundosApp",
+                invite_code=subadmin.invite_code or "",
+                app_theme="light",  # mock data
+                success=True
+            )
+            return response.dict()
+        except Exception as e:
+            logger.error(f"Failed to fetch subadmin details: {str(e)}")
+            await session.rollback()
+            raise HTTPException(status_code=500, detail=f"Failed to fetch subadmin details: {str(e)}")
+
+    async def update_subadmin_full_details(
+        self,
+        session: AsyncSession,
+        subadmin_id: UUID,
+        update_data: dict
+    ) -> dict:
+        try:
+            subadmin = await session.get(Subadmin, subadmin_id)
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
+            # Update fields if present in update_data
+            for field in ["logo", "name", "email", "contact", "about", "username", "password", "re_entered_password", "app_name", "invite_code"]:
+                if field in update_data and update_data[field] is not None:
+                    setattr(subadmin, field if field != "re_entered_password" else "re_entered_password", update_data[field])
+            subadmin.updated_at = datetime.now()
+            await session.commit()
+            return SubadminDetailsUpdateResponse(
+                subadmin_id=subadmin.id,
+                message="Subadmin details updated successfully",
+                success=True
+            ).dict()
+        except Exception as e:
+            logger.error(f"Failed to update subadmin details: {str(e)}")
+            await session.rollback()
+            raise HTTPException(status_code=500, detail=f"Failed to update subadmin details: {str(e)}")

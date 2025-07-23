@@ -3,7 +3,10 @@ from typing import Any, Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 from src.utils.dependencies import get_session
-from src.schemas.admin import (CreateProfileReq, CreateCredentialsReq, CreateProfileRes, GetSubadminRes, AdminSignInReq)
+from src.schemas.admin import (
+    CreateProfileReq, CreateCredentialsReq, CreateProfileRes, GetSubadminRes, AdminSignInReq,
+    SubadminListPaginatedResponse, SubadminDetailsResponse, SubadminDetailsUpdateRequest, SubadminDetailsUpdateResponse
+)
 from src.services.admin import AdminService
 
 router = APIRouter() 
@@ -109,6 +112,29 @@ async def send_invitation(
         raise HTTPException(status_code=400, detail="failed to send Invitation email")
 
     return result
+
+@router.get("/subadmins", response_model=SubadminListPaginatedResponse, tags=["manish+dev_changes"])
+async def get_paginated_subadmins(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    page: int = 1,
+    per_page: int = 20
+):
+    return await admin_services.get_paginated_subadmins(session=session, page=page, per_page=per_page)
+
+@router.get("/subadmin_details/{subadmin_id}", response_model=SubadminDetailsResponse, tags=["manish+dev_changes"])
+async def get_subadmin_details_full(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    subadmin_id: UUID
+):
+    return await admin_services.get_subadmin_full_details(session=session, subadmin_id=subadmin_id)
+
+@router.put("/subadmin_details/{subadmin_id}", response_model=SubadminDetailsUpdateResponse, tags=["manish+dev_changes"])
+async def update_subadmin_details_full(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    subadmin_id: UUID,
+    update_data: SubadminDetailsUpdateRequest
+):
+    return await admin_services.update_subadmin_full_details(session=session, subadmin_id=subadmin_id, update_data=update_data.dict(exclude_unset=True))
 
 
 

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from typing import List
+from typing import List, Optional
 from uuid import UUID 
 
 class CreateProfileReq(BaseModel):
@@ -39,5 +39,53 @@ class GetSubadminRes(BaseModel):
 class AdminSignInReq(BaseModel):
     username: str
     password: str
+    
+
+class SubadminListItem(BaseModel):
+    subadmin_id: UUID
+    subadmin_name: str
+    email: EmailStr
+    invitation_code: str
+    onboarding_date: str
+    total_users: int
+    active_deals: int
+
+class SubadminListPaginatedResponse(BaseModel):
+    subadmins: list[SubadminListItem]
+    pagination: dict
+    success: bool
+
+class SubadminDetailsResponse(BaseModel):
+    subadmin_id: UUID
+    logo: Optional[str] = None
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    contact: Optional[str] = None
+    about: Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[str] = None
+    reenter_password: Optional[str] = None
+    app_name: Optional[str] = None
+    invite_code: Optional[str] = None
+    app_theme: Optional[str] = None
+    success: bool
+
+class SubadminDetailsUpdateRequest(BaseModel):
+    logo: Optional[str] = None
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    contact: Optional[str] = None
+    about: Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[str] = None
+    reenter_password: Optional[str] = None
+    app_name: Optional[str] = None
+    invite_code: Optional[str] = None
+    app_theme: Optional[str] = None
+
+class SubadminDetailsUpdateResponse(BaseModel):
+    subadmin_id: UUID
+    message: str
+    success: bool
     
 
