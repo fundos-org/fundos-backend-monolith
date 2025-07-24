@@ -1,8 +1,6 @@
 from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
-from ..models.user import Role
-from datetime import datetime
 
 class ZohoDetails(BaseModel):
     user_id: UUID = Field(...)

@@ -689,7 +689,6 @@ class SubAdminService:
 
                 else: 
                     # user exits but not a part of this subadmin
-                
                     # Send invite to existing user as he is not in this subadmin team
                     email_response = await self.email_service.send_invitation_email(
                         email=email,

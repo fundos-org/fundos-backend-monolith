@@ -10,8 +10,9 @@ from src.models import KYC
 from src.models import Deal
 from src.services.s3 import S3Service
 from sqlalchemy.ext.asyncio import AsyncSession
+from src.configs.configs import aws_config
 
-BUCKET_NAME = "your-s3-bucket-name"
+BUCKET_NAME = aws_config.aws_bucket
 
 def get_s3_service() -> S3Service:
     return S3Service(bucket_name=BUCKET_NAME)

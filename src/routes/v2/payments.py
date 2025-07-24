@@ -29,11 +29,13 @@ async def create_payment(
 
 @router.post("/handle/webhook")
 async def handle_payment_webhook(
-    data: PaymentWebhookData
+    data: PaymentWebhookData, 
+    session: Annotated[AsyncSession, Depends(get_session)]
 ) -> Dict[str, Any]:
     logger.info(f"Received data: {data}")
     
     response = await payment_service.handle_webhook(
-        webhook_data=data.encData
+        webhook_data=data.encData, 
+        session=session
         )
     return response
