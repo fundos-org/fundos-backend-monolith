@@ -4,7 +4,6 @@ from src.configs.configs import app_config
 
 router = APIRouter()
 
-from fastapi.responses import HTMLResponse
 from fastapi import APIRouter
 
 router = APIRouter()

@@ -8,7 +8,7 @@ from src.models.subadmin import Subadmin
 from src.models.user import User, KycStatus, Role
 from src.models.deal import Deal, DealStatus
 from src.schemas.admin import (
-    SubadminListPaginatedResponse, SubadminListItem, SubadminDetailsResponse, SubadminDetailsUpdateRequest, SubadminDetailsUpdateResponse
+    SubadminDetails, SubadminListItem, SubadminDetailsResponse, SubadminDetailsUpdateResponse
 )
 from uuid import UUID
 from src.services.s3 import S3Service

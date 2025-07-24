@@ -1,0 +1,23 @@
+name: Deploy to Production EC2
+
+on:
+  push:
+    branches: [manish_dev_changes]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script: |
+            cd /home/ubuntu/code/testing-backend
+            git checkout manish_dev_changes
+            git pull
+            ./start-backend.sh

@@ -3,7 +3,6 @@ from typing import Optional
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 # from enum import Enum 
-from .user import KycStatus
 
 class KYC(SQLModel, table=True):
     id: UUID = Field(primary_key=True, default_factory=uuid4)

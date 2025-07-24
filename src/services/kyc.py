@@ -3,13 +3,12 @@ import httpx
 import base64
 import redis
 import json
-import os
 from fastapi import HTTPException
 from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.kyc import KYC, KycStatus
-from src.models.user import User, OnboardingStatus
+from src.models.user import User
 from src.logging.logging_setup import get_logger
 from datetime import datetime
 from src.configs.configs import redis_configs

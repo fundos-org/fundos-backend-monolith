@@ -1,11 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import JSONResponse
 from typing import Annotated, Any
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette import status
 from src.schemas.kyc import (
-    AadhaarRequest, AadhaarResponse,
-    SubmitOTPRequest, ResendOTPRequest,
+    AadhaarRequest, SubmitOTPRequest, ResendOTPRequest,
     PanDetailsRequest, PanBankLinkRequest
 )
 from src.services.kyc import KycService

@@ -1,6 +1,5 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
-from src.logging.logging_middleware import LoggingMiddleware
 from src.routes.kyc import router as kycRouter
 from src.routes.deal import router as dealsRouter 
 from src.routes.dummy import router as dummyRouter

@@ -1,4 +1,5 @@
-import smtplib, ssl
+import smtplib
+import ssl
 from email.message import EmailMessage
 port = 587
 smtp_server = "smtp.zeptomail.in"

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from src.services.s3 import S3Service
 from src.configs.configs import aws_config, app_config
 

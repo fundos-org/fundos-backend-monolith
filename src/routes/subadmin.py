@@ -5,19 +5,12 @@ from uuid import UUID
 from src.models.deal import DealStatus
 from src.utils.dependencies import get_session
 from src.schemas.subadmin import (SubAdminSignInReq, SubAdminDashboardStatisticsRes, SubAdminDashboardTransactionsRes, 
-                                
-                                 InvestorListResponse, InvestorListMetadata,
+                                  InvestorListResponse, InvestorListMetadata,
                                   DeleteInvestorResponse, UpdateInvestorResponse, InvestorInfoResponse, InvestorInvestmentsResponse, InvestorInvestmentsMetadataResponse, InvestorTransactionsResponse,
                                   InvestorDocumentsResponse, MarkDealInactiveResponse, EditDealRequest, EditDealResponse, DealDetailsResponse, DealAboutResponse, DealInvestorsResponse, DealTransactionsResponse,
-                                  DealDocumentsResponse,
-                                  CombinedEmailResponse, EmailUpdateRequest, CombinedEmailUpdateResponse, SubadminListResponse, PaginatedDealsOverviewResponse)
+                                  DealDocumentsResponse, CombinedEmailResponse, EmailUpdateRequest, CombinedEmailUpdateResponse, SubadminListResponse, PaginatedDealsOverviewResponse)
 from src.services.subadmin import SubAdminService
-# from src.models.user import User, Role
-# from src.models.transaction import Transaction
-# from sqlalchemy import select
 import logging
-# from fastapi import status
-# from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
