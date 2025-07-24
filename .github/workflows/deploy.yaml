@@ -2,7 +2,7 @@ name: Deploy to Production EC2
 
 on:
   push:
-    branches: [manish_dev_changes]
+    branches: [release/testing]
 
 jobs:
   deploy:
@@ -18,6 +18,6 @@ jobs:
           port: 22
           script: |
             cd /home/ubuntu/code/testing-backend
-            git checkout manish_dev_changes
+            git checkout release/testing
             git pull
             ./start-backend.sh
