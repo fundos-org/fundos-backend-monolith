@@ -7,7 +7,7 @@ from typing import Annotated, Any, Dict, Optional
 from uuid import UUID
 from src.services.deal import DealService
 from src.schemas.deal import (
-    DealCreateRequest, DealCreateResponse, 
+    DealCreateRequest, 
     CompanyDetailsRequest, IndustryProblemRequest, 
     CustomerSegmentRequest, 
     ValuationRequest, SecuritiesRequest

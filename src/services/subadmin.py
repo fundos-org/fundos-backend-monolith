@@ -1,4 +1,4 @@
-from fastapi import HTTPException, status, Body
+from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select, func
 from sqlalchemy.orm import joinedload
@@ -1571,7 +1571,7 @@ class SubAdminService:
             logger.info(f"Deal details updated for {deal.company_name}")
             return {
                 "deal_id": str(deal_id),
-                "message": f"Deal details have been successfully updated",
+                "message": "Deal details have been successfully updated",
                 "success": True
             }
         except HTTPException as he:
@@ -1860,8 +1860,8 @@ class SubAdminService:
                 raise HTTPException(status_code=404, detail="Subadmin not found")
 
             # Mock update - in real implementation, this would update database
-            subject = update_data.get("subject", "")
-            body = update_data.get("body", "")
+            # subject = update_data.get("subject", "")
+            # body = update_data.get("body", "")
 
             logger.info(f"Welcome mail updated for subadmin ID: {subadmin_id}")
 
@@ -1927,8 +1927,8 @@ class SubAdminService:
                 raise HTTPException(status_code=404, detail="Subadmin not found")
 
             # Mock update - in real implementation, this would update database
-            subject = update_data.get("subject", "")
-            body = update_data.get("body", "")
+            # subject = update_data.get("subject", "")
+            # body = update_data.get("body", "")
 
             logger.info(f"Onboarding mail updated for subadmin ID: {subadmin_id}")
 
@@ -1994,8 +1994,8 @@ class SubAdminService:
                 raise HTTPException(status_code=404, detail="Subadmin not found")
 
             # Mock update - in real implementation, this would update database
-            subject = update_data.get("subject", "")
-            body = update_data.get("body", "")
+            # subject = update_data.get("subject", "")
+            # body = update_data.get("body", "")
 
             logger.info(f"Consent mail updated for subadmin ID: {subadmin_id}")
 
