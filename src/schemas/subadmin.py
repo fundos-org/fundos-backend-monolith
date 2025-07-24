@@ -328,7 +328,7 @@ class DealDetailsInfo(BaseModel):
     pitch_video_url: Optional[str] = None
 
 class DealDetailsResponse(BaseModel):
-    subadmin_id: str
+    # subadmin_id: str
     deal_id: str
     deal_details: DealDetailsInfo
     success: bool
