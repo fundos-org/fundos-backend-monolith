@@ -57,6 +57,7 @@ class SubAdminService:
                 "subadmin_id": str(subadmin.id),
                 "name": subadmin.name,
                 "invite_code": subadmin.invite_code,
+                "logo": subadmin.logo,
                 "success": True
             }
         except HTTPException as he:
