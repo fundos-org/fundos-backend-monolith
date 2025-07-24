@@ -552,6 +552,147 @@ class SubAdminService:
                 detail=f"Failed to fetch deals overview: {str(e)}"
             )
 
+    async def get_deals_overview_paginated(
+        self,
+        session: AsyncSession,
+        subadmin_id: UUID,
+        active_page: int = 1,
+        active_per_page: int = 10,
+        closed_page: int = 1,
+        closed_per_page: int = 10,
+        onhold_page: int = 1,
+        onhold_per_page: int = 10
+    ) -> dict:
+        try:
+            subadmin = await session.get(Subadmin, subadmin_id)
+            if not subadmin:
+                raise HTTPException(status_code=404, detail="Subadmin not found")
+            # Active deals
+            active_stmt = select(Deal).where(
+                Deal.fund_manager_id == subadmin_id,
+                cast(Deal.status, String) == "OPEN"
+            )
+            active_result = await session.execute(active_stmt)
+            active_deals = active_result.scalars().all()
+            total_active = len(active_deals)
+            total_active_pages = (total_active + active_per_page - 1) // active_per_page
+            active_offset = (active_page - 1) * active_per_page
+            paginated_active = active_deals[active_offset:active_offset+active_per_page]
+            active_deals_list = [
+                {
+                    "deal_id": str(deal.id),
+                    "description": deal.about_company or "",
+                    "title": deal.company_name or "",
+                    "deal_status": deal.status.value if hasattr(deal.status, 'value') else str(deal.status),
+                    "current_valuation": deal.current_valuation or 0,
+                    "round_size": deal.round_size or 0,
+                    "commitment": deal.syndicate_commitment or 0,
+                    "business_model": deal.business_model.value if hasattr(deal.business_model, 'value') else str(deal.business_model),
+                    "company_stage": deal.company_stage.value if hasattr(deal.company_stage, 'value') else str(deal.company_stage),
+                    "logo_url": deal.logo_url or "",
+                    "created_at": deal.created_at.strftime("%Y-%m-%d") if deal.created_at else ""
+                }
+                for deal in paginated_active
+            ]
+            active_pagination = {
+                "page": active_page,
+                "per_page": active_per_page,
+                "total_records": total_active,
+                "total_pages": total_active_pages,
+                "has_next": active_page < total_active_pages,
+                "has_prev": active_page > 1
+            }
+            # Closed deals
+            closed_stmt = select(Deal).where(
+                Deal.fund_manager_id == subadmin_id,
+                cast(Deal.status, String) == "CLOSED"
+            )
+            closed_result = await session.execute(closed_stmt)
+            closed_deals = closed_result.scalars().all()
+            total_closed = len(closed_deals)
+            total_closed_pages = (total_closed + closed_per_page - 1) // closed_per_page
+            closed_offset = (closed_page - 1) * closed_per_page
+            paginated_closed = closed_deals[closed_offset:closed_offset+closed_per_page]
+            closed_deals_list = [
+                {
+                    "deal_id": str(deal.id),
+                    "description": deal.about_company or "",
+                    "title": deal.company_name or "",
+                    "deal_status": deal.status.value if hasattr(deal.status, 'value') else str(deal.status),
+                    "current_valuation": deal.current_valuation or 0,
+                    "round_size": deal.round_size or 0,
+                    "commitment": deal.syndicate_commitment or 0,
+                    "business_model": deal.business_model.value if hasattr(deal.business_model, 'value') else str(deal.business_model),
+                    "company_stage": deal.company_stage.value if hasattr(deal.company_stage, 'value') else str(deal.company_stage),
+                    "logo_url": deal.logo_url or "",
+                    "created_at": deal.created_at.strftime("%Y-%m-%d") if deal.created_at else ""
+                }
+                for deal in paginated_closed
+            ]
+            closed_pagination = {
+                "page": closed_page,
+                "per_page": closed_per_page,
+                "total_records": total_closed,
+                "total_pages": total_closed_pages,
+                "has_next": closed_page < total_closed_pages,
+                "has_prev": closed_page > 1
+            }
+            # Onhold deals
+            onhold_stmt = select(Deal).where(
+                Deal.fund_manager_id == subadmin_id,
+                cast(Deal.status, String) == "ON_HOLD"
+            )
+            onhold_result = await session.execute(onhold_stmt)
+            onhold_deals = onhold_result.scalars().all()
+            total_onhold = len(onhold_deals)
+            total_onhold_pages = (total_onhold + onhold_per_page - 1) // onhold_per_page
+            onhold_offset = (onhold_page - 1) * onhold_per_page
+            paginated_onhold = onhold_deals[onhold_offset:onhold_offset+onhold_per_page]
+            onhold_deals_list = [
+                {
+                    "deal_id": str(deal.id),
+                    "description": deal.about_company or "",
+                    "title": deal.company_name or "",
+                    "deal_status": deal.status.value if hasattr(deal.status, 'value') else str(deal.status),
+                    "current_valuation": deal.current_valuation or 0,
+                    "round_size": deal.round_size or 0,
+                    "commitment": deal.syndicate_commitment or 0,
+                    "business_model": deal.business_model.value if hasattr(deal.business_model, 'value') else str(deal.business_model),
+                    "company_stage": deal.company_stage.value if hasattr(deal.company_stage, 'value') else str(deal.company_stage),
+                    "logo_url": deal.logo_url or "",
+                    "created_at": deal.created_at.strftime("%Y-%m-%d") if deal.created_at else ""
+                }
+                for deal in paginated_onhold
+            ]
+            onhold_pagination = {
+                "page": onhold_page,
+                "per_page": onhold_per_page,
+                "total_records": total_onhold,
+                "total_pages": total_onhold_pages,
+                "has_next": onhold_page < total_onhold_pages,
+                "has_prev": onhold_page > 1
+            }
+            return {
+                "subadmin_id": str(subadmin.id),
+                "subadmin_name": subadmin.name or "",
+                "active_deals": active_deals_list,
+                "closed_deals": closed_deals_list,
+                "onhold_deals": onhold_deals_list,
+                "active_pagination": active_pagination,
+                "closed_pagination": closed_pagination,
+                "onhold_pagination": onhold_pagination,
+                "success": True
+            }
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"Failed to fetch paginated deals overview: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch paginated deals overview: {str(e)}"
+            )
+
     async def get_members_statistics(
         self,
         session: AsyncSession,

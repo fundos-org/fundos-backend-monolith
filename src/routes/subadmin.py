@@ -10,7 +10,7 @@ from src.schemas.subadmin import (SubAdminSignInReq, SubAdminDashboardStatistics
                                   DeleteInvestorResponse, UpdateInvestorResponse, InvestorInfoResponse, InvestorInvestmentsResponse, InvestorInvestmentsMetadataResponse, InvestorTransactionsResponse,
                                   InvestorDocumentsResponse, MarkDealInactiveResponse, EditDealRequest, EditDealResponse, DealDetailsResponse, DealAboutResponse, DealInvestorsResponse, DealTransactionsResponse,
                                   DealDocumentsResponse, WelcomeMailResponse, OnboardingMailResponse, ConsentMailResponse, WelcomeMailUpdateResponse, OnboardingMailUpdateResponse, ConsentMailUpdateResponse,
-                                  CombinedEmailResponse, EmailUpdateRequest, CombinedEmailUpdateResponse, SubadminListResponse)
+                                  CombinedEmailResponse, EmailUpdateRequest, CombinedEmailUpdateResponse, SubadminListResponse, PaginatedDealsOverviewResponse)
 from src.services.subadmin import SubAdminService
 from src.models.user import User, Role
 from src.models.transaction import Transaction
@@ -128,6 +128,28 @@ async def deals_overview(
         raise HTTPException(status_code=400, detail="failed to get subadmin details")
 
     return result
+
+@router.get("/deals/overview/paginated/{subadmin_id}", response_model=PaginatedDealsOverviewResponse, tags=["manish+dev_changes"])
+async def get_deals_overview_paginated(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    subadmin_id: UUID,
+    active_page: int = 1,
+    active_per_page: int = 10,
+    closed_page: int = 1,
+    closed_per_page: int = 10,
+    onhold_page: int = 1,
+    onhold_per_page: int = 10
+):
+    return await subadmin_services.get_deals_overview_paginated(
+        session=session,
+        subadmin_id=subadmin_id,
+        active_page=active_page,
+        active_per_page=active_per_page,
+        closed_page=closed_page,
+        closed_per_page=closed_per_page,
+        onhold_page=onhold_page,
+        onhold_per_page=onhold_per_page
+    )
 
 @router.post("/deals/change/status")
 async def members_overview(

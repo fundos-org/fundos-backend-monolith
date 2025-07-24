@@ -470,3 +470,14 @@ class SubadminListItem(BaseModel):
 class SubadminListResponse(BaseModel):
     subadmins: List[SubadminListItem]
     success: bool
+
+class PaginatedDealsOverviewResponse(BaseModel):
+    subadmin_id: str
+    subadmin_name: str
+    active_deals: List[DealDetail]
+    closed_deals: List[DealDetail]
+    onhold_deals: List[DealDetail]
+    active_pagination: Optional[PaginationInfo] = None
+    closed_pagination: Optional[PaginationInfo] = None
+    onhold_pagination: Optional[PaginationInfo] = None
+    success: bool
