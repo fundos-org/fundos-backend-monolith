@@ -10,7 +10,7 @@ from src.schemas.subadmin import (SubAdminSignInReq, SubAdminDashboardStatistics
                                   DeleteInvestorResponse, UpdateInvestorResponse, InvestorInfoResponse, InvestorInvestmentsResponse, InvestorInvestmentsMetadataResponse, InvestorTransactionsResponse,
                                   InvestorDocumentsResponse, MarkDealInactiveResponse, EditDealRequest, EditDealResponse, DealDetailsResponse, DealAboutResponse, DealInvestorsResponse, DealTransactionsResponse,
                                   DealDocumentsResponse,
-                                  CombinedEmailResponse, EmailUpdateRequest, CombinedEmailUpdateResponse, SubadminListResponse, PaginatedDealsOverviewResponse)
+                                  CombinedEmailResponse, EmailUpdateRequest, CombinedEmailUpdateResponse, SubadminListResponse, PaginatedDealsOverviewResponse, InvestorMetadataResponse)
 from src.services.subadmin import SubAdminService
 # from src.models.user import User, Role
 # from src.models.transaction import Transaction
@@ -220,14 +220,13 @@ async def get_investors_list(
 async def get_investors_metadata(
     session: Annotated[AsyncSession, Depends(get_session)],
     subadmin_id: UUID
-) -> InvestorListMetadata:
+) -> InvestorMetadataResponse:
     result = await subadmin_services.get_investors_metadata(
         session=session,
         subadmin_id=subadmin_id
     )
     if not result["success"]:
         raise HTTPException(status_code=400, detail="Failed to fetch investors metadata")
-
     return result
 
 @router.delete("/investors/delete/{subadmin_id}/{investor_id}", tags=["manish_dev_changes"])

@@ -16,6 +16,7 @@ from src.services.email import EmailService
 from typing import Any
 from datetime import datetime
 from src.configs.configs import aws_config, app_config
+from sqlalchemy import cast, String
 
 
 logger = get_logger(__name__) 
@@ -137,6 +138,21 @@ class AdminService:
             if not subadmin:
                 raise HTTPException(status_code=404, detail="subadmin not found")
 
+            # Check if invite_code is being changed and if there are existing users
+            if subadmin.invite_code != invite_code:
+                # Check if there are users with the current invite_code
+                user_count_stmt = select(func.count(User.id)).where(
+                    User.invitation_code == subadmin.invite_code
+                )
+                user_count_result = await session.execute(user_count_stmt)
+                user_count = user_count_result.scalar() or 0
+                
+                if user_count > 0:
+                    raise HTTPException(
+                        status_code=400, 
+                        detail=f"Cannot change invite_code. {user_count} users are currently using the existing invite_code '{subadmin.invite_code}'"
+                    )
+
             subadmin.username = username
             subadmin.password = password
             subadmin.re_entered_password = re_entered_password
@@ -149,9 +165,11 @@ class AdminService:
             await session.refresh(subadmin)
 
             return {
-                "message": "details updated successfully", 
-                "subadmin_obj": f"{subadmin}",
-                "subadmin_id": subadmin.id,
+                "message": "Subadmin credentials updated successfully", 
+                "subadmin_id": str(subadmin.id),
+                "username": subadmin.username,
+                "app_name": subadmin.app_name,
+                "invite_code": subadmin.invite_code,
                 "success": True
             }
         except HTTPException as he:
@@ -320,15 +338,15 @@ class AdminService:
                 # Count total_users (investors with VERIFIED KYC under this subadmin)
                 user_count_stmt = select(func.count(User.id)).where(
                     User.fund_manager_id == subadmin.id,
-                    User.role == Role.INVESTOR,
-                    User.kyc_status == KycStatus.VERIFIED
+                    cast(User.role, String) == "INVESTOR",
+                    cast(User.kyc_status, String) == "VERIFIED"
                 )
                 user_count_result = await session.execute(user_count_stmt)
                 total_users = user_count_result.scalar() or 0
                 # Count active deals (OPEN status under this subadmin)
                 deal_count_stmt = select(func.count(Deal.id)).where(
                     Deal.fund_manager_id == subadmin.id,
-                    Deal.status == DealStatus.OPEN
+                    cast(Deal.status, String) == "OPEN"
                 )
                 deal_count_result = await session.execute(deal_count_stmt)
                 active_deals = deal_count_result.scalar() or 0

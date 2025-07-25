@@ -5,6 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 from src.models.user_deal_preference import UserDealPreference
 from src.models.kyc import KYC
+from src.models.investment import Investment
+from src.models.transaction import Transaction
 from src.services.phone import PhoneService
 from src.logging.logging_setup import get_logger # assuming you have a logger setup
 from pydantic import EmailStr
@@ -661,22 +663,42 @@ class DummyService:
             user = result.scalars().first()
 
             if user:
+                # Step 1: Delete transactions first (they reference investments)
+                # Get all investments for this user
+                investment_stmt = select(Investment).where(Investment.investor_id == user.id)
+                investment_result = await session.execute(investment_stmt)
+                investments = investment_result.scalars().all()
+                
+                # Delete transactions for each investment
+                for investment in investments:
+                    transaction_stmt = select(Transaction).where(Transaction.investment_id == investment.id)
+                    transaction_result = await session.execute(transaction_stmt)
+                    transactions = transaction_result.scalars().all()
+                    
+                    for transaction in transactions:
+                        await session.delete(transaction)
+                
+                # Step 2: Delete investments
+                for investment in investments:
+                    await session.delete(investment)
+                
+                # Step 3: Delete KYC records
                 stmt = select(KYC).where(KYC.user_id == user.id)
                 result = await session.execute(stmt)
                 kyc = result.scalars().first()
 
                 if kyc:
                     await session.delete(kyc)
-                    await session.commit()
                 
+                # Step 4: Delete UserDealPreference records
                 stmt = select(UserDealPreference).where(UserDealPreference.user_id == user.id)
                 result = await session.execute(stmt)
                 user_deal_preference = result.scalars().first()
 
                 if user_deal_preference:
                     await session.delete(user_deal_preference)
-                    await session.commit()
 
+                # Step 5: Finally delete the user
                 await session.delete(user)
                 await session.commit()
 
@@ -702,17 +724,27 @@ class DummyService:
         session: AsyncSession
     ) -> Dict[str, Any]:
         try:
-            # Step 1: Delete all rows from the KYC table to avoid foreign key constraints
+            # Step 1: Delete all transactions first (they reference investments)
+            transaction_stmt = delete(Transaction)
+            transaction_result = await session.execute(transaction_stmt)
+            logger.info(f"Deleted {transaction_result.rowcount} rows from Transaction table")
+            
+            # Step 2: Delete all investments (they reference users)
+            investment_stmt = delete(Investment)
+            investment_result = await session.execute(investment_stmt)
+            logger.info(f"Deleted {investment_result.rowcount} rows from Investment table")
+            
+            # Step 3: Delete all rows from the KYC table to avoid foreign key constraints
             kyc_stmt = delete(KYC)
             kyc_result = await session.execute(kyc_stmt)
             logger.info(f"Deleted {kyc_result.rowcount} rows from KYC table")
         
-            # Step 2: Delete all rows from the UserDealPreference table
+            # Step 4: Delete all rows from the UserDealPreference table
             user_deal_preference_stmt = delete(UserDealPreference)
             user_deal_preference_result = await session.execute(user_deal_preference_stmt)
             logger.info(f"Deleted {user_deal_preference_result.rowcount} rows from UserDealPreference table")  
 
-            # Step 3: Delete all rows from the User table
+            # Step 5: Delete all rows from the User table
             user_stmt = delete(User)
             user_result = await session.execute(user_stmt)
             logger.info(f"Deleted {user_result.rowcount} rows from User table")
@@ -721,10 +753,13 @@ class DummyService:
             await session.commit()
 
             return {
-                "message": "All users and related KYC data deleted successfully",
+                "message": "All users and related data deleted successfully",
                 "success": True,
                 "users_deleted": user_result.rowcount,
-                "kyc_deleted": kyc_result.rowcount
+                "kyc_deleted": kyc_result.rowcount,
+                "investments_deleted": investment_result.rowcount,
+                "transactions_deleted": transaction_result.rowcount,
+                "user_preferences_deleted": user_deal_preference_result.rowcount
             }
 
         except Exception as e:

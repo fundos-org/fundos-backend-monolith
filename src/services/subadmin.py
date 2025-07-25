@@ -377,7 +377,7 @@ class SubAdminService:
             live_deals_stmt = select(func.count(Deal.id)).where(
                 and_(
                     Deal.fund_manager_id == subadmin_id,
-                    Deal.status.in_([DealStatus.OPEN, DealStatus.ON_HOLD])
+                    cast(Deal.status, String).in_(["OPEN", "ON_HOLD"])
                 )
             )
             live_deals = await session.execute(live_deals_stmt)
@@ -387,7 +387,7 @@ class SubAdminService:
             closed_deals_stmt = select(func.count(Deal.id)).where(
                 and_(
                     Deal.fund_manager_id == subadmin_id,
-                    Deal.status == DealStatus.CLOSED
+                    cast(Deal.status, String) == "CLOSED"
                 )
             )
             closed_deals = await session.execute(closed_deals_stmt)
@@ -399,8 +399,8 @@ class SubAdminService:
             ).where(
                 and_(
                     Deal.fund_manager_id == subadmin_id,
-                    Transaction.status == TransactionStatus.COMPLETED,
-                    Transaction.transaction_type == TransactionType.PAYMENT
+                    cast(Transaction.status, String) == "COMPLETED",
+                    cast(Transaction.transaction_type, String) == "PAYMENT"
                 )
             )
             total_capital_raised = await session.execute(total_capital_raised_stmt)
@@ -1002,18 +1002,18 @@ class SubAdminService:
             all_investors_stmt = select(User).where(
                 and_(
                     User.fund_manager_id == subadmin_id,
-                    User.role == Role.INVESTOR
+                    cast(User.role, String) == "INVESTOR"
                 )
             ).options(joinedload(User.investments))
             all_investors_result = await session.execute(all_investors_stmt)
             all_investors = all_investors_result.unique().scalars().all()
 
-            investor_onboarded = sum(1 for inv in all_investors if inv.onboarding_status == OnboardingStatus.Completed)
+            investor_onboarded = sum(1 for inv in all_investors if str(inv.onboarding_status) == "Completed")
             
             # this will return the count of kyc pending where role is investor and kyc is pending and onboarding status is completed
             kyc_pending = 0
             for inv in all_investors:
-                if inv.role == Role.INVESTOR and inv.onboarding_status == OnboardingStatus.Completed and inv.kyc_status == KycStatus.PENDING:
+                if str(inv.role) == "INVESTOR" and str(inv.onboarding_status) == "Completed" and str(inv.kyc_status) == "PENDING":
                     kyc_pending += 1
             
             started_investing = sum(1 for inv in all_investors if len(inv.investments) > 0)
@@ -1060,14 +1060,15 @@ class SubAdminService:
                 raise HTTPException(status_code=403, detail="Investor does not belong to this subadmin")
 
             # Verify investor role
-            if investor.role != Role.INVESTOR:
+            logger.info(f"Investor role: {investor.role}, type: {type(investor.role)}")
+            if investor.role not in [Role.INVESTOR, "INVESTOR", "investor"]:
                 raise HTTPException(status_code=400, detail="User is not an investor")
 
             # Check if investor has any active investments
             investments_stmt = select(Investment).where(
                 and_(
                     Investment.investor_id == investor_id,
-                    cast(Investment.status, String).in_([InvestmentStatus.PENDING.name, InvestmentStatus.COMPLETED.name])
+                    cast(Investment.status, String).in_(["PENDING", "COMPLETED"])
                 )
             )
             investments_result = await session.execute(investments_stmt)
@@ -1128,7 +1129,8 @@ class SubAdminService:
                 raise HTTPException(status_code=403, detail="Investor does not belong to this subadmin")
 
             # Verify investor role
-            if investor.role != Role.INVESTOR:
+            logger.info(f"Investor role: {investor.role}, type: {type(investor.role)}")
+            if investor.role not in [Role.INVESTOR, "INVESTOR", "investor"]:
                 raise HTTPException(status_code=400, detail="User is not an investor")
 
             # Update user data
@@ -1193,7 +1195,8 @@ class SubAdminService:
                 raise HTTPException(status_code=404, detail="Investor not found")
 
             # Verify investor role
-            if investor.role != Role.INVESTOR:
+            logger.info(f"Investor role: {investor.role}, type: {type(investor.role)}")
+            if investor.role not in [Role.INVESTOR, "INVESTOR", "investor"]:
                 raise HTTPException(status_code=400, detail="User is not an investor")
 
             # Fetch KYC record for this investor
@@ -1319,7 +1322,8 @@ class SubAdminService:
                 raise HTTPException(status_code=404, detail="Investor not found")
 
             # Verify investor role
-            if investor.role != Role.INVESTOR:
+            logger.info(f"Investor role: {investor.role}, type: {type(investor.role)}")
+            if investor.role not in [Role.INVESTOR, "INVESTOR", "investor"]:
                 raise HTTPException(status_code=400, detail="User is not an investor")
 
             # Count total deals for this investor
@@ -1427,7 +1431,8 @@ class SubAdminService:
                 raise HTTPException(status_code=404, detail="Investor not found")
 
             # Verify investor role
-            if investor.role != Role.INVESTOR:
+            logger.info(f"Investor role: {investor.role}, type: {type(investor.role)}")
+            if investor.role not in [Role.INVESTOR, "INVESTOR", "investor"]:
                 raise HTTPException(status_code=400, detail="User is not an investor")
 
             # Prepare documents info
