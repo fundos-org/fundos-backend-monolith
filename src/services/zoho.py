@@ -1,4 +1,3 @@
-import re
 from tempfile import SpooledTemporaryFile
 from typing import Any, Dict
 import httpx
@@ -275,7 +274,7 @@ class ZohoService:
         metadata_key = self._get_cache_key(user_id, "metadata") #self._get_cache_key(user_id, "metadata")
         metadata = self.redis.get(metadata_key)
         if not metadata:
-            logger.error(f"Missing metadata for user_id: iswar")
+            logger.error(f"Missing metadata for user_id: {user_id}")
             raise HTTPException(status_code=400, detail="Missing document metadata")
 
         metadata = json.loads(metadata)
@@ -493,7 +492,7 @@ class ZohoService:
 
         request_id = payload["requests"].get("request_id")
         action_ids = [action["action_id"] for action in payload["requests"].get("actions", [])]
-        document_id = payload["requests"].get("document_ids", [{}])[0].get("document_id")
+        # document_id = payload["requests"].get("document_ids", [{}])[0].get("document_id")
 
         if len(action_ids) != 3:
             logger.error(f"Expected 3 signers, found {len(action_ids)} for request_id: {request_id}")
@@ -562,7 +561,7 @@ class ZohoService:
             investor_email = user.email
             investment_scheme = deal.investment_scheme_appendix # need to add a field for this in deal model
             company_name = deal.company_name
-            capital_commitment = user.capital_commitment
+            # capital_commitment = user.capital_commitment
             investment_amount_str = f"{investment_amount:,.2f}"
             drawdown_amount = user.drawdown_amount or 0
 
@@ -577,13 +576,13 @@ class ZohoService:
             total_payable = investment_amount + total_fee
             total_payable_str = f"{total_payable:,.2f}" # total payable
 
-            capital_commitment_str = f"{capital_commitment:,.2f}"
+            # capital_commitment_str = f"{capital_commitment:,.2f}"
 
             drawdown_so_far = drawdown_amount + total_payable # need to add a field for this in user model : user.drawdown_amount
             drawdown_so_far = f"{drawdown_so_far:,.2f}"
 
-            undrawn_capital_commitment = capital_commitment - total_payable 
-            undrawn_commitment = f"{undrawn_capital_commitment:,.2f}"
+            # undrawn_capital_commitment = capital_commitment - total_payable 
+            # undrawn_commitment = f"{undrawn_capital_commitment:,.2f}"
 
             # Construct the payload
             payload = {

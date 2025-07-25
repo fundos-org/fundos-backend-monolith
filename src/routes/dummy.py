@@ -1,17 +1,13 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from starlette import status
-from pydantic import EmailStr
 from src.logging.logging_setup import get_logger
 from src.db.session import get_session 
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated, Dict, Any, Optional
-from src.schemas.kyc import (EmailVerifyOtpRequest, EmailVerifyOtpResponse, AgreementRequest, AgreementResponse, 
-                            DeclarationRequest, DeclarationResponse, ChooseInvestorRequest, ChooseInvestorResponse, 
-                            PhoneNumSendOtpRequest, EmailSendOtpRequest, EmailSendOtpResponse, PhoneNumSendOtpResponse, 
-                            PhoneNumVerifyOtpRequest, PhoneNumVerifyOtpResponse, UserDetailsRequest, UserDetailsResponse, 
-                            ProfessionalBackgroundRequest, ProfessionalBackgroundResponse, PhotoUploadRequest, PhotoUploadResponse
-                            , UserOnboardingStartResponse, UserOnboardingStartRequest) 
+from src.schemas.kyc import (EmailVerifyOtpRequest, EmailVerifyOtpResponse, AgreementRequest, 
+                            DeclarationRequest, DeclarationResponse, ChooseInvestorRequest, ChooseInvestorResponse, EmailSendOtpRequest, EmailSendOtpResponse, 
+                            ProfessionalBackgroundRequest, ProfessionalBackgroundResponse, PhotoUploadRequest, PhotoUploadResponse) 
 
 from src.schemas.user import ZohoDetails
 from src.services.dummy import DummyService

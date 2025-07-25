@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
 
 class AppConfigs(BaseSettings):
     env: str = "DEV"
@@ -20,7 +21,7 @@ class AppConfigs(BaseSettings):
 # Usage
 app_config = AppConfigs() 
 
-import os
+
 os.environ["DB_USER"] = "fundos_local"
 
 #! important: Pydantic's BaseSettings loads values from environment variables by default, even if you have defaults in your class.
@@ -138,7 +139,7 @@ class MSG91Configs(BaseSettings):
 msg91_configs = MSG91Configs() 
 
 class RedisConfigs():
-    redis_host: str = "redis"
+    redis_host: str = "redis-shared"
     redis_port: int = 6379
     redis_db: int = 0
     redis_cache_ttl: int = 600

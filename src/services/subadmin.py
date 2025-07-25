@@ -8,7 +8,7 @@ from src.models.deal import Deal, DealStatus
 from src.models.user import User, KycStatus, Role, OnboardingStatus
 from src.models.kyc import KYC
 from sqlalchemy import cast, String
-from src.models.investment import Investment, InvestmentStatus
+from src.models.investment import Investment
 from src.models.transaction import Transaction, TransactionStatus, TransactionType
 from src.services.s3 import S3Service
 from src.services.email import EmailService

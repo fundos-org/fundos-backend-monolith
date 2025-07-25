@@ -5,10 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select, func
 from src.logging.logging_setup import get_logger # assuming you have a logger setup
 from src.models.subadmin import Subadmin
-from src.models.user import User, KycStatus, Role
-from src.models.deal import Deal, DealStatus
+from src.models.user import User
+from src.models.deal import Deal
 from src.schemas.admin import (
-    SubadminListPaginatedResponse, SubadminListItem, SubadminDetailsResponse, SubadminDetailsUpdateRequest, SubadminDetailsUpdateResponse
+    SubadminDetails, SubadminListItem, SubadminDetailsResponse, SubadminDetailsUpdateResponse
 )
 from uuid import UUID
 from src.services.s3 import S3Service
