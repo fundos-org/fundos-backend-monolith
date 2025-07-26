@@ -15,21 +15,36 @@ from src.middlewares.exception_handlers import (
     validation_exception_handler,
     http_exception_handler,
 )
-from fastapi.middleware.cors import CORSMiddleware
+# from fastapi.middleware.cors import CORSMiddleware
 
 
 api_prefix_v1 = "/api/v1/live" 
 api_prefix_v0 = "/api/v0/test" 
 api_prefix_v2 = "/api/v2/live"
 
-app = FastAPI(lifespan=lifespan) 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Adjust this to your needs
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+# app = FastAPI(lifespan=lifespan) 
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],  # Adjust this to your needs
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+app = FastAPI(
+    lifespan=lifespan,
+    root_path="/testing",
+    title="Fundos backend microservice API",
+    description="Fundos backend microservice API",
+    version="1.0.0",
+    openapi_url="/openapi.json",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    contact={
+        "name": "Fundos",
+        "url": "https://www.fundos.solutions"
+    }
 )
+
 
 # add logging middleware
 # app.add_middleware(LoggingMiddleware)
