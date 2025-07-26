@@ -28,11 +28,11 @@ os.environ["DB_USER"] = "fundos_local"
 
 # class DbConfigs(BaseSettings): 
 class DbConfigs():
-    user: str = "fundos_local"
-    password: str = "password"
-    host: str = "localhost"
-    port: int = 5432
-    dbname: str = "fundos"
+    # user: str = "fundos_local"
+    # password: str = "password"
+    # host: str = "localhost"
+    # port: int = 5432
+    # dbname: str = "fundos"
 
     # model_config = SettingsConfigDict(
     #     env_file=".env",

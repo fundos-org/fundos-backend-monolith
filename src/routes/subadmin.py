@@ -28,7 +28,7 @@ subadmin_services = SubAdminService()
 @router.post("/signin")
 async def signin_subadmin(
     session: Annotated[AsyncSession, Depends(get_session)], 
-    data: SubAdminSignInReq = Depends(), 
+    data: SubAdminSignInReq, 
 ) -> Any:
 
     result = await subadmin_services.subadmin_signin(
@@ -37,7 +37,8 @@ async def signin_subadmin(
         password=data.password
     )
     if not result["success"]:
-        raise HTTPException(status_code=400, detail="Invalid invitation code")
+        # Authentication failures should return 401 Unauthorized, not 200
+        raise HTTPException(status_code=401, detail=result.get("message", "Authentication failed"))
 
     return result
 
@@ -240,9 +241,7 @@ async def delete_investor(
         subadmin_id=subadmin_id,
         investor_id=investor_id
     )
-    if not result["success"]:
-        raise HTTPException(status_code=400, detail="Failed to delete investor")
-
+    # Always return 200 status - let the client handle success/failure based on the success field
     return result
 
 @router.put("/investors/update/{subadmin_id}/{investor_id}", tags=["manish_dev_changes"])
@@ -380,9 +379,7 @@ async def edit_deal(
         deal_id=deal_id,
         update_data=update_data.dict(exclude_unset=True)
     )
-    if not result["success"]:
-        raise HTTPException(status_code=400, detail="Failed to update deal details")
-
+    # Always return 200 status - let the client handle success/failure based on the success field
     return result
 
 @router.get("/deals/deal_info/about/{deal_id}", tags=["manish_dev_changes"])

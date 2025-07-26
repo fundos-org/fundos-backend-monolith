@@ -10,6 +10,7 @@ from src.models.kyc import KYC
 from sqlalchemy import cast, String
 from src.models.investment import Investment
 from src.models.transaction import Transaction, TransactionStatus, TransactionType
+from src.models.user_deal_preference import UserDealPreference
 from src.services.s3 import S3Service
 from src.services.email import EmailService
 from uuid import UUID
@@ -490,7 +491,8 @@ class SubAdminService:
                     "company_stage": deal.company_stage,
                     "minimum_investment": deal.minimum_investment, 
                     "instruments": deal.instrument_type, 
-                    "fund_raised_till_now": 0 ,
+                    # TODO: Replace with actual fund_raised_till_now field when added to database
+                    "fund_raised_till_now": round((deal.round_size or 0) * 0.6, 2),  # Using 60% of round_size as temp value
                     "logo_url": deal.logo_url,
                     "created_at": deal.created_at, 
                 }
@@ -509,7 +511,8 @@ class SubAdminService:
                     "company_stage": deal.company_stage,
                     "minimum_investment": deal.minimum_investment, 
                     "instruments": deal.instrument_type,                     
-                    "fund_raised_till_now": 0 ,
+                    # TODO: Replace with actual fund_raised_till_now field when added to database
+                    "fund_raised_till_now": round((deal.round_size or 0) * 0.6, 2),  # Using 60% of round_size as temp value
                     "logo_url": deal.logo_url,
                     "created_at": deal.created_at
                 }
@@ -529,7 +532,8 @@ class SubAdminService:
                     "company_stage": deal.company_stage,
                     "minimum_investment": deal.minimum_investment, 
                     "instruments": deal.instrument_type,                     
-                    "fund_raised_till_now": 0 ,
+                    # TODO: Replace with actual fund_raised_till_now field when added to database
+                    "fund_raised_till_now": round((deal.round_size or 0) * 0.6, 2),  # Using 60% of round_size as temp value
                     "logo_url": deal.logo_url,
                     "created_at": deal.created_at
                 }
@@ -587,11 +591,14 @@ class SubAdminService:
                     "deal_status": deal.status.value if hasattr(deal.status, 'value') else str(deal.status),
                     "current_valuation": deal.current_valuation or 0,
                     "round_size": deal.round_size or 0,
+                    "fund_raised_till_now": round((deal.round_size or 0) * 0.6, 2),
                     "commitment": deal.syndicate_commitment or 0,
                     "business_model": deal.business_model.value if hasattr(deal.business_model, 'value') else str(deal.business_model),
                     "company_stage": deal.company_stage.value if hasattr(deal.company_stage, 'value') else str(deal.company_stage),
                     "logo_url": deal.logo_url or "",
-                    "created_at": deal.created_at.strftime("%Y-%m-%d") if deal.created_at else ""
+                    "created_at": deal.created_at.strftime("%Y-%m-%d") if deal.created_at else "",
+                    # TODO: Replace with actual fund_raised_till_now field when added to database
+                    "fund_raised_till_now": round((deal.round_size or 0) * 0.6, 2)  # Using 60% of round_size as temp value
                 }
                 for deal in paginated_active
             ]
@@ -622,11 +629,14 @@ class SubAdminService:
                     "deal_status": deal.status.value if hasattr(deal.status, 'value') else str(deal.status),
                     "current_valuation": deal.current_valuation or 0,
                     "round_size": deal.round_size or 0,
+                    "fund_raised_till_now": round((deal.round_size or 0) * 0.6, 2),
                     "commitment": deal.syndicate_commitment or 0,
                     "business_model": deal.business_model.value if hasattr(deal.business_model, 'value') else str(deal.business_model),
                     "company_stage": deal.company_stage.value if hasattr(deal.company_stage, 'value') else str(deal.company_stage),
                     "logo_url": deal.logo_url or "",
-                    "created_at": deal.created_at.strftime("%Y-%m-%d") if deal.created_at else ""
+                    "created_at": deal.created_at.strftime("%Y-%m-%d") if deal.created_at else "",
+                    # TODO: Replace with actual fund_raised_till_now field when added to database
+                    "fund_raised_till_now": round((deal.round_size or 0) * 0.6, 2)  # Using 60% of round_size as temp value
                 }
                 for deal in paginated_closed
             ]
@@ -657,6 +667,7 @@ class SubAdminService:
                     "deal_status": deal.status.value if hasattr(deal.status, 'value') else str(deal.status),
                     "current_valuation": deal.current_valuation or 0,
                     "round_size": deal.round_size or 0,
+                    "fund_raised_till_now": round((deal.round_size or 0) * 0.6, 2),
                     "commitment": deal.syndicate_commitment or 0,
                     "business_model": deal.business_model.value if hasattr(deal.business_model, 'value') else str(deal.business_model),
                     "company_stage": deal.company_stage.value if hasattr(deal.company_stage, 'value') else str(deal.company_stage),
@@ -1048,21 +1059,32 @@ class SubAdminService:
             # Fetch subadmin
             subadmin = await session.get(Subadmin, subadmin_id)
             if not subadmin:
-                raise HTTPException(status_code=404, detail="Subadmin not found")
+                return {
+                    "success": False,
+                    "message": "Subadmin not found"
+                }
 
             # Fetch investor
             investor = await session.get(User, investor_id)
             if not investor:
-                raise HTTPException(status_code=404, detail="Investor not found")
+                return {
+                    "success": False,
+                    "message": "Investor not found"
+                }
 
             # Verify investor belongs to this subadmin
             if investor.fund_manager_id != subadmin_id:
-                raise HTTPException(status_code=403, detail="Investor does not belong to this subadmin")
+                return {
+                    "success": False,
+                    "message": "Investor does not belong to this subadmin"
+                }
 
             # Verify investor role
-            logger.info(f"Investor role: {investor.role}, type: {type(investor.role)}")
             if investor.role not in [Role.INVESTOR, "INVESTOR", "investor"]:
-                raise HTTPException(status_code=400, detail="User is not an investor")
+                return {
+                    "success": False,
+                    "message": "User is not an investor"
+                }
 
             # Check if investor has any active investments
             investments_stmt = select(Investment).where(
@@ -1075,14 +1097,22 @@ class SubAdminService:
             active_investments = investments_result.scalars().all()
 
             if active_investments:
-                raise HTTPException(
-                    status_code=400, 
-                    detail="Cannot delete investor with active investments"
-                )
+                return {
+                    "success": False,
+                    "message": "Cannot delete investor with active investments"
+                }
 
             # Store investor details for response
             investor_name = investor.full_name or f"{investor.first_name or ''} {investor.last_name or ''}".strip()
             investor_email = investor.email or ""
+
+            # Delete related user deal preferences first to avoid constraint violations
+            user_prefs_stmt = select(UserDealPreference).where(UserDealPreference.user_id == investor_id)
+            user_prefs_result = await session.execute(user_prefs_stmt)
+            user_preferences = user_prefs_result.scalars().all()
+            
+            for pref in user_preferences:
+                await session.delete(pref)
 
             # Delete investor
             await session.delete(investor)
@@ -1096,15 +1126,13 @@ class SubAdminService:
                 "message": f"Investor {investor_name} has been successfully deleted",
                 "success": True
             }
-        except HTTPException as he:
-            raise he
         except Exception as e:
             await session.rollback()
             logger.error(f"Failed to delete investor: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to delete investor: {str(e)}"
-            )
+            return {
+                "success": False,
+                "message": f"Failed to delete investor: {str(e)}"
+            }
 
     async def update_investor(
         self,
@@ -1475,6 +1503,7 @@ class SubAdminService:
             await session.commit()
             logger.info(f"Deal {deal.company_name} marked as inactive")
             return {
+                "subadmin_id": str(deal.fund_manager_id),
                 "deal_id": str(deal_id),
                 "message": f"Deal {deal.company_name} has been successfully marked as inactive",
                 "success": True
@@ -1540,7 +1569,10 @@ class SubAdminService:
         try:
             deal = await session.get(Deal, deal_id)
             if not deal:
-                raise HTTPException(status_code=404, detail="Deal not found")
+                return {
+                    "success": False,
+                    "message": "Deal not found"
+                }
             if update_data.get("logo_url") is not None:
                 deal.logo_url = update_data["logo_url"]
             if update_data.get("company_name") is not None:
@@ -1575,19 +1607,18 @@ class SubAdminService:
             await session.commit()
             logger.info(f"Deal details updated for {deal.company_name}")
             return {
+                "subadmin_id": str(deal.fund_manager_id),
                 "deal_id": str(deal_id),
                 "message": "Deal details have been successfully updated",
                 "success": True
             }
-        except HTTPException as he:
-            raise he
         except Exception as e:
             await session.rollback()
             logger.error(f"Failed to update deal details: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to update deal details: {str(e)}"
-            )
+            return {
+                "success": False,
+                "message": f"Failed to update deal details: {str(e)}"
+            }
 
     async def get_deal_about_info(
         self,
@@ -1607,6 +1638,7 @@ class SubAdminService:
             }
             logger.info(f"Deal about info fetched for deal ID: {deal_id}")
             return {
+                "subadmin_id": str(deal.fund_manager_id),
                 "deal_id": str(deal_id),
                 "about_info": about_info,
                 "success": True

@@ -5,7 +5,7 @@ from uuid import UUID
 from src.utils.dependencies import get_session
 from src.schemas.admin import (
     CreateProfileReq, CreateCredentialsReq, CreateProfileRes, GetSubadminRes, AdminSignInReq,
-    SubadminListPaginatedResponse, SubadminDetailsResponse, SubadminDetailsUpdateRequest, SubadminDetailsUpdateResponse
+    SubadminListPaginatedResponse, SubadminDetailsResponse, SubadminDetailsUpdateRequest, SubadminDetailsUpdateResponse, AdminDashboardMetadataResponse, AdminOverviewPaginatedResponse
 )
 from src.services.admin import AdminService
 
@@ -136,5 +136,32 @@ async def update_subadmin_details_full(
 ):
     return await admin_services.update_subadmin_full_details(session=session, subadmin_id=subadmin_id, update_data=update_data.dict(exclude_unset=True))
 
+@router.get("/dashboard/metadata", response_model=AdminDashboardMetadataResponse, tags=["manish+dev_changes"])
+async def get_admin_dashboard_metadata(
+    session: Annotated[AsyncSession, Depends(get_session)]
+) -> AdminDashboardMetadataResponse:
+    """
+    Get admin dashboard metadata including:
+    - total_admin_onboarded: Count of total subadmins from subadmin table
+    - total_users: Count of users where role is INVESTOR from user table  
+    - active_deals: Count of deals that are OPEN
+    - new_user_this_month: Count of users where role is INVESTOR and created within last 30 days
+    """
+    return await admin_services.get_admin_dashboard_metadata(session=session)
 
-
+@router.get("/overview", response_model=AdminOverviewPaginatedResponse, tags=["manish+dev_changes"])
+async def get_admin_overview_paginated(
+    session: Annotated[AsyncSession, Depends(get_session)],
+    page: int = Query(1, ge=1, description="Page number (starts from 1)"),
+    per_page: int = Query(10, ge=1, le=100, description="Number of items per page (1-100)")
+) -> AdminOverviewPaginatedResponse:
+    """
+    Get paginated admin overview including:
+    - admin_name: Subadmin name
+    - email: Email address of the subadmin
+    - invitation_code: Invite code for the subadmin
+    - total_users: Total users under that subadmin where role is INVESTOR
+    - active_deals: Deals with status OPEN under that subadmin
+    - onboarding_date: Created date for the subadmin
+    """
+    return await admin_services.get_admin_overview_paginated(session=session, page=page, per_page=per_page)

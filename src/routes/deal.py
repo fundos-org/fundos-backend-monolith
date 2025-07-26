@@ -34,7 +34,11 @@ async def create_deal_draft(
             "message": "Deal draft created", 
             "success": True
         }
+    except HTTPException as he:
+        # Re-raise HTTP exceptions with proper status codes
+        raise he
     except Exception as e:
+        # Server errors should return 500, not 200
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to create deal draft: {str(e)}")
 
 @router.post("/web/company-details")

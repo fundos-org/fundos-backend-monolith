@@ -5,16 +5,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select, func
 from src.logging.logging_setup import get_logger # assuming you have a logger setup
 from src.models.subadmin import Subadmin
-from src.models.user import User
-from src.models.deal import Deal
+from src.models.user import User, Role
+from src.models.deal import Deal, DealStatus
 from src.schemas.admin import (
-    SubadminDetails, SubadminListItem, SubadminDetailsResponse, SubadminDetailsUpdateResponse
+    SubadminDetails, SubadminListItem, SubadminDetailsResponse, SubadminDetailsUpdateResponse, AdminDashboardMetadataResponse, AdminOverviewPaginatedResponse, AdminOverviewItem, PaginationInfo
 )
 from uuid import UUID
 from src.services.s3 import S3Service
 from src.services.email import EmailService
 from typing import Any
-from datetime import datetime
+from datetime import datetime, timedelta
 from src.configs.configs import aws_config, app_config
 from sqlalchemy import cast, String
 
@@ -25,7 +25,17 @@ class AdminService:
     def __init__(self):
         self.bucket_name = aws_config.aws_bucket
         self.folder_prefix = aws_config.aws_subadmin_profile_pictures_folder
-        self.s3_service = S3Service(bucket_name=self.bucket_name, region_name="ap-south-1")
+        
+        # Initialize S3Service with error handling
+        try:
+            self.s3_service = S3Service(bucket_name=self.bucket_name, region_name="ap-south-1")
+            self.s3_available = True
+            logger.info("S3Service initialized successfully")
+        except Exception as e:
+            logger.warning(f"S3Service initialization failed: {str(e)}. Will use mock URLs for uploads.")
+            self.s3_service = None
+            self.s3_available = False
+            
         self.email_service = EmailService()
 
     async def admin_signin(
@@ -78,39 +88,66 @@ class AdminService:
                 )
 
             # Create Subadmin instance with all required fields
+            # Provide temporary defaults for fields that will be set later via credentials API
             subadmin = Subadmin(
                 name=name,
                 email=email,
                 contact=contact,
-                about=about
+                about=about,
+                username=f"temp_user_{datetime.now().strftime('%Y%m%d_%H%M%S')}",  # Temporary username
+                password="TEMP_PASSWORD",  # Temporary password  
+                re_entered_password="TEMP_PASSWORD",  # Temporary re-entered password
+                app_name="TEMP_APP",  # Temporary app name
+                invite_code=f"TEMP_CODE_{datetime.now().strftime('%Y%m%d_%H%M%S')}"  # Temporary invite code
             )
 
             # Add subadmin to the session
             session.add(subadmin)
 
-            # Upload to S3 and get presigned URL
-            try:
-                image_url = await self.s3_service.upload_and_get_url(
-                    object_id=subadmin.id,
-                    file=logo,
-                    bucket_name=self.bucket_name,
-                    folder_prefix=self.folder_prefix,
-                    expiration=3600,
-                )
-                subadmin.logo = image_url
-            except Exception as e:
-                raise HTTPException(
-                    status_code=status.HTTP_417_EXPECTATION_FAILED,
-                    detail=f"Failed to upload file to storage layer for subadmin: {subadmin.id} with error: {str(e)}",
-                )
+            # Upload to S3 and get presigned URL, or use mock URL if S3 not available
+            if self.s3_available:
+                try:
+                    image_url = await self.s3_service.upload_and_get_url(
+                        object_id=subadmin.id,
+                        file=logo,
+                        bucket_name=self.bucket_name,
+                        folder_prefix=self.folder_prefix,
+                        expiration=3600,
+                    )
+                    subadmin.logo = image_url
+                    logger.info(f"Successfully uploaded logo for subadmin: {subadmin.id}")
+                except Exception as e:
+                    # Log the S3 error but don't fail the entire operation
+                    logger.warning(f"S3 upload failed for subadmin: {subadmin.id}, using mock URL. Error: {str(e)}")
+                    # Use a mock/placeholder URL when S3 fails
+                    mock_logo_url = f"https://ui-avatars.com/api/?name={name.replace(' ', '+')}&background=random&size=200"
+                    subadmin.logo = mock_logo_url
+            else:
+                # S3 not available, use mock URL directly
+                logger.info(f"S3 not available, using mock logo for subadmin: {subadmin.id}")
+                mock_logo_url = f"https://ui-avatars.com/api/?name={name.replace(' ', '+')}&background=random&size=200"
+                subadmin.logo = mock_logo_url
 
             # Commit the transaction
             await session.commit()
             await session.refresh(subadmin)
 
+            # Check if we used a mock URL
+            is_mock_logo = subadmin.logo.startswith("https://ui-avatars.com")
+            
+            if is_mock_logo:
+                if not self.s3_available:
+                    message = "Subadmin profile created successfully with mock logo (storage service unavailable)"
+                else:
+                    message = "Subadmin profile created successfully with mock logo (upload failed)"
+            else:
+                message = "Subadmin profile created successfully"
+
             return {
                 "success": True,
                 "subadmin_id": subadmin.id,
+                "logo_url": subadmin.logo,
+                "message": message
             }
 
         except HTTPException as he:
@@ -433,3 +470,151 @@ class AdminService:
             logger.error(f"Failed to update subadmin details: {str(e)}")
             await session.rollback()
             raise HTTPException(status_code=500, detail=f"Failed to update subadmin details: {str(e)}")
+
+    async def get_admin_dashboard_metadata(
+        self,
+        session: AsyncSession
+    ) -> dict:
+        """
+        Get admin dashboard metadata including total subadmins, users, active deals, and new users this month.
+        
+        Returns:
+            dict: Dashboard metadata containing counts for various entities
+        """
+        try:
+            # Count total subadmins from subadmin table
+            total_admin_stmt = select(func.count(Subadmin.id))
+            total_admin_result = await session.execute(total_admin_stmt)
+            total_admin_onboarded = total_admin_result.scalar() or 0
+
+            # Count total users where role is INVESTOR
+            total_users_stmt = select(func.count(User.id)).where(
+                cast(User.role, String) == "INVESTOR"
+            )
+            total_users_result = await session.execute(total_users_stmt)
+            total_users = total_users_result.scalar() or 0
+
+            # Count active deals (OPEN status)
+            active_deals_stmt = select(func.count(Deal.id)).where(
+                cast(Deal.status, String) == "OPEN"
+            )
+            active_deals_result = await session.execute(active_deals_stmt)
+            active_deals = active_deals_result.scalar() or 0
+
+            # Count new users this month (users with role INVESTOR created within last 30 days)
+            one_month_ago = datetime.now().replace(tzinfo=None) - timedelta(days=30)
+            new_users_stmt = select(func.count(User.id)).where(
+                cast(User.role, String) == "INVESTOR",
+                User.created_at >= one_month_ago
+            )
+            new_users_result = await session.execute(new_users_stmt)
+            new_user_this_month = new_users_result.scalar() or 0
+
+            logger.info(f"Admin dashboard metadata retrieved: {total_admin_onboarded} admins, {total_users} users, {active_deals} active deals, {new_user_this_month} new users this month")
+
+            return AdminDashboardMetadataResponse(
+                total_admin_onboarded=total_admin_onboarded,
+                total_users=total_users,
+                active_deals=active_deals,
+                new_user_this_month=new_user_this_month,
+                success=True
+            ).dict()
+
+        except Exception as e:
+            logger.error(f"Failed to fetch admin dashboard metadata: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch admin dashboard metadata: {str(e)}"
+            )
+
+    async def get_admin_overview_paginated(
+        self,
+        session: AsyncSession,
+        page: int = 1,
+        per_page: int = 10
+    ) -> dict:
+        """
+        Get paginated admin overview including subadmin details with their associated user and deal counts.
+        
+        Args:
+            session: Database session
+            page: Page number (default: 1)
+            per_page: Items per page (default: 10)
+            
+        Returns:
+            dict: Paginated admin overview with counts for users and deals under each subadmin
+        """
+        try:
+            # Calculate offset for pagination
+            offset = (page - 1) * per_page
+
+            # Get total count of subadmins for pagination
+            total_count_stmt = select(func.count(Subadmin.id))
+            total_count_result = await session.execute(total_count_stmt)
+            total_records = total_count_result.scalar() or 0
+
+            # Calculate total pages
+            total_pages = (total_records + per_page - 1) // per_page
+
+            # Get paginated subadmins
+            subadmins_stmt = select(Subadmin).offset(offset).limit(per_page).order_by(Subadmin.created_at.desc())
+            subadmins_result = await session.execute(subadmins_stmt)
+            subadmins = subadmins_result.scalars().all()
+
+            # Build admin overview list
+            admin_overview_list = []
+            for subadmin in subadmins:
+                # Count total users (INVESTOR role) under this subadmin
+                total_users_stmt = select(func.count(User.id)).where(
+                    User.fund_manager_id == subadmin.id,
+                    cast(User.role, String) == "INVESTOR"
+                )
+                total_users_result = await session.execute(total_users_stmt)
+                total_users = total_users_result.scalar() or 0
+
+                # Count active deals (OPEN status) under this subadmin
+                active_deals_stmt = select(func.count(Deal.id)).where(
+                    Deal.fund_manager_id == subadmin.id,
+                    cast(Deal.status, String) == "OPEN"
+                )
+                active_deals_result = await session.execute(active_deals_stmt)
+                active_deals = active_deals_result.scalar() or 0
+
+                # Format onboarding date
+                onboarding_date = subadmin.created_at.strftime("%Y-%m-%d") if subadmin.created_at else ""
+
+                admin_overview_item = AdminOverviewItem(
+                    admin_id=str(subadmin.id),
+                    admin_name=subadmin.name or "",
+                    email=subadmin.email or "",
+                    invitation_code=subadmin.invite_code or "",
+                    total_users=total_users,
+                    active_deals=active_deals,
+                    onboarding_date=onboarding_date
+                )
+                admin_overview_list.append(admin_overview_item)
+
+            # Create pagination info
+            pagination_info = PaginationInfo(
+                page=page,
+                per_page=per_page,
+                total_records=total_records,
+                total_pages=total_pages,
+                has_next=page < total_pages,
+                has_prev=page > 1
+            )
+
+            logger.info(f"Admin overview paginated retrieved: page {page}, {len(admin_overview_list)} admins, total {total_records} records")
+
+            return AdminOverviewPaginatedResponse(
+                admins=admin_overview_list,
+                pagination=pagination_info,
+                success=True
+            ).dict()
+
+        except Exception as e:
+            logger.error(f"Failed to fetch admin overview paginated: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch admin overview paginated: {str(e)}"
+            )

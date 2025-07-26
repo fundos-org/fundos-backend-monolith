@@ -87,5 +87,32 @@ class SubadminDetailsUpdateResponse(BaseModel):
     subadmin_id: UUID
     message: str
     success: bool
-    
 
+class AdminDashboardMetadataResponse(BaseModel):
+    total_admin_onboarded: int
+    total_users: int
+    active_deals: int
+    new_user_this_month: int
+    success: bool
+
+class AdminOverviewItem(BaseModel):
+    admin_id: str
+    admin_name: str
+    email: str
+    invitation_code: str
+    total_users: int
+    active_deals: int
+    onboarding_date: str
+
+class PaginationInfo(BaseModel):
+    page: int
+    per_page: int
+    total_records: int
+    total_pages: int
+    has_next: bool
+    has_prev: bool
+
+class AdminOverviewPaginatedResponse(BaseModel):
+    admins: List[AdminOverviewItem]
+    pagination: PaginationInfo
+    success: bool

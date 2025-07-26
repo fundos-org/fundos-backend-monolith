@@ -73,6 +73,7 @@ class DealDetail(BaseModel):
     deal_status: str
     current_valuation: float
     round_size: float
+    fund_raised_till_now: float  # TODO: Replace with actual database field when available
     commitment: float
     business_model: str
     company_stage: str 
@@ -165,8 +166,8 @@ class DeleteInvestorRequest(BaseModel):
     investor_id: str
 
 class DeleteInvestorResponse(BaseModel):
-    subadmin_id: str
-    investor_id: str
+    subadmin_id: Optional[str] = None
+    investor_id: Optional[str] = None
     message: str
     success: bool
 
@@ -300,8 +301,8 @@ class EditDealRequest(BaseModel):
     pitch_video_url: Optional[str] = None
 
 class EditDealResponse(BaseModel):
-    subadmin_id: str
-    deal_id: str
+    subadmin_id: Optional[str] = None
+    deal_id: Optional[str] = None
     message: str
     success: bool
 

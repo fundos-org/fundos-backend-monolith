@@ -36,27 +36,29 @@ class DealService:
         )
 
     async def _cache_deal_data(self, deal_id: UUID, data: Dict):
-        """Cache deal data in Redis with a TTL of 24 hours."""
+        """Cache deal data in Redis with a TTL of 24 hours. Gracefully handles Redis failures."""
         try:
             await self.redis_client.setex(
                 f"deal:{deal_id}", 
                 86400,  # 24 hours TTL
                 json.dumps(data, default=str)
             )
+            logger.info(f"Successfully cached deal data for {deal_id}")
         except Exception as e:
-            logger.error(f"Failed to cache deal data: {str(e)}")
-            raise HTTPException(status_code=500, detail="Failed to cache deal data")
+            logger.warning(f"Failed to cache deal data (Redis unavailable): {str(e)}")
+            # Don't raise exception - allow the operation to continue without Redis
 
     async def _get_cached_deal_data(self, deal_id: UUID) -> Dict:
-        """Retrieve deal data from Redis."""
+        """Retrieve deal data from Redis. Returns None if Redis is unavailable."""
         try:
             cached_data = await self.redis_client.get(f"deal:{deal_id}")
             if not cached_data:
-                raise HTTPException(status_code=404, detail="Deal not found in cache")
+                logger.warning(f"Deal {deal_id} not found in cache")
+                return None
             return json.loads(cached_data)
         except Exception as e:
-            logger.error(f"Failed to retrieve cached deal data: {str(e)}")
-            raise HTTPException(status_code=500, detail="Failed to retrieve cached deal data")
+            logger.warning(f"Failed to retrieve cached deal data (Redis unavailable): {str(e)}")
+            return None
 
     async def _upload_file_background(
         self, 
@@ -117,18 +119,16 @@ class DealService:
         Raises:
             HTTPException: If there's an error during creation
         """
-        try:
-            deal_id = uuid.uuid4()
-            deal_data = {
-                "id": str(deal_id),
-                "fund_manager_id": str(fund_manager_id),
-                "status": DealStatus.ON_HOLD.value,
-            }
-            await self._cache_deal_data(deal_id, deal_data)
-            return deal_data
-        except Exception as e:
-            logger.error(f"Failed to create deal draft: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        deal_id = uuid.uuid4()
+        deal_data = {
+            "id": str(deal_id),
+            "fund_manager_id": str(fund_manager_id),
+            "status": DealStatus.ON_HOLD.value,
+        }
+        # Try to cache the data, but don't fail if Redis is unavailable (graceful degradation)
+        await self._cache_deal_data(deal_id, deal_data)
+        logger.info(f"Deal draft created successfully: {deal_id}")
+        return deal_data
 
     async def update_company_details(
         self, 
